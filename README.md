@@ -2,9 +2,14 @@
 
 > *Tarefa*: Realiza unha breve descrición do proxecto (entre 100 e 300 palabras). Resalta o fundamental **coas túas palabras**. Utiliza unha linguaxe correcta, pero natural, que o entenda todo o mundo, incluso e en especial, as persoas que non teñan un coñecemento técnico avanzado. Pode ser un estrato ou resumo dos apartados que se contemplan na memoria.
 
+## Instalación/Posta en marcha
+
+> *Tarefa*: **Indica os pasos a seguir para que poidamos probar a vosa aplicación nun contorno de desenvolvemento**. 
+Inclúe un breve manual de uso ou un vídeo explicativo, segundo consideres axeitado.
+
 ## Uso
 
-> *Tarefa*: **Indica a URL para poder acceder á túa aplicación web**. 
+> *Tarefa*: **Indica a URL para poder acceder á túa aplicación web e os usuarios para poder probala na avaliación **. 
 Inclúe un breve manual de uso ou un vídeo explicativo, segundo consideres axeitado.
 
 ## Sobre a persoa autora
