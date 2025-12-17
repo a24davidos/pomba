@@ -5,7 +5,6 @@
 ## Instalación/Posta en marcha
 
 > *Tarefa*: **Indica os pasos a seguir para que poidamos probar a vosa aplicación nun contorno de desenvolvemento**. 
-Inclúe un breve manual de uso ou un vídeo explicativo, segundo consideres axeitado.
 
 ## Uso
 
