@@ -1,6 +1,6 @@
 # URL da páxina web
 
-# Prototipos realizados
+# Deseño dos prototipos 
 
 ## Prototipo 1
 ### Data: 
