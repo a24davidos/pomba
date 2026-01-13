@@ -34,4 +34,4 @@ Debes incluír carga de datos inicial automática para poder probar a app.
 3. [Deseño](doc/templates/3_deseno.md)
 4. [Planificación e Orzamento](doc/templates/a3_orzamento.md)
 5. [Codificación e Probas](doc/templates/4_codificacion_probas.md)
-6. [Mantemento](doc/templates/5_manuais.md)
+6. [Melloras Futuras](doc/templates/5_manuais.md)
