@@ -17,14 +17,6 @@
 ### Requirimentos a implementar:
 ### Observacións trala creación do prototipo:
 
-# Retos e Innovación
 
-## Reto número 1
-### Motivación
-### Descrición
-
-## Reto número 2
-### Motivación
-### Descrición
 
 
