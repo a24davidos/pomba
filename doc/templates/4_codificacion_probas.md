@@ -23,8 +23,8 @@
 ## Prototipo 4
 ### Data de entrega: 
 ### Funcionalidades implementadas:
-### Observacións: modificacións que houbo que realizar sobre a planificación inicial dos requerimentos ou calquera aclaración adicional:
-### Innovación: ferramentas de desenvolvemento que houbo que aprender a usar para incluír no proxecto:
+### Observacións: 
+### Innovación: 
 
 ## Prototipo Final
 ### Data de entrega: 
