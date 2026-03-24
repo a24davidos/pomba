@@ -59,7 +59,7 @@ CREATE TABLE archivo (
     tamaño BIGINT NOT NULL,
     fecha_subida TIMESTAMP DEFAULT NOW(),
     fecha_modificacion TIMESTAMP DEFAULT NOW(),
-    UNIQUE (carpeta_id, nombre)
+    UNIQUE (carpeta_id, nombre, eliminado)
 );
 ```
 
