@@ -1,32 +1,3 @@
-# Deseño
-
-## Esquema (boceto ou wireframe).
-
-![](../img/Mockup%20-%20Deseño.png)
-
-## Identidade visual 
-
-La aplicación tendrá un  estilo retro y minimalista inspirado en interfaces clásicas de Mac OS y exploradores de archivos, pero adaptado a estándares actuales de usabilidad y legibilidad.
-
-- **Tipografía**: `'Press Start 2P', 'VT323', monospace` 
-
-- **Paleta de colores:**
-
-  - Los colores principales serán el blanco, el gris y el negro.
-
-  - Opcionalmente se podrán añadir otros colores como por ejemplo el azul, para realzar ciertos elementos y. dar un estilo moderno.
-
-- **Estilo general**:
-
-  - Ventanas y paneles con bordes simples y esquinas ligeramente redondeadas.
-  - Íconos claros y minimalistas, inspirados en pixel art, pero adaptados a resoluciones actuales.
-  - Uso de espacios en blanco generoso para mejorar la legibilidad y la navegación.
-  - Botones y elementos interactivos con feedback visual
-
-## Diagrama de Bases de Datos
-
-##### Base de datos:
-
 ```sql
 CREATE TABLE usuario (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -61,8 +32,17 @@ CREATE TABLE archivo (
     fecha_modificacion TIMESTAMP DEFAULT NOW(),
     UNIQUE (carpeta_id, nombre)
 );
+
+-- =========================
+-- ÍNDICES RECOMENDADOS
+-- =========================
+-- Para listar rápido los archivos de un usuario
+CREATE INDEX idx_archivo_usuario ON archivo(usuario_id);
+
+-- Para listar archivos dentro de una carpeta
+CREATE INDEX idx_archivo_carpeta ON archivo(carpeta_id);
+
+-- Para filtrar archivos en papelera
+CREATE INDEX idx_archivo_eliminado ON archivo(eliminado);
 ```
 
-##### Diagrama de base de datos:
-
-![](../img/Diagrama%20de%20base%20de%20datos.png)
