@@ -6,15 +6,15 @@
 
 ## Identidade visual 
 
-La aplicación tendrá un  estilo retro y minimalista inspirado en interfaces clásicas de Mac OS y exploradores de archivos, pero adaptado a estándares actuales de usabilidad y legibilidad.
+La aplicación tendrá un  estilo retro y minimalista inspirado en interfaces clásicas de Mac OS y antiguos exploradores de archivos, pero adaptado a estándares actuales de usabilidad y legibilidad.
 
-- **Tipografía**: `'Press Start 2P', 'VT323', monospace` 
+- **Tipografía**: Press Start 2P, VT323, monospace
 
 - **Paleta de colores:**
 
   - Los colores principales serán el blanco, el gris y el negro.
 
-  - Opcionalmente se podrán añadir otros colores como por ejemplo el azul, para realzar ciertos elementos y. dar un estilo moderno.
+  - Opcionalmente se podrán añadir otros colores como por ejemplo el azul, para realzar ciertos elementos y dar un estilo moderno.
 
 - **Estilo general**:
 
