@@ -1,0 +1,28 @@
+# Imagen base oficial de Python 3.12
+FROM python:3.12
+
+# Instalo dependencias necesarias
+RUN apt-get update && apt-get install -y \
+    git \
+    unzip \
+    zip \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    libxml2-dev \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Defino el directorio de trabajo dentro del contenedor
+WORKDIR /app
+
+# Copio el entrypoint y le doy permisos
+COPY entrypoint-backend.sh /usr/local/bin/entrypoint-backend.sh
+RUN chmod +x /usr/local/bin/entrypoint-backend.sh
+
+# Expongo el puerto donde Django servirá la app
+EXPOSE 8000
+
+# Defino el entrypoint por defecto
+ENTRYPOINT ["/usr/local/bin/entrypoint-backend.sh"]

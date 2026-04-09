@@ -1,0 +1,20 @@
+#Selecciono a imaxe que me interesa
+FROM node:20
+
+#Instalo as dependencias
+RUN apt-get update &&   apt-get install -y \
+    git \
+    unzip \
+    zip \
+    && rm -rf /var/lib/apt/lists/*
+
+#Non teño que instalar ningun xestor para js
+WORKDIR /app
+
+#Copio o entrypoint
+COPY entrypoint-frontend.sh /usr/local/bin/entrypoint-frontend.sh
+RUN chmod +x /usr/local/bin/entrypoint-frontend.sh
+
+EXPOSE 5173
+
+ENTRYPOINT ["/usr/local/bin/entrypoint-frontend.sh"]

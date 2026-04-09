@@ -1,0 +1,117 @@
+version: '3.9'
+
+services:
+
+  # Backend Django
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: django_backend
+    env_file: .env
+    environment:
+      - DB_NAME=${POSTGRES_DB}
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - PYTHONPATH=/app/libraries/lib/python3.12/site-packages
+    volumes:
+      - ../backend:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - garage
+      - elasticsearch
+    networks:
+      - appnet
+
+  # Frontend Vue 3 + Vite
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: vue_frontend
+    env_file: .env
+    volumes:
+      - ../frontend/:/app
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    networks:
+      - appnet
+
+  # PostgreSQL
+  db:
+    image: postgres:15
+    container_name: postgres_db
+    env_file: .env
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - appnet
+
+  # Garage (S3 Storage)
+  garage:
+    image: dxflrs/garage:v0.8.2
+    container_name: garage
+    restart: unless-stopped
+    environment:
+      - GARAGE_RPC_SECRET=66079f0326ae751c8fc39ea9cd765d547ad4d35e6d457ff18a253d9f29347372
+    volumes:
+      - garage_meta:/var/lib/garage/meta
+      - garage_data:/var/lib/garage/data
+      - ./garage.toml:/etc/garage.toml:ro
+    ports:
+      - "3900:3900"   # S3 API
+      - "3901:3901"   # RPC 
+      - "3903:3903"   # Admin API 
+    networks:
+      - appnet
+
+  # Elasticsearch
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.1
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - xpack.security.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - bootstrap.memory_lock=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    ports:
+      - "${ES_PORT}:9200"
+    networks:
+      - appnet
+
+  # Kibana
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.10.1
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    networks:
+      - appnet
+
+networks:
+  appnet:
+
+volumes:
+  postgres_data:
+  es_data:
+  garage_meta:
+  garage_data:

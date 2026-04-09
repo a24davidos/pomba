@@ -1,0 +1,8 @@
+Key name: mi-llave-django
+Key ID: GK4d78c75638da1ee93f26f3ed
+Secret key: 3736881ec99cda01d2c52f17610ff36e00ac463ba53a6333e731fbbd6dfa84b5
+Can create buckets: false
+
+Key-specific bucket aliases:
+
+Authorized buckets:
