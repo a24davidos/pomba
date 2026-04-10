@@ -9,7 +9,7 @@ python3 -m venv libraries
 source libraries/bin/activate
 
 # Instalación de dependencias
-pip install django psycopg2
+pip install django djangorestframework django-cors-headers psycopg[binary,pool] djangorestframework-simplejwt
 
 if [ -f "requirements.txt" ]; then
     pip install -r requirements.txt
