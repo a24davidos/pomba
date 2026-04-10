@@ -33,7 +33,7 @@ end
 # Unset irrelevant variables.
 deactivate nondestructive
 
-set -gx VIRTUAL_ENV /app/libraries
+set -gx VIRTUAL_ENV /home/sanclemente.local/a24davidos/a24davidos/final_daw/ArquetipoDesarrollo/backend/libraries
 
 set -gx _OLD_VIRTUAL_PATH $PATH
 set -gx PATH "$VIRTUAL_ENV/"bin $PATH

@@ -1,4 +1,4 @@
-#!/app/libraries/bin/python3
+#!/home/sanclemente.local/a24davidos/a24davidos/final_daw/ArquetipoDesarrollo/backend/libraries/bin/python3
 
 import sys
 import json
