@@ -5,3 +5,6 @@ up:
 
 down:
 	docker compose -f Docker/docker-compose.yml down
+
+build:
+	docker compose -f Docker/docker-compose.yml build --no-cache

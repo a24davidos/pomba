@@ -1,5 +1,5 @@
 #!/bin/bash
-echo "🛠️ Preparando contorna local para Musixest..."
+echo "🛠️ Preparando contorna local para o meu proxecto..."
 
 if [ ! -d "backend/libraries" ]; then
     python3 -m venv backend/libraries
