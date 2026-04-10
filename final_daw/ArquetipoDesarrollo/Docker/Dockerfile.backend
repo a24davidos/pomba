@@ -3,9 +3,6 @@ FROM python:3.12
 
 # Instalo dependencias necesarias
 RUN apt-get update && apt-get install -y \
-    git \
-    unzip \
-    zip \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \

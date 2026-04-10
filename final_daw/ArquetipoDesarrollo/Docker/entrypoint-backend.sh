@@ -4,12 +4,9 @@ set -e
 APP_DIR="/app"
 cd "$APP_DIR"
 
-# Crear y activar entorno virtual
-python3 -m venv libraries
-source libraries/bin/activate
-
 # Instalar dependencias básicas
-pip install django psycopg2-binary boto3
+pip install --no-cache-dir --upgrade pip
+pip install django djangorestframework django-cors-headers psycopg[binary,pool] djangorestframework-simplejwt
 
 # Instalar dependencias adicionales si existe requirements.txt
 if [ -f "requirements.txt" ]; then
