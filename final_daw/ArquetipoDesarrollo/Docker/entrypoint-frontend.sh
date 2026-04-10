@@ -11,9 +11,16 @@ if [ ! -f "package.json" ]; then
     npm create vite@latest . -- --template vue
 fi
 
+# Instalar dependencias solo si falta la carpeta node_modules
+if [ ! -d "node_modules" ]; then
+    echo "📦 Instalando dependencias de Node..."
+    npm install
+else
+    echo "✅ Dependencias ya instaladas. Saltando npm install."
+fi
+
 #Instalo as dependencias
 npm install
-rm -rf .vscode/ .gitignore
 
 #Arranco vue
 echo "Arrancando Vue.js..."

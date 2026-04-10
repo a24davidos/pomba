@@ -1,12 +1,10 @@
-version: '3.9'
-
 services:
 
   # Backend Django
   backend:
     build:
-      context: .
-      dockerfile: Dockerfile.backend
+      context: ..
+      dockerfile: Docker/Dockerfile.backend
     container_name: django_backend
     env_file: .env
     environment:
@@ -15,15 +13,15 @@ services:
       - DB_PASSWORD=${POSTGRES_PASSWORD}
       - DB_HOST=db
       - DB_PORT=5432
-      - PYTHONPATH=/app/libraries/lib/python3.12/site-packages
     volumes:
       - ../backend:/app
     ports:
       - "8000:8000"
     depends_on:
-      - db
-      - garage
-      - elasticsearch
+      db:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://127.0.0.1:8000/admin/login/ || exit 1"]
       interval: 15s
@@ -53,28 +51,34 @@ services:
   db:
     image: postgres:15
     container_name: postgres_db
-    env_file: .env
+    # Usamos el archivo de variables que definiste
+    env_file: .env  
+    environment:
+      # Aunque env_file carga las variables, a veces es mejor 
+      # asegurar las que usa la imagen oficial de Postgres
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - appnet
     healthcheck:
-      test:
-        ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
-
 
   # Garage (S3 Storage)
   garage:
     image: dxflrs/garage:v0.8.2
     container_name: garage
     restart: unless-stopped
+    env_file: .env
     environment:
-      - GARAGE_RPC_SECRET=66079f0326ae751c8fc39ea9cd765d547ad4d35e6d457ff18a253d9f29347372
+      - GARAGE_RPC_SECRET=${GARAGE_RPC_SECRET}
     volumes:
       - garage_meta:/var/lib/garage/meta
       - garage_data:/var/lib/garage/data
@@ -90,6 +94,7 @@ services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.10.1
     container_name: elasticsearch
+    env_file: .env
     environment:
       - discovery.type=single-node
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
@@ -106,17 +111,24 @@ services:
       - "${ES_PORT}:9200"
     networks:
       - appnet
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -vq '\"status\":\"red\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   # Kibana
   kibana:
     image: docker.elastic.co/kibana/kibana:8.10.1
     container_name: kibana
+    env_file: .env
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     ports:
       - "5601:5601"
     depends_on:
-      - elasticsearch
+      elasticsearch:
+        condition: service_healthy
     networks:
       - appnet
 
