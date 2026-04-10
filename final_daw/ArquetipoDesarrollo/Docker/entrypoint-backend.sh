@@ -4,23 +4,25 @@ set -e
 APP_DIR="/app"
 cd "$APP_DIR"
 
-# Instalar dependencias básicas
+# Instalar dependencias
 pip install --no-cache-dir --upgrade pip
-pip install django djangorestframework django-cors-headers psycopg[binary,pool] djangorestframework-simplejwt
 
-# Instalar dependencias adicionales si existe requirements.txt
 if [ -f "requirements.txt" ]; then
-    pip install -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt
+else
+    pip install --no-cache-dir django djangorestframework django-cors-headers psycopg[binary,pool] djangorestframework-simplejwt
+    # Guardar el estado de las dependencias
+    pip freeze > requirements.txt
 fi
-
-# Guardar el estado de las dependencias
-pip freeze > requirements.txt
 
 # Crear proyecto Django si no existe
 if [ ! -f "manage.py" ]; then
     echo "Creando un proyecto Django completo..."
     django-admin startproject myproject .
 fi
+
+# Limpiado
+rm -rf db.sqlite3
 
 # Arrancar Django
 echo "Arrancando Django..."

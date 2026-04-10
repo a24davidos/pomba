@@ -13,6 +13,7 @@ fi
 
 #Instalo as dependencias
 npm install
+rm -rf .vscode/ .gitignore
 
 #Arranco vue
 echo "Arrancando Vue.js..."
