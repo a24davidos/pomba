@@ -28,3 +28,6 @@ build:
 # Ver o estado do cluster de Garage
 status:
 	@docker exec garage /garage status
+
+start-app:
+	docker exec -it django_backend python manage.py startapp $(NAME)
