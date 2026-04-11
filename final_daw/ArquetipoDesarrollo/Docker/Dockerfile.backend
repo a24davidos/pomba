@@ -15,8 +15,8 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY Makefile /usr/Makefile
-COPY requirements.txt /usr/requirements.txt
+COPY Makefile .
+COPY requirements.txt .
 
 COPY entrypoint-backend.sh /usr/local/bin/entrypoint-backend.sh
 RUN chmod +x /usr/local/bin/entrypoint-backend.sh

@@ -1,10 +1,6 @@
 #Librerías Django
-backend/libraries
-__pycache__/
-*.pyc
-
+backend
 .env
-
 
 # Logs
 logs
