@@ -3,8 +3,8 @@ services:
   # Backend Django
   backend:
     build:
-      context: ..
-      dockerfile: Docker/Dockerfile.backend
+      context: .
+      dockerfile: Dockerfile.backend
     container_name: django_backend
     env_file: .env
     environment:
