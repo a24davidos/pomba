@@ -1,28 +1,39 @@
-#Librerías Django
-backend
+# --- DJANGO & PYTHON ---
+__pycache__/
+*.py[cod]
+*$py.class
 .env
+.venv
+env/
+venv/
+PYTHONPATH
+htmlcov/
+.tox/
+.pytest_cache/
+staticfiles/             # Importante: el resultado de collectstatic no se sube
+media/                   # Si usas Garage no habrá nada, pero por si acaso
 
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# --- BASE DE DATOS & DOCKER ---
+postgres_data/           # Si usas volúmenes locales, no los subas
+.docker/
+docker-compose.override.yml
 
-node_modules
-dist
-dist-ssr
+# --- FRONTEND (VUE 3) ---
+node_modules/
+dist/
+dist-ssr/
 *.local
+.eslintcache
+.stylelintcache
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# --- SISTEMA & EDITORES ---
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+
+# --- LOGS ---
+logs/
+*.log
