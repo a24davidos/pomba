@@ -10,11 +10,11 @@ PYTHONPATH
 htmlcov/
 .tox/
 .pytest_cache/
-staticfiles/             # Importante: el resultado de collectstatic no se sube
-media/                   # Si usas Garage no habrá nada, pero por si acaso
+staticfiles/
+media/
 
 # --- BASE DE DATOS & DOCKER ---
-postgres_data/           # Si usas volúmenes locales, no los subas
+postgres_data/
 .docker/
 docker-compose.override.yml
 
