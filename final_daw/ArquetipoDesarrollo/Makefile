@@ -2,7 +2,7 @@
 
 up:
 	@echo "🚀 Levantando servizos de Docker..."
-	docker compose --env-file Docker/.env -f Docker/docker-compose.yml up -d --wait
+	docker compose --env-file "Docker/.env" -f "Docker/docker-compose.yml" up -d --wait
 	@echo "🐍 Preparando contorna local de Python..."
 	@chmod +x local_setup.sh
 	@./local_setup.sh
@@ -13,8 +13,7 @@ up:
 
 down:
 	@echo "🛑 Parando servizos..."
-	docker compose -f Docker/docker-compose.yml down
-
+	docker compose -f "Docker/docker-compose.yml" down
 # Limpeza total: detén contedores e borra volumes (base de datos e S3)
 clean:
 	@echo "🧹 Limpeza profunda: borrando contedores e volumes..."
