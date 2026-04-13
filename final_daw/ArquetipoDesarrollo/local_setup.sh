@@ -9,10 +9,20 @@ source backend/libraries/bin/activate
 
 echo "📦 Instalando dependencias para IDE..."
 pip install --no-cache-dir --upgrade pip
+
 if [ -f "backend/requirements.txt" ]; then
     pip install --no-cache-dir -r backend/requirements.txt
 else
-    pip install django djangorestframework django-cors-headers psycopg[binary,pool] djangorestframework-simplejwt
+    pip install django \
+                djangorestframework \
+                django-cors-headers \
+                "psycopg[binary,pool]" \
+                djangorestframework-simplejwt \
+                boto3 \
+                django-storages \
+                elasticsearch \
+                django-elasticsearch-dsl
+                
     pip freeze > backend/requirements.txt
 fi
 
