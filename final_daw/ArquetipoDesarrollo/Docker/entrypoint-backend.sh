@@ -2,7 +2,7 @@
 set -e
 
 APP_DIR="/app"
-PROJECT_NAME=${PROJECT_NAME:-myproject} # Usamos un valor por defecto si no está definida
+PROJECT_NAME=${PROJECT_NAME:-core} # Usamos un valor por defecto si no está definida
 
 cd "$APP_DIR"
 
