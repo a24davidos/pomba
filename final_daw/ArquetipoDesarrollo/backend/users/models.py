@@ -1,34 +1,43 @@
 import uuid
 import os
 from django.db import models
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.utils.timezone import now
 
 def subir_imagen(instance, filename):
-    ext = filename.split('.')[-1]
-    nombre_unico = f"{uuid.uuid4()}.{ext}"
-    fecha_path = now().strftime("%Y/%m")
-    return os.path.join('avatares', fecha_path, nombre_unico)
+    ext = filename.split('.')[-1].lower()
+    return os.path.join('avatares', now().strftime("%Y/%m"), f"{uuid.uuid4()}.{ext}")
 
+class UserManager(BaseUserManager):
+    def create_user(self, email, password=None, **extra_fields):
+        if not email:
+            raise ValueError("El email es obligatorio")
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, email, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('is_active', True)
+        return self.create_user(email, password, **extra_fields)
+    
 # Create your models here.
-class User(AbstractUser):
-    email = models.EmailField(max_length=150,unique=True)
-    username = models.CharField(max_length=150, unique=True, null=True, blank=True)
-    nombre = models.CharField(max_length=100, null=True, blank=True)
-    apellidos = models.CharField(max_length=100, null=True, blank=True)
-    foto_perfil = models.ImageField(upload_to=subir_imagen, null=True, blank=True)
+class User(AbstractBaseUser, PermissionsMixin):
+    email = models.EmailField(unique=True, max_length=150)
+    nombre = models.CharField(max_length=100, blank=True, null=True)
+    apellidos = models.CharField(max_length=100, blank=True, null=True)
+    foto_perfil = models.ImageField(upload_to=subir_imagen, blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+    date_joined = models.DateTimeField(default=now)
 
-    #Quito campos que no utilizare
-    first_name = None
-    last_name = None
+    objects = UserManager()
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username']
-
-    #Como el campo Usuario no lo vamos a utilizar, lo copiamos siempre del email.
-    def save(self, *args, **kwargs):
-        self.username = self.email
-        super().save(*args, **kwargs)
+    REQUIRED_FIELDS = ['nombre']
 
     def __str__(self):
         return self.email
