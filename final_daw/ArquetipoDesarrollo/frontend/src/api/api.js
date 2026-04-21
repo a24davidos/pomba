@@ -20,7 +20,7 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Si es 401 y no es un reintento...
+    // Si es 401 y no es un reintento
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
@@ -30,7 +30,7 @@ api.interceptors.response.use(
 
         // Usamos una instancia limpia de axios
         // para evitar bucles infinitos si esta petición también falla
-        const { data } = await axios.post('http://localhost:8000/api/auth/refresh_token/', {
+        const { data } = await axios.post('http://localhost/api/auth/refresh_token/', {
           refresh: refreshToken
         });
 
@@ -54,5 +54,9 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+
+console.log("¡Cargando API!");
+window.api = api;
 
 export default api;
