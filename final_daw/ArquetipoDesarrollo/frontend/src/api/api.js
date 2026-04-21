@@ -45,7 +45,7 @@ api.interceptors.response.use(
         console.error("Sesión expirada. Redirigiendo...");
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
-        //VER COMO ENIVAR A UNA PAGINA
+        //VER COMO ENIVAR A UNA PAGINA - duuuuudaaaa
         // window.location.href = '/login';
         return Promise.reject(refreshError);
       }
