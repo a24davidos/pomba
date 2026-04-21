@@ -1,7 +1,17 @@
-<script setup>
-import HelloWorld from './components/HelloWorld.vue'
+<template>
+  <router-view />
+</template>
+
+<script>
+export default {
+  setup () {
+    
+
+    return {}
+  }
+}
 </script>
 
-<template>
-  <HelloWorld />
-</template>
+<style lang="scss" scoped>
+
+</style>
