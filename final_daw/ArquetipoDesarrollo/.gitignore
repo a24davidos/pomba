@@ -12,6 +12,7 @@ htmlcov/
 .pytest_cache/
 staticfiles/
 media/
+garage.toml
 
 # --- BASE DE DATOS & DOCKER ---
 postgres_data/
