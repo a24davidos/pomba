@@ -1,4 +1,4 @@
-import api from '../api';
+import api from './api';
 
 
 const setTokens = (data) => {
@@ -8,9 +8,8 @@ const setTokens = (data) => {
 
 export const authService = {
 
-    async login(username, password) {
-        const { data } = await api.post('auth/obtain_token/', { username, password });
-
+    async login(email, password) {
+        const { data } = await api.post('auth/obtain_token/', { email, password });
         setTokens(data);
         return data;
     }, 
@@ -23,7 +22,7 @@ export const authService = {
         window.location.href = '/login';
     },
 
-    // Para comprobar si el usuario está dentro (útil para mostrar/ocultar botones)
+    // Para comprobar si el usuario está dentro (útil para mostrar/ocultar botones) REVISAR SI ESTO ES TABIEN QUE ME RAYA UN POCO. ¡El user puede modificar el tempo del token y falsear el sistema???
     isLoggedIn() {
         const token = localStorage.getItem('access_token');
         if (!token) return false;

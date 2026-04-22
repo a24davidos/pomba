@@ -1,4 +1,5 @@
 import axios from 'axios';
+import router from '@/router'
 
 const api = axios.create({
   baseURL: 'http://localhost/api/',
@@ -41,12 +42,11 @@ api.interceptors.response.use(
         return api(originalRequest);
 
       } catch (refreshError) {
-        // Si el refresh falla, limpiamos y fuera
+        //Borrar prod
         console.error("Sesión expirada. Redirigiendo...");
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
-        //VER COMO ENIVAR A UNA PAGINA - duuuuudaaaa
-        // window.location.href = '/login';
+        router.push('/login')
         return Promise.reject(refreshError);
       }
     }
@@ -55,8 +55,5 @@ api.interceptors.response.use(
   }
 );
 
-
-console.log("¡Cargando API!");
-window.api = api;
 
 export default api;
