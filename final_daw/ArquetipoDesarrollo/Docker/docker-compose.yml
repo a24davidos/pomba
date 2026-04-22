@@ -130,7 +130,7 @@ services:
         
   # Kibana
   kibana:
-    image: docker.elastic.co/kibana/kibana:8.10.1
+    image: docker.elastic.co/kibana/kibana:9.3.3
     container_name: kibana
     env_file: .env
     environment:
