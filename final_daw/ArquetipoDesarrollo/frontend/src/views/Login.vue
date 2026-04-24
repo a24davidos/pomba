@@ -1,106 +1,93 @@
 <template>
-  <div>
-    <h1 class="title">Login in the page</h1>
-    <form action class="form" @submit.prevent="login">
-      <label class="form-label" for="email">Email:</label>
-      <input v-model="email" class="form-input" type="email" id="email" required placeholder="Email" />
-      <label class="form-label" for="password">Password:</label>
-      <input v-model="password" class="form-input" type="password" id="password" placeholder="Password" />
-      <span v-show="error" style="color: red;"> Algo metiste mal </span>
-      <input class="form-submit" type="submit" value="Login" />
-    </form>
+  <div class="bg-surface-50 dark:bg-surface-950 px-6 py-20 md:px-20 lg:px-80">
+    <div
+      class="bg-surface-0 dark:bg-surface-900 p-8 md:p-12 shadow-sm rounded-2xl w-full max-w-sm mx-auto flex flex-col gap-8">
+
+      <!-- HEADER -->
+      <div class="flex flex-col items-center gap-4">
+        <div class="text-2xl font-semibold text-center text-surface-900 dark:text-surface-0">
+          Bienvenido!
+        </div>
+        <div class="text-center text-surface-600 dark:text-surface-300">
+          ¿No tienes cuenta aún?
+          <a class="text-primary font-medium ml-1 cursor-pointer hover:text-primary-emphasis">
+            Registrate!
+          </a>
+        </div>
+      </div>
+
+      <!-- FORM -->
+      <div class="flex flex-col gap-6 w-full">
+
+        <!-- EMAIL -->
+        <div class="flex flex-col gap-2">
+          <label class="font-medium">Correo electrónico</label>
+          <InputText v-model="email" type="email" placeholder="Correo electrónico"
+            class="w-full px-3 py-2 shadow-sm rounded-lg" @input="error = false" />
+        </div>
+
+        <!-- PASSWORD -->
+        <div class="flex flex-col gap-2">
+          <label class="font-medium">Contraseña</label>
+          <Password v-model="password" placeholder="Contraseña" :toggleMask="true" :feedback="false"
+            input-class="w-full!" @input="error = false" />
+        </div>
+
+        <!-- ERROR -->
+        <small v-if="error" class="text-red-500">
+          Credenciales incorrectas
+        </small>
+
+        <!-- REMEMBER + FORGOT -->
+        <div class="flex justify-end">
+          <a class="text-primary font-medium cursor-pointer hover:text-primary-emphasis">
+            ¿Has olvidado tu contraseña?
+          </a>
+        </div>
+      </div>
+
+
+      <Button label="Entrar" icon="pi pi-user" class="w-full py-2 rounded-lg flex justify-center items-center gap-2"
+        :loading="loading" @click="login" />
+    </div>
   </div>
 </template>
 
-<script>
-  import { authService } from "@/api/auth";
+<script setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import Button from 'primevue/button'
+import Checkbox from 'primevue/checkbox'
+import InputText from 'primevue/inputtext'
+import Password from 'primevue/password'
+import { authService } from '@/api/auth'
 
-  export default {
-    data() {
-      return {
-        email: "",
-        password: "",
-        error: false
-      }
-    },
-    methods: {
-      async login() {
-        try {
-          const response = await authService.login(this.email, this.password);
+// STATE
+const email = ref('')
+const password = ref('')
+const remember = ref(true)
+const error = ref(false)
+const loading = ref(false)
 
-          // Mandamos al usuario a la Home
-          this.$router.push('/home');
+const router = useRouter()
 
-        } catch (error) {
-          //Si hay problema mostramos un mensaje
-          this.error = true
+// LOGIN
+const login = async () => {
+  error.value = false
+  loading.value = true
 
-        }
-      }
+  try {
+    await authService.login(email.value, password.value)
+
+    if (remember.value) {
+      // opcional: guardar token o flag
     }
-  };
+
+    router.push('/home')
+  } catch (e) {
+    error.value = true
+  } finally {
+    loading.value = false
+  }
+}
 </script>
-
-<style scoped>
-  .login {
-    padding: 2rem;
-  }
-
-  .title {
-    text-align: center;
-  }
-
-  .form {
-    margin: 3rem auto;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    width: 20%;
-    min-width: 350px;
-    max-width: 100%;
-    background: rgba(19, 35, 47, 0.9);
-    border-radius: 5px;
-    padding: 40px;
-    box-shadow: 0 4px 10px 4px rgba(0, 0, 0, 0.3);
-  }
-
-  .form-label {
-    margin-top: 2rem;
-    color: white;
-    margin-bottom: 0.5rem;
-  }
-
-  /* equivalente a &:first-of-type */
-  .form-label:first-of-type {
-    margin-top: 0rem;
-  }
-
-  .form-input {
-    padding: 10px 15px;
-    background: none;
-    background-image: none;
-    border: 1px solid white;
-    color: white;
-  }
-
-  /* equivalente a &:focus */
-  .form-input:focus {
-    outline: 0;
-    border-color: #1ab188;
-  }
-
-  .form-submit {
-    background: #1ab188;
-    border: none;
-    color: white;
-    margin-top: 3rem;
-    padding: 1rem 0;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-
-  /* equivalente a &:hover */
-  .form-submit:hover {
-    background: #0b9185;
-  }
-</style>
