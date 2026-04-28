@@ -33,9 +33,12 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    const url = originalRequest.url || '';
+
+    const isPublic = publicRoutes.some(route => url.includes(route));
 
     // Si es 401 y no es un reintento
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && !isPublic) {
       originalRequest._retry = true;
 
       try {

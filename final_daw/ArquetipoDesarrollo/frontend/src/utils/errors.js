@@ -1,37 +1,44 @@
-const mensajesCustom = {
-  // Combinación específica: Campo + Código
-  "email.unique": "Este email ya se encuentra en uso",
-  "email.invalid": "El formato del correo no parece correcto.",
-  
-  // Mensajes por defecto si no hay uno específico para el campo
-  "unique": "Este valor ya está en uso.",
-  "required": "Este campo es obligatorio.",
-  
-  // Errores de sistema
-  "server_error": "Hubo un problema en el servidor, inténtalo de nuevo más tarde."
-};
+import { errorMessages } from "./errorMessages";
 
 export function getErrorMessage(error) {
-  // El servidor respondió con un error (400, 403, 500, etc.)
+  // CASO 1: Respuesta de la API (400, 401, etc.)
   if (error.response) {
     const data = error.response.data;
 
-    // Buscamos en el primer error del array
-    if (data?.type === "validation_error" && data.errors?.length > 0) {
-      const err = data.errors[0];
-      return err.detail; 
+    // Buscamos en el array de errores
+    if (data.errors && Array.isArray(data.errors) && data.errors.length > 0) {
+      const err = data.errors[0]; // Tomamos el primero para el mensaje
+      const attr = err.attr;
+      const code = err.code;
+
+      // 1. Intentamos buscar en 'fields' (específico): ej. fields.email.unique
+      if (attr && errorMessages.fields[attr] && errorMessages.fields[attr][code]) {
+        return errorMessages.fields[attr][code];
+      }
+
+      // 2. Si no hay nada específico, buscamos en 'codes' y devolvemos un mensaje genérico
+      if (errorMessages.codes[code]) {
+        return errorMessages.codes[code];
+      }
+
+      //Si no hay traducción, devolvemos el detalle que nos devuelve Dango Django
+      return err.detail;
     }
 
-    // Errores genéricos de DRF (ej: "No tienes permisos")
-    return data?.detail || "Error en el servidor.";
+    // Errores simples de DRF (ej. { detail: "..." })
+    return data?.detail || errorMessages.fallback;
   }
 
-  //Se intentó conectar pero no hubo respuesta (Error de Red real)
+  // CASO 2: Error de red (Servidor apagado o sin internet)
   if (error.request) {
-    return "No se ha podido establecer conexión con el servidor. Revisa tu internet.";
+    return errorMessages.network;
   }
 
-  // No hay response ni request, es un fallo interno de la App
-  console.error("Critical Client Error:", error); // Esto te ayuda a debuguear en consola
-  return `Error interno de la aplicación: ${error.message}`;
+  // CASO 3: Error de código JS (Bugs)
+  console.error("Critical Client Error:", error);
+  const isDev = import.meta?.env?.DEV;
+  
+  return isDev
+    ? `Error interno: ${error.message}`
+    : errorMessages.fallback;
 }
