@@ -35,6 +35,7 @@ api.interceptors.response.use(
     const originalRequest = error.config;
     const url = originalRequest.url || '';
 
+    //Si es publica no queremos que reintente nada
     const isPublic = publicRoutes.some(route => url.includes(route));
 
     // Si es 401 y no es un reintento
