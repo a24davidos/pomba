@@ -14,6 +14,11 @@ export const authService = {
         return data;
     }, 
 
+    async register(email, password, nombre, apellidos) {
+        const response = await api.post('user/register/', {email, password, nombre, apellidos})
+        return response
+    },
+
     logout() {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
