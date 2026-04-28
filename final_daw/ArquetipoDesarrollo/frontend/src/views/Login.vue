@@ -10,9 +10,9 @@
         </div>
         <div class="text-center text-surface-600 dark:text-surface-300">
           ¿No tienes cuenta aún?
-          <a class="text-primary font-medium ml-1 cursor-pointer hover:text-primary-emphasis">
+          <router-link to="/register" class="text-primary font-medium ml-1 cursor-pointer hover:text-primary-emphasis">
             Registrate!
-          </a>
+          </router-link>
         </div>
       </div>
 
@@ -34,13 +34,17 @@
         </div>
 
         <!-- ERROR -->
-        <small v-if="error" class="text-red-500">
-          Credenciales incorrectas
-        </small>
+        <div v-if="error"
+          class="flex items-center gap-2 text-red-500 bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800/30">
+          <i class="pi pi-exclamation-triangle text-lg"></i>
+          <span class="text-sm md:text-base font-medium">
+            El correo o la contraseña no son correctos.
+          </span>
+        </div>
 
-        <!-- REMEMBER + FORGOT -->
-        <div class="flex justify-end">
-          <a class="text-primary font-medium cursor-pointer hover:text-primary-emphasis">
+        <!-- FORGOT -->
+        <div class="flex justify-center md:justify-end">
+          <a class="text-primary font-medium cursor-pointer hover:text-primary-emphasis text-center md:text-right">
             ¿Has olvidado tu contraseña?
           </a>
         </div>
@@ -65,7 +69,6 @@ import { authService } from '@/api/auth'
 // STATE
 const email = ref('')
 const password = ref('')
-const remember = ref(true)
 const error = ref(false)
 const loading = ref(false)
 
@@ -77,12 +80,7 @@ const login = async () => {
   loading.value = true
 
   try {
-    await authService.login(email.value, password.value)
-
-    if (remember.value) {
-      // opcional: guardar token o flag
-    }
-
+    await authService.login(email.value.trim(), password.value)
     router.push('/home')
   } catch (e) {
     error.value = true

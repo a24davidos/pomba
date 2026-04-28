@@ -1,5 +1,6 @@
 import axios from 'axios';
 import router from '@/router'
+import { authService } from './auth';
 
 const api = axios.create({
   baseURL: 'http://localhost/api/',
@@ -44,9 +45,7 @@ api.interceptors.response.use(
       } catch (refreshError) {
         //Borrar prod
         console.error("Sesión expirada. Redirigiendo...");
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        router.push('/login')
+        authService.logout()
         return Promise.reject(refreshError);
       }
     }

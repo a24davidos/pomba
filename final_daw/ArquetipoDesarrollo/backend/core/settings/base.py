@@ -36,10 +36,10 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    # El token de acceso caducará en solo 1 minuto
+    # El token de acceso caducará en solo 1 dia
     'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
     
-    # El token de refresco durará 5 minutos
+    # El token de refresco durará 2 días
     'REFRESH_TOKEN_LIFETIME': timedelta(days=2),
     #Esto genera un nuevo refresh cada vez
     'ROTATE_REFRESH_TOKENS': True,
