@@ -31,6 +31,5 @@ onMounted(() => {
     :icon="isDark ? 'pi pi-moon' : 'pi pi-sun'"
     class="p-button-rounded p-button-text"
     @click="toggleDark"
-    v-tooltip="isDark ? 'Modo oscuro' : 'Modo claro'"
   />
 </template>
