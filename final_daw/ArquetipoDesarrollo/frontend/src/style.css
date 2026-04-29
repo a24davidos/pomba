@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "tailwindcss-primeui";
 
+
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: InterVariable, sans-serif;
   --font-sans--font-feature-settings: "cv02", "cv03", "cv04", "cv11";
@@ -20,11 +23,7 @@
   --animate-infinite-scroll: infinite-scroll 40s linear infinite;
 
   @keyframes infinite-scroll {
-      from {
-          transform: translateX(0);
-      }
-      to {
-          transform: translateX(-100%);
-      }
+    from { transform: translateX(0); }
+    to { transform: translateX(-100%); }
   }
 }

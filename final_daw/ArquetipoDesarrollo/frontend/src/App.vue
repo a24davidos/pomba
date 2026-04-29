@@ -1,17 +1,14 @@
 <template>
-  <router-view />
+  <div>
+    <!-- Toggle global -->
+    <div class="fixed top-4 right-4 z-50">
+      <ThemeToggle />
+    </div>
+
+    <router-view />
+  </div>
 </template>
 
-<script>
-export default {
-  setup () {
-    
-
-    return {}
-  }
-}
+<script setup>
+import ThemeToggle from '@/components/ThemeToggle.vue'
 </script>
-
-<style lang="scss" scoped>
-
-</style>
