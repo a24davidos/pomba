@@ -21,7 +21,9 @@
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
+    "@primevue/auto-import-resolver": "^4.5.5",
     "@vitejs/plugin-vue": "^6.0.5",
+    "unplugin-vue-components": "^32.0.0",
     "vite": "^8.0.4"
   }
 }
