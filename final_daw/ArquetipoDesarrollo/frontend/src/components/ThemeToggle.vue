@@ -22,14 +22,15 @@ onMounted(() => {
     isDark.value = true;
     applyTheme(true);
   }
-
 });
 </script>
 
 <template>
-  <Button
-    :icon="isDark ? 'pi pi-moon' : 'pi pi-sun'"
-    class="p-button-rounded p-button-text"
-    @click="toggleDark"
-  />
+<Button
+  :icon="isDark ? 'pi pi-moon' : 'pi pi-sun'"
+  rounded
+  text
+  class="hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors duration-300"
+  @click="toggleDark"
+/>
 </template>
