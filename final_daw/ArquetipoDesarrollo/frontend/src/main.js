@@ -5,29 +5,26 @@ import './api/api.js'
 import router from './router.js'
 
 import PrimeVue from 'primevue/config';
-import Aura from '@primeuix/themes/aura'; // Asegúrate de haber hecho: npm install @primeuix/themes
-import Button from "primevue/button"
-
-// Importante para los iconos de los Blocks
+import Aura from '@primeuix/themes/aura'; 
 import 'primeicons/primeicons.css' 
+import Button from "primevue/button"
+import Tooltip from 'primevue/tooltip'
 
 const app = createApp(App)
 
 app.use(PrimeVue, {
-    theme: {
-        preset: Aura,
-        options: {
-            prefix: 'p',
-            darkModeSelector: 'system',
-            // ESTO ES CLAVE:
-            cssLayer: {
-                name: 'primevue',
-                order: 'theme, base, primevue, utilities' 
-            }
-        }
+  theme: {
+    preset: Aura,
+    options: {
+      darkModeSelector: '.dark', // 👈 CLAVE
+      cssLayer: {
+        name: 'primevue',
+        order: 'theme, base, primevue, utilities'
+      }
     }
-});
+  }
+})
 
-app.component('Button', Button); // Nota: PrimeBlocks ya suelen traer sus propios imports, pero esto está bien.
+app.directive('tooltip', Tooltip)
 app.use(router)
 app.mount('#app')
