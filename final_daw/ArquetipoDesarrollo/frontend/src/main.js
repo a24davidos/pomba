@@ -4,6 +4,7 @@ import App from './App.vue'
 import './api/api.js'
 import router from './router.js'
 
+
 import PrimeVue from 'primevue/config';
 import Aura from '@primeuix/themes/aura'; 
 import 'primeicons/primeicons.css' 
@@ -17,10 +18,10 @@ app.use(PrimeVue, {
     preset: Aura,
     options: {
       darkModeSelector: '.dark', // 👈 CLAVE
-      cssLayer: {
-        name: 'primevue',
-        order: 'theme, base, primevue, utilities'
-      }
+      // cssLayer: {
+      //   name: 'primevue',
+      //   // order: 'theme, base, primevue, utilities'
+      // }
     }
   }
 })
