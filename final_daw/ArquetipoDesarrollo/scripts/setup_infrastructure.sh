@@ -1,58 +1,75 @@
 #!/bin/bash
-# scripts/setup_infrastructure.sh
+set -e
 
-echo "⏳ Agardando por Garage..."
+echo "⏳ Esperando a que Garage (v2) estea dispoñible..."
+
+# 1. Esperar a que o servizo responda
 until docker exec garage /garage status > /dev/null 2>&1; do
   sleep 2
 done
 
-# 1. Obter ID do nodo
-NODE_ID=$(docker exec garage /garage status | grep -A 1 "ID" | tail -n 1 | awk '{print $1}')
+echo "✅ Garage responde"
 
-# 2. Configurar Layout
-# Na v0.8.2+, o comando apply necesita o número de versión (neste caso a 1)
-if ! docker exec garage /garage layout show | grep -q "$NODE_ID"; then
-    echo "🏗️ Configurando layout de Garage (dc1, capacity 1)..."
-    docker exec garage /garage layout assign -z dc1 -c 1 "$NODE_ID"
-    # Aplicamos a versión 1 especificamente
-    docker exec garage /garage layout apply --version 1
-    
-    echo "📡 Agardando a que o nodo se estabilice..."
-    sleep 5
+# 2. Obter Node ID real
+echo "📌 Obteniendo Node ID..."
+NODE_ID=$(docker exec garage /garage node id | grep -Eo '[a-f0-9]{64}' | head -n 1)
+
+if [ -z "$NODE_ID" ]; then
+  echo "❌ Non se puido obter Node ID"
+  exit 1
 fi
 
-# 3. Xestionar chaves (key new)
+echo "📌 Node ID: $NODE_ID"
+
+# 3. Aplicar layout
+echo "🏗️ Configurando layout..."
+
+# Asignar nodo
+docker exec garage /garage layout assign "$NODE_ID" --zone dc1 --capacity 1G
+
+# Buscamos a versión na liña de suxestión de comando "apply --version X"
+LAYOUT_VERSION=$(docker exec garage /garage layout show | grep "apply --version" | grep -Eo '[0-9]+' | tail -n 1)
+
+if [ -z "$LAYOUT_VERSION" ] || [ "$LAYOUT_VERSION" = "0" ]; then
+    LAYOUT_VERSION="1"
+fi
+
+echo "📌 Aplicando layout version: $LAYOUT_VERSION"
+# Si el layout ya se aplicó antes, este comando simplemente no hará nada o confirmará, 
+# pero le ponemos un || true por si acaso para que el script no se detenga si ya está aplicado.
+docker exec garage /garage layout apply --version "$LAYOUT_VERSION" || echo "Layout ya aplicado."
+
+echo "⏳ Esperando estabilización..."
+sleep 3
+
+# 4. Crear key se non existe
 if ! docker exec garage /garage key list | grep -q "django-key"; then
-    echo "🔑 Xerando nova API Key..."
-    # Reintentamos se hai problemas de quórum ao principio
-    NEW_KEY=""
-    while [ -z "$NEW_KEY" ]; do
-        NEW_KEY=$(docker exec garage /garage key new --name django-key 2>/dev/null)
-        if [ -z "$NEW_KEY" ]; then
-            echo "🔄 Agardando quórum para crear chaves..."
-            sleep 2
-        fi
-    done
-    
-    ACCESS_KEY=$(echo "$NEW_KEY" | grep "Key ID:" | awk '{print $3}')
-    SECRET_KEY=$(echo "$NEW_KEY" | grep "Secret key:" | awk '{print $3}')
-    
-    ENV_PATH="./Docker/.env"
-    
-    if [ ! -z "$ACCESS_KEY" ]; then
-        sed -i "" "s/^AWS_ACCESS_KEY_ID=.*/AWS_ACCESS_KEY_ID=$ACCESS_KEY/" "$ENV_PATH"
-        sed -i "" "s/^AWS_SECRET_ACCESS_KEY=.*/AWS_SECRET_ACCESS_KEY=$SECRET_KEY/" "$ENV_PATH"
-        echo "✅ Chaves gardadas en $ENV_PATH"
-    fi
+  echo "🔑 Creando API key..."
+
+  KEY_INFO=$(docker exec garage /garage key create django-key)
+  
+  ACCESS_KEY=$(echo "$KEY_INFO" | grep "Key ID:" | awk '{print $3}')
+  SECRET_KEY=$(echo "$KEY_INFO" | grep "Secret key:" | awk '{print $3}')
+
+  ENV_PATH="./Docker/.env"
+
+  echo "🔐 Gardando credenciais en $ENV_PATH..."
+  # NOTA: sed -i "" es para macOS, sino usar sin ""
+  sed -i "" "s/^AWS_ACCESS_KEY_ID=.*/AWS_ACCESS_KEY_ID=$ACCESS_KEY/" "$ENV_PATH"
+  sed -i "" "s/^AWS_SECRET_ACCESS_KEY=.*/AWS_SECRET_ACCESS_KEY=$SECRET_KEY/" "$ENV_PATH"
+
+  echo "✅ Keys gardadas"
 fi
 
-# 4. Crear bucket e dar permisos
-echo "📦 Asegurando bucket e permisos..."
-# Agardamos quórum para o bucket
-until docker exec garage /garage bucket create mi-bucket-app > /dev/null 2>&1; do
-  sleep 2
-done
+# 5. Crear bucket
+echo "📦 Creando bucket..."
+# En v2, si el bucket ya existe, el comando falla, así que comprobamos antes
+if ! docker exec garage /garage bucket list | grep -q "mi-bucket-app"; then
+    docker exec garage /garage bucket create mi-bucket-app
+fi
 
-docker exec garage /garage bucket allow --read --write mi-bucket-app --key django-key
+echo "🔐 Aplicando permisos..."
 
-echo "🚀 Infraestrutura de Garage lista e conectada!"
+docker exec garage /garage bucket allow mi-bucket-app --key django-key --read --write
+
+echo "🚀 Garage v2 listo e operativo"
