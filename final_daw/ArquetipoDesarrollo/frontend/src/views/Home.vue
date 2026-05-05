@@ -1,21 +1,10 @@
 <template>
-  <div class="landing">
-    <h1>Bienvenido a mi App</h1>
-    <p>Esta es la página de inicio para probar el router.</p>
-    
-    <div class="actions">
-      <router-link to="/login">Ir al Login</router-link>
-    </div>
-  </div>
+  <section>
+    <h1 class="text-2xl font-bold mb-4 ">Mis archivos</h1>
+    <!-- aQUI tengo que meter la tabla!!! -->
+  </section>
 </template>
 
-<style scoped>
-.landing {
-  text-align: center;
-  margin-top: 50px;
-  font-family: sans-serif;
-}
-.actions {
-  margin-top: 20px;
-}
-</style>
+<script setup>
+import ThemeToggle from '@/components/ThemeToggle.vue'
+</script>

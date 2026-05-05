@@ -14,15 +14,20 @@ export const authService = {
         return data;
     }, 
 
+    async register(email, password, nombre, apellidos) {
+        const response = await api.post('user/register/', {email, password, nombre, apellidos})
+        return response
+    },
+
     logout() {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
 
         //Redirigimos al usuario para que no se quede en una zona privada
-        window.location.href = '/login';
+        router.push('/')
     },
 
-    // Para comprobar si el usuario está dentro (útil para mostrar/ocultar botones) REVISAR SI ESTO ES TABIEN QUE ME RAYA UN POCO. ¡El user puede modificar el tempo del token y falsear el sistema???
+    // Para comprobar si el usuario está dentro (útil para mostrar/ocultar botones) 
     isLoggedIn() {
         const token = localStorage.getItem('access_token');
         if (!token) return false;

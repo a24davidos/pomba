@@ -1,106 +1,154 @@
 <template>
-  <div>
-    <h1 class="title">Login in the page</h1>
-    <form action class="form" @submit.prevent="login">
-      <label class="form-label" for="email">Email:</label>
-      <input v-model="email" class="form-input" type="email" id="email" required placeholder="Email" />
-      <label class="form-label" for="password">Password:</label>
-      <input v-model="password" class="form-input" type="password" id="password" placeholder="Password" />
-      <span v-show="error" style="color: red;"> Algo metiste mal </span>
-      <input class="form-submit" type="submit" value="Login" />
-    </form>
+  <div class="fixed top-4 right-4">
+    <ThemeToggle />
+  </div>
+  <div class="bg-surface-50 dark:bg-surface-950 px-6 py-20 md:px-20 lg:px-80">
+    <div class="bg-surface-0 dark:bg-surface-900 p-8 md:p-12 shadow-sm rounded-2xl w-full max-w-md mx-auto flex flex-col gap-8">
+      
+      <!-- HEADER -->
+      <div class="flex flex-col items-center gap-4">
+        <h1 class="text-2xl font-semibold text-center text-surface-900 dark:text-surface-0">
+          Bienvenido
+        </h1>
+        <p class="text-center text-surface-600 dark:text-surface-300">
+          ¿No tienes cuenta?
+          <router-link to="/register" class="text-primary font-medium ml-1 cursor-pointer hover:text-primary-emphasis">
+            Regístrate
+          </router-link>
+        </p>
+      </div>
+
+      <!-- FORM -->
+      <Form 
+        v-slot="$form" 
+        :resolver="resolver" 
+        :initialValues="initialValues" 
+        @submit="onFormSubmit"
+        class="flex flex-col gap-6 w-full"
+      >
+
+        <!-- EMAIL -->
+        <div class="flex flex-col gap-2">
+          <label class="font-medium">Correo electrónico</label>
+          <InputText 
+            name="email" 
+            type="email" 
+            placeholder="Tu correo electrónico"
+            class="w-full px-3 py-2 shadow-sm rounded-lg" 
+          />
+          <Message v-if="$form.email?.invalid" severity="error" variant="simple" size="small">
+            {{ $form.email.error.message }}
+          </Message>
+        </div>
+
+        <!-- PASSWORD -->
+        <div class="flex flex-col gap-2">
+          <label class="font-medium">Contraseña</label>
+          <Password 
+            name="password" 
+            placeholder="Tu contraseña" 
+            :toggleMask="true" 
+            :feedback="false" 
+            input-class="w-full!" 
+            fluid
+          />
+          <Message v-if="$form.password?.invalid" severity="error" variant="simple" size="small">
+            {{ $form.password.error.message }}
+          </Message>
+        </div>
+
+        <!-- ERROR API -->
+        <div v-if="apiError" class="flex items-center gap-2 text-red-500 bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800/30">
+          <i class="pi pi-exclamation-triangle text-lg"></i>
+          <span class="text-sm md:text-base font-medium">
+            {{ apiErrorMessage }}
+          </span>
+        </div>
+
+        <!-- FORGOT -->
+        <div class="flex justify-center md:justify-end">
+          <a class="text-primary font-medium cursor-pointer hover:text-primary-emphasis text-center md:text-right">
+            ¿Has olvidado tu contraseña?
+          </a>
+        </div>
+
+        <!-- SUBMIT -->
+        <Button 
+          type="submit" 
+          label="Entrar" 
+          icon="pi pi-user" 
+          class="w-full py-2 rounded-lg"
+          :loading="loading" 
+        />
+      </Form>
+
+    </div>
   </div>
 </template>
 
-<script>
-  import { authService } from "@/api/auth";
+<script setup>
+import { ref } from "vue";
+import { Form } from "@primevue/forms";
+import InputText from "primevue/inputtext";
+import Password from "primevue/password";
+import Button from "primevue/button";
+import Message from "primevue/message";
+import { authService } from "@/api/auth";
+import { getErrorMessage } from "@/utils/errors";
+import { useRouter } from "vue-router";
 
-  export default {
-    data() {
-      return {
-        email: "",
-        password: "",
-        error: false
-      }
-    },
-    methods: {
-      async login() {
-        try {
-          const response = await authService.login(this.email, this.password);
+const router = useRouter();
 
-          // Mandamos al usuario a la Home
-          this.$router.push('/home');
+const loading = ref(false);
+const apiError = ref(false);
+const apiErrorMessage = ref("");
 
-        } catch (error) {
-          //Si hay problema mostramos un mensaje
-          this.error = true
+const initialValues = ref({
+  email: "",
+  password: "",
+});
 
-        }
-      }
-    }
-  };
+// VALIDACIÓN
+const resolver = ({ values }) => {
+  const errors = {};
+
+  if (!values.email) {
+    errors.email = [{ message: "El correo es obligatorio." }];
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) {
+    errors.email = [{ message: "Formato de correo inválido." }];
+  }
+
+  if (!values.password) {
+    errors.password = [{ message: "La contraseña es obligatoria." }];
+  }
+
+  return { errors };
+};
+
+// SUBMIT
+const onFormSubmit = async (event) => {
+  if (!event.valid) return;
+
+  loading.value = true;
+  apiError.value = false;
+  apiErrorMessage.value = "";
+
+  const { states } = event;
+
+  try {
+    await authService.login(
+      states.email.value.trim(),
+      states.password.value
+    );
+
+    router.push("/home");
+
+  } catch (error) {
+    apiError.value = true;
+    apiErrorMessage.value = getErrorMessage(error) || 
+      "El correo o la contraseña no son correctos.";
+  } finally {
+    loading.value = false;
+  }
+};
 </script>
-
-<style scoped>
-  .login {
-    padding: 2rem;
-  }
-
-  .title {
-    text-align: center;
-  }
-
-  .form {
-    margin: 3rem auto;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    width: 20%;
-    min-width: 350px;
-    max-width: 100%;
-    background: rgba(19, 35, 47, 0.9);
-    border-radius: 5px;
-    padding: 40px;
-    box-shadow: 0 4px 10px 4px rgba(0, 0, 0, 0.3);
-  }
-
-  .form-label {
-    margin-top: 2rem;
-    color: white;
-    margin-bottom: 0.5rem;
-  }
-
-  /* equivalente a &:first-of-type */
-  .form-label:first-of-type {
-    margin-top: 0rem;
-  }
-
-  .form-input {
-    padding: 10px 15px;
-    background: none;
-    background-image: none;
-    border: 1px solid white;
-    color: white;
-  }
-
-  /* equivalente a &:focus */
-  .form-input:focus {
-    outline: 0;
-    border-color: #1ab188;
-  }
-
-  .form-submit {
-    background: #1ab188;
-    border: none;
-    color: white;
-    margin-top: 3rem;
-    padding: 1rem 0;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-
-  /* equivalente a &:hover */
-  .form-submit:hover {
-    background: #0b9185;
-  }
-</style>
