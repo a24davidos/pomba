@@ -63,7 +63,7 @@ services:
 
   # PostgreSQL
   db:
-    image: postgres:15
+    image: postgres:16
     container_name: postgres_db
     # Usamos el archivo de variables que definiste
     env_file: .env  
