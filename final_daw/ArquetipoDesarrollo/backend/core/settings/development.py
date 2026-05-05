@@ -1,12 +1,12 @@
 from .base import *
 import os
 
-# Variables de contorna dende .env (Ajustado al nombre de tu variable)
+# --- VARIABLES DE ENTORNO ---
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'fallback-insecure-key')
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
-ALLOWED_HOSTS = ['*'] # En desarrollo, permitimos todo
+ALLOWED_HOSTS = ['*']
 
-# Database PostgreSQL
+# --- DATABASE (POSTGRESQL) ---
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -18,33 +18,42 @@ DATABASES = {
     }
 }
 
-# Configuración de Elasticsearch
+# --- ELASTICSEARCH ---
 ELASTICSEARCH_DSL = {
     'default': {
-        'hosts': 'http://elasticsearch:9200'
+        'hosts': os.environ.get('ELASTICSEARCH_URL', 'http://elasticsearch:9200')
     },
 }
 
-# Configuración de Garage (S3 Storage)
+# --- CONFIGURACIÓN DE GARAGE (S3 STORAGE PARA MEDIA) ---
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
 AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', 'mi-bucket-app')
-AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL', 'http://garage:3900')
 
-# Forzamos usar S3_ENDPOINT_URL y no el por defecto de Amazon
-AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.garage.localhost:3900"
+# En desarrollo, si accedes desde fuera del contenedor (browser del Mac), 
+# usa http://localhost:3900. Si todo va por Nginx, usa el endpoint del proxy.
+AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL', 'http://localhost:3900')
+
+# Configuración necesaria para Garage v2
+AWS_S3_REGION_NAME = 'garage'
+AWS_S3_SIGNATURE_VERSION = 's3v4'
 AWS_S3_FILE_OVERWRITE = False
-AWS_DEFAULT_ACL = 'public-read'
+AWS_DEFAULT_ACL = None  # Garage v2 prefiere manejar permisos vía bucket allow
 
-# Configuramos para que los archivos multimedia suban a Garage
+# IMPORTANTE: Forzamos el estilo de ruta para evitar problemas de DNS con el nombre del bucket
+AWS_S3_ADDRESSING_STYLE = "path"
+
+# Configuramos para que SOLO los archivos multimedia suban a Garage
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+MEDIA_URL = f'{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/'
 
-# Internationalization
+# --- STATIC FILES (LOCAL EN DESARROLLO) ---
+# Se mantienen en el sistema de archivos local, servidos por Nginx
+STATIC_URL = '/static_backend/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# --- INTERNATIONALIZATION ---
 LANGUAGE_CODE = 'es-ES'
 TIME_ZONE = 'Europe/Madrid'
 USE_I18N = True
 USE_TZ = True
-
-# Static files (Estáticos se sirven localmente en desarrollo)
-STATIC_URL = '/static_backend/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
