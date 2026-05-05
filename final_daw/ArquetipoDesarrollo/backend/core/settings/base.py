@@ -23,6 +23,7 @@ THIRD_PARTY_APPS = [
     'corsheaders',
     'storages',
     'django_elasticsearch_dsl',
+    "drf_standardized_errors",
 ]
 
 
@@ -33,13 +34,18 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+     "EXCEPTION_HANDLER": ('drf_standardized_errors.handler.exception_handler'),
 }
 
+# Para excepciones que no se manejan
+DRF_STANDARDIZED_ERRORS = {"ENABLE_IN_DEBUG_FOR_UNHANDLED_EXCEPTIONS": True}
+
+
 SIMPLE_JWT = {
-    # El token de acceso caducará en solo 1 minuto
+    # El token de acceso caducará en solo 1 dia
     'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
     
-    # El token de refresco durará 5 minutos
+    # El token de refresco durará 2 días
     'REFRESH_TOKEN_LIFETIME': timedelta(days=2),
     #Esto genera un nuevo refresh cada vez
     'ROTATE_REFRESH_TOKENS': True,
@@ -89,18 +95,25 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
-# Password validation
+
 AUTH_PASSWORD_VALIDATORS = [
     {
+        # Evita que la clave contenga el nombre o email del usuario
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
     },
     {
+        #Minimo de tamaño de la conraseña
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': 8,
+        }
     },
     {
+        # Evita claves comunes como "123456" o "password"
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
     },
     {
+        # Evita que la clave sea 100% numérica
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]

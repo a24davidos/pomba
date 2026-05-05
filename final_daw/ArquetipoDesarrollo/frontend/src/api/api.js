@@ -6,23 +6,40 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+const publicRoutes = [
+  'auth/obtain_token/',
+  'auth/refresh_token/',
+  'user/register/'
+]
+
 // 1. INTERCEPTOR DE PETICIÓN: Añadir el token automáticamente
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  // Comprobamos si la URL actual coincide con alguna ruta pública
+  const isPublic = publicRoutes.some(route => config.url?.includes(route));
+
+  if (!isPublic) {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
+
   return config;
 });
+
 
 // 2. INTERCEPTOR DE RESPUESTA: Manejar el refresh
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    const url = originalRequest.url || '';
+
+    //Si es publica no queremos que reintente nada
+    const isPublic = publicRoutes.some(route => url.includes(route));
 
     // Si es 401 y no es un reintento
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && !isPublic) {
       originalRequest._retry = true;
 
       try {
@@ -42,11 +59,11 @@ api.interceptors.response.use(
         return api(originalRequest);
 
       } catch (refreshError) {
-        //Borrar prod
+        //Borrar en prod
         console.error("Sesión expirada. Redirigiendo...");
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
-        router.push('/login')
+        router.push('/'); 
         return Promise.reject(refreshError);
       }
     }
