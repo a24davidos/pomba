@@ -1,6 +1,6 @@
 <template>
   <section>
-    <h1 class="text-2xl font-bold mb-4">Mis archivos</h1>
+    <h1 class="text-2xl font-bold mb-4 ">Mis archivos</h1>
     <!-- aQUI tengo que meter la tabla!!! -->
   </section>
 </template>
