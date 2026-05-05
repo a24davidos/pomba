@@ -5,14 +5,14 @@
     <header class="col-span-1 lg:col-span-2 flex gap-2 items-center px-6 z-10">
 
       <!-- LOGO -->
-      <div class="flex items-center lg:w-[236px] shrink-0">
+      <div class="flex items-center lg:w-59 shrink-0">
         <div class="w-9 h-9 bg-primary rounded-lg flex items-center justify-center">
           <i class="pi pi-cloud text-primary-contrast text-lg"></i>
         </div>
       </div>
 
       <!-- BUSCADOR --> 
-      <div class="flex-1 flex justify-start">
+      <div class="flex-1 flex justify-start ml-1">
         <div class="w-full max-w-4xl">
           <IconField class="w-full group">
             <InputIcon>
@@ -21,7 +21,7 @@
 
             <InputText
               placeholder="Buscar"
-              class="w-full py-3 !px-12 !border-none 
+              class="w-full py-3 px-12 border-none 
                     rounded-3xl transition-all duration-200
                     bg-surface-150 dark:bg-surface-800
                     hover:bg-surface-200 dark:hover:bg-surface-700
@@ -46,7 +46,7 @@
     </aside>
 
     <!-- MAIN -->
-    <main class="p-6 overflow-x-hidden bg-surface-0 dark:bg-surface-900 rounded-2xl">
+    <main class="p-6 overflow-x-hidden bg-surface-0 dark:bg-surface-900 rounded-2xl ml-3 mr-3">
       <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         <router-view />
       </div>
