@@ -43,7 +43,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.email
 
 
-class Archivo(models.Model):
+class Item(models.Model):
     class Tipo(models.TextChoices):
         ARCHIVO = 'archivo', 'Archivo'
         CARPETA = 'carpeta', 'Carpeta'
@@ -63,7 +63,7 @@ class Archivo(models.Model):
     usuario = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='archivos'
+        related_name='items'
     )
 
     # --- STORAGE (SOLO ARCHIVOS) ---
@@ -111,13 +111,13 @@ class Archivo(models.Model):
 
         indexes = [
             #Indice para los archivos de cada usuario
-            models.Index(fields=['usuario'], name='idx_archivos_usuario'),
+            models.Index(fields=['usuario'], name='idx_items_usuario'),
             #Indice para los hijos de la carpeta
-            models.Index(fields=['padre'], name='idx_archivo_padre'),
+            models.Index(fields=['padre'], name='idx_items_padre'),
             # Índice para filtrar archivos/carpetas por usuario y carpeta
-            models.Index(fields=['usuario', 'padre'], name='idx_archivo_usuario_padre'),
+            models.Index(fields=['usuario', 'padre'], name='idx_items_usuario_padre'),
             #Indice papelera
-            models.Index(fields=['usuario', 'eliminado'], name='idx_usuario_eliminado')
+            models.Index(fields=['usuario', 'eliminado'], name='idx_items_eliminado')
         ]
 
 #NOTA PARA MI MISMO, CUANDO QUIERA CONSEGUIR LAS RUTAS, HACER UNA UNICA LLAMADA A LA BD, CARGAR EN MEMORIA Y DE MANERA RECURSIVA CONSEGUIR LOS PARENTS ETCCC
