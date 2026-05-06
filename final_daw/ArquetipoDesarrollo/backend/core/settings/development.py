@@ -45,7 +45,7 @@ AWS_S3_ADDRESSING_STYLE = "path"
 
 # Configuramos para que SOLO los archivos multimedia suban a Garage
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-MEDIA_URL = f'{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/'
+MEDIA_URL = "/media/"
 
 # --- STATIC FILES (LOCAL EN DESARROLLO) ---
 # Se mantienen en el sistema de archivos local, servidos por Nginx
