@@ -51,6 +51,9 @@ class Item(models.Model):
             self.mime_type = None
         super().save(*args, **kwargs)
 
+    def __str__(self):
+        return f"{self.nombre}"
+
     class Meta:
         constraints = [
             # Regla para cuando hay un padre (subcarpetas)

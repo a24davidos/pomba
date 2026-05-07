@@ -5,7 +5,7 @@ from .models import Item
 
 class ItemSerializer(serializers.ModelSerializer):
     tiene_hijos = serializers.SerializerMethodField()
-
+    #Aquí debería de formatear el tamaño con una función o eso se hace en el front?? Supongo que como es un atributo calculado será aquí
     class Meta:
         model = Item
         fields = [
