@@ -39,7 +39,7 @@ class Item(models.Model):
     eliminado = models.BooleanField(default=False)
     fecha_eliminado = models.DateTimeField(null=True, blank=True)
 
-    # --- TIMESTAMPS ---
+    # --- Datetime ---
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_modificacion = models.DateTimeField(auto_now=True)
 
