@@ -22,6 +22,18 @@ class ItemSerializer(serializers.ModelSerializer):
     def get_tiene_hijos(self, obj):
         return getattr(obj, 'tiene_hijos', False)
 
+    def validate_tipo(self, value):
+        "Si alguien manda mayusculas los controlamos"
+        value = value.lower()
+
+        "Evitamos que alguien pueda cambiar el tipo de nuestra carpeta"
+        if self.instance and self.instance.tipo != value:
+            raise serializers.ValidationError(
+                "No se puede cambiar el tipo."
+            )
+
+        return value
+
     def validate_padre(self, value):
         if value is not None:
             if value.tipo != Item.Tipo.CARPETA:

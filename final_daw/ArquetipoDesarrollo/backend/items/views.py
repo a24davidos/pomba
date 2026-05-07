@@ -54,6 +54,6 @@ class ItemViewSet(viewsets.ModelViewSet):
                 usuario=self.request.user,
                 ruta=f"uploads/{self.request.user.id}/{file_obj.name}", # Un ejemplo de ruta
                 tamano_bytes=file_obj.size,
-                mime_type=file_obj.content_type
+                mime_type=file_obj.content_type,
                 metadatos={"placeholder": "placeholder"}
             )
