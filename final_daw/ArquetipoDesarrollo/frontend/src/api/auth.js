@@ -1,5 +1,5 @@
 import api from './api';
-
+import { useRouter } from "vue-router";
 
 const setTokens = (data) => {
   localStorage.setItem('access_token', data.access);
@@ -7,7 +7,7 @@ const setTokens = (data) => {
 };
 
 export const authService = {
-
+    
     async login(email, password) {
         const { data } = await api.post('auth/obtain_token/', { email, password });
         setTokens(data);
@@ -22,9 +22,6 @@ export const authService = {
     logout() {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
-
-        //Redirigimos al usuario para que no se quede en una zona privada
-        router.push('/')
     },
 
     // Para comprobar si el usuario está dentro (útil para mostrar/ocultar botones) 
