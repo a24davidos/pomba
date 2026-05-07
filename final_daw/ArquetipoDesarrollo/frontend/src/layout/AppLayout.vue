@@ -36,7 +36,8 @@
       <!-- USUARIO Y TOOGLE -->
       <div class="flex items-center gap-3 shrink-0">
         <ThemeToggle />
-        <Button icon="pi pi-user" rounded severity="secondary" variant="text" />
+        <Button icon="pi pi-user" rounded severity="secondary" variant="text" @click="toggle" />
+        <Menu ref="menu" :model="items" popup />
       </div>
     </header>
 
@@ -54,3 +55,36 @@
 
   </div>
 </template>
+
+<script setup>
+
+
+import { ref } from 'vue'
+import { authService } from "@/api/auth";
+import { useRouter } from 'vue-router'
+
+
+const router = useRouter()
+
+const menu = ref()
+
+const items = ref([
+  { label: 'Perfil', icon: 'pi pi-user'},
+  { label: 'Ajustes', icon: 'pi pi-cog' },
+  { separator: true },
+  {
+    label: 'Logout',
+    icon: 'pi pi-sign-out',
+    command: () => logout()
+  }
+])
+
+const toggle = (event) => {
+  menu.value.toggle(event)
+}
+
+const logout = () => {
+  authService.logout()
+  router.push('/')
+}
+</script>
