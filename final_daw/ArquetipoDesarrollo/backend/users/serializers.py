@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core import exceptions
 
+
 User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
@@ -27,3 +28,11 @@ class UserSerializer(serializers.ModelSerializer):
         
         return user
     
+# class ItemSerializer(serializers.ModelSerializer):
+
+#     class Meta:
+#         model = Item
+#         fields = [
+#             'id', 'nombre', 'tipo', 'padre', 'usuario', 'ruta', 'tamano_bytes', 'mime_type', 'metadatos', 'favorito', 'eliminado', 'fecha_eliminado', 'fecha_creacion', 'fecha_modificacion'
+#         ]
+        
