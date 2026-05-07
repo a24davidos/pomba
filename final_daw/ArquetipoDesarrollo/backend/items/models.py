@@ -2,7 +2,6 @@ from django.db import models
 from users.models import User
 
 # Create your models here.
-
 class Item(models.Model):
     class Tipo(models.TextChoices):
         ARCHIVO = 'archivo', 'Archivo'
@@ -50,7 +49,6 @@ class Item(models.Model):
             self.ruta = None
             self.tamano_bytes = None
             self.mime_type = None
-        
         super().save(*args, **kwargs)
 
     class Meta:

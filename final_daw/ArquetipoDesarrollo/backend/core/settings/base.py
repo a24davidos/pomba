@@ -120,3 +120,6 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 AUTH_USER_MODEL = 'users.User'
+
+# SESSION_COOKIE_SECURE = True: Asegura que la cookie de sesión solo se envíe por conexiones cifradas.
+# CSRF_COOKIE_SECURE = True: Lo mismo para el token contra ataques maliciosos.

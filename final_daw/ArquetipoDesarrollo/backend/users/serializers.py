@@ -28,11 +28,3 @@ class UserSerializer(serializers.ModelSerializer):
         
         return user
     
-# class ItemSerializer(serializers.ModelSerializer):
-
-#     class Meta:
-#         model = Item
-#         fields = [
-#             'id', 'nombre', 'tipo', 'padre', 'usuario', 'ruta', 'tamano_bytes', 'mime_type', 'metadatos', 'favorito', 'eliminado', 'fecha_eliminado', 'fecha_creacion', 'fecha_modificacion'
-#         ]
-        
