@@ -45,11 +45,12 @@ class Item(models.Model):
 
     # Controlo que al crear una carpeta no se guarden, rutas, ni tamaño de bytes, ni el mime
     def save(self, *args, **kwargs):
-        self.full_clean()  # Mirar si esto esta bien
+
         if self.tipo == self.Tipo.CARPETA:
             self.ruta = None
             self.tamano_bytes = None
             self.mime_type = None
+
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -81,6 +82,3 @@ class Item(models.Model):
             # Indice papelera
             models.Index(fields=["usuario", "eliminado"], name="idx_items_eliminado"),
         ]
-
-
-# NOTA PARA MI MISMO, CUANDO QUIERA CONSEGUIR LAS RUTAS, HACER UNA UNICA LLAMADA A LA BD, CARGAR EN MEMORIA Y DE MANERA RECURSIVA CONSEGUIR LOS PARENTS ETCCC

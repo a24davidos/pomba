@@ -13,9 +13,7 @@ from .services import ItemService
 class ItemViewSet(viewsets.ModelViewSet):
     serializer_class = ItemSerializer
 
-    # -------------------
-    # QUERYSET (seguridad + navegación)
-    # -------------------
+    # Filtramos que el usuario solo pueda trabajar sobre el queryset que le pertenece
     def get_queryset(self):
         hijos = Item.objects.filter(padre=OuterRef("pk"), eliminado=False)
 
@@ -35,13 +33,11 @@ class ItemViewSet(viewsets.ModelViewSet):
 
         return qs.annotate(tiene_hijos=Exists(hijos)).order_by("-tipo", "nombre")
 
-    # -------------------
     # CREATE (delegado a service)
-    # -------------------
     def perform_create(self, serializer):
         file_obj = self.request.FILES.get("file")
 
-        item = ItemService.create_item(
+        item = ItemService.crear_item(
             user=self.request.user, data=serializer.validated_data, file=file_obj
         )
 
