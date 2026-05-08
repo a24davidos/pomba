@@ -2,6 +2,7 @@ from rest_framework import viewsets
 from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 
 from django.db.models import Exists, OuterRef
 
@@ -35,12 +36,15 @@ class ItemViewSet(viewsets.ModelViewSet):
 
     # CREATE (delegado a service)
     def perform_create(self, serializer):
-        file_obj = self.request.FILES.get("file")
+        # Cogemos el archivo de la request
+        blob = self.request.FILES.get("file")
 
+        # Se lo pasamos al service como 'fichero'
         item = ItemService.crear_item(
-            user=self.request.user, data=serializer.validated_data, file=file_obj
+            usuario=self.request.user, 
+            datos=serializer.validated_data, 
+            fichero=blob 
         )
-
         serializer.instance = item
 
     # =========================================================
@@ -52,6 +56,10 @@ class ItemViewSet(viewsets.ModelViewSet):
         """
         TODO: mover item a otra carpeta
         """
+        #Sino uso self, estaría ignorando el queryset, y haciendo una consulta directa a la base de datos por lo tanto me saltaría toda protección posible
+        item = self.get_object()
+
+
         pass
 
     @action(detail=True, methods=["post"])

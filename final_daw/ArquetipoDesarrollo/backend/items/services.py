@@ -18,7 +18,7 @@ class ItemService:
 
     # Aplicamos reglas de almacenamietno
     @staticmethod
-    def aplicar_reglas_almacenamiento(item, usuario=None, archivo=None):
+    def aplicar_reglas_almacenamiento(item, usuario=None, fichero=None):
 
         # Si es carpeta, no tiene datos de archivo
         if item.tipo == Item.Tipo.CARPETA:
@@ -28,12 +28,12 @@ class ItemService:
             return item
 
         # Si es archivo, debe existir archivo
-        if not archivo:
+        if not fichero:
             raise ValidationError("Archivo requerido")
 
-        item.ruta = f"uploads/{usuario.id}/{archivo.name}"
-        item.tamano_bytes = archivo.size
-        item.mime_type = archivo.content_type
+        item.ruta = f"uploads/{usuario.id}/{fichero.name}"
+        item.tamano_bytes = fichero.size
+        item.mime_type = fichero.content_type
 
         return item
 
@@ -48,20 +48,21 @@ class ItemService:
     # CREAR ITEM
 
     @staticmethod
-    def crear_item(usuario, datos, archivo=None):
+    def crear_item(usuario, datos, fichero=None): 
+        
+        # Creamos la instancia del modelo con los datos del formulario
+        nuevo_item = Item(usuario=usuario, **datos)
 
-        item = Item(usuario=usuario, **datos)
-
-        item = ItemService.aplicar_reglas_almacenamiento(
-            item=item,
+        # Pasamos el archivo  a las reglas de almacenamiento
+        nuevo_item = ItemService.aplicar_reglas_almacenamiento(
+            item=nuevo_item,
             usuario=usuario,
-            archivo=archivo
+            fichero=fichero # Aquí le pasas el objeto que recibiste arriba
         )
-
-        return ItemService.guardar_item(item)
+        
+        return ItemService.guardar_item(nuevo_item)
 
     # MOVER ITEM
-
     @staticmethod
     def mover_item(item, nueva_carpeta_padre):
 

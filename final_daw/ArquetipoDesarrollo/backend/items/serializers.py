@@ -28,9 +28,13 @@ class ItemSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "usuario",
-            "fecha_creacion",
+            "ruta",
             "tamano_bytes",
             "mime_type",
+            "eliminado",
+            "fecha_eliminado",
+            "fecha_creacion",
+            "fecha_modificacion",
         ]
 
     # Hacemos una validación basica (Esto solo se llama cuando se hace post, put o patch)
