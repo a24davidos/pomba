@@ -1,59 +1,87 @@
 from rest_framework import viewsets
 from rest_framework.exceptions import ValidationError
+from rest_framework.decorators import action
+from rest_framework.response import Response
+
 from django.db.models import Exists, OuterRef
+
 from .models import Item
 from .serializers import ItemSerializer
+from .services import ItemService
+
 
 class ItemViewSet(viewsets.ModelViewSet):
     serializer_class = ItemSerializer
 
+    # -------------------
+    # QUERYSET (seguridad + navegación)
+    # -------------------
     def get_queryset(self):
-        # 1. Subquery para el atributo temporal
-        hijos = Item.objects.filter(padre=OuterRef('pk'), eliminado=False)
+        hijos = Item.objects.filter(padre=OuterRef("pk"), eliminado=False)
 
-        # 2. Filtro de seguridad base
         qs = Item.objects.filter(usuario=self.request.user)
 
-        # 3. Capturamos los parámetros
-        carpeta_id = self.request.query_params.get('carpeta') 
-        es_papelera = self.request.query_params.get('papelera') == 'true'
+        carpeta_id = self.request.query_params.get("carpeta")
+        es_papelera = self.request.query_params.get("papelera") == "true"
 
-        # 4. Lógica de navegación
         if es_papelera:
             qs = qs.filter(eliminado=True)
+
         elif carpeta_id:
-            # Filtramos por el ID de la carpeta que nos pasa Vue
             qs = qs.filter(padre_id=carpeta_id, eliminado=False)
+
         else:
-            # Si no hay carpeta_id, estamos en el nivel raíz
             qs = qs.filter(padre__isnull=True, eliminado=False)
 
-        return qs.annotate(tiene_hijos=Exists(hijos)).order_by('-tipo', 'nombre')
+        return qs.annotate(tiene_hijos=Exists(hijos)).order_by("-tipo", "nombre")
 
+    # -------------------
+    # CREATE (delegado a service)
+    # -------------------
     def perform_create(self, serializer):
-        tipo = serializer.validated_data.get('tipo')
+        file_obj = self.request.FILES.get("file")
 
-        # CASO CARPETA
-        if tipo == Item.Tipo.CARPETA:
-            serializer.save(
-                usuario=self.request.user,
-                ruta=None,
-                tamano_bytes=None,
-                mime_type=None
-            )
-        
-        # CASO ARCHIVO
-        else:
-            file_obj = self.request.FILES.get('file')
-            if not file_obj:
-                raise ValidationError({"file": "No se ha proporcionado ningún archivo físico."})
+        item = ItemService.create_item(
+            user=self.request.user, data=serializer.validated_data, file=file_obj
+        )
 
-            # Luego aqui tendre que cambiar cosas para trabajar con Garage
-            # Por ahora guardamos los metadatos del archivo como un placeholder
-            serializer.save(
-                usuario=self.request.user,
-                ruta=f"uploads/{self.request.user.id}/{file_obj.name}", # Un ejemplo de ruta
-                tamano_bytes=file_obj.size,
-                mime_type=file_obj.content_type,
-                metadatos={"placeholder": "placeholder"}
-            )
+        serializer.instance = item
+
+    # =========================================================
+    # ACTIONS
+    # =========================================================
+
+    @action(detail=True, methods=["post"])
+    def move(self, request, pk=None):
+        """
+        TODO: mover item a otra carpeta
+        """
+        pass
+
+    @action(detail=True, methods=["post"])
+    def rename(self, request, pk=None):
+        """
+        TODO: renombrar item
+        """
+        pass
+
+    @action(detail=True, methods=["post"])
+    def favorite(self, request, pk=None):
+        """
+        TODO: marcar/desmarcar favorito
+        """
+        pass
+
+    @action(detail=True, methods=["post"])
+    def trash(self, request, pk=None):
+        """
+        TODO: mover a papelera
+        """
+        pass
+
+    @action(detail=True, methods=["post"])
+    def restore(self, request, pk=None):
+        """
+        TODO: restaurar de papelera
+        """
+        pass
