@@ -53,4 +53,13 @@
     outline: none !important;
     box-shadow: none !important;
   }
+
+  .p-datatable-mask{
+    position: absolute;
+    top: 5vh;
+  }
+  .p-overlay-mask {
+  background: transparent !important;
+    color: var(--p-button-primary-background);
+} 
 }
