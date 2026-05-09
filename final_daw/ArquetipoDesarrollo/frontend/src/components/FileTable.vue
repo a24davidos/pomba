@@ -9,23 +9,23 @@
       class="w-full"
     >
 
-      <Column selectionMode="multiple" headerStyle="width: 3rem" />
+    <Column selectionMode="multiple" headerStyle="width: 3rem" />
 
-      <Column field="nombre" header="Nombre">
-        <template #body="{ data }">
+    <Column field="nombre" header="Nombre">
+      <template #body="{ data }">
+        <div
+          @click="abrirItem(data)"
+          class="flex items-center cursor-pointer hover:underline w-full"
+        >
           <i
             :class="data.tipo === 'carpeta' ? 'pi pi-folder' : 'pi pi-file'"
             class="mr-2"
           ></i>
 
-          <span
-            @click="openItem(data)"
-            class="cursor-pointer hover:underline"
-          >
-            {{ data.nombre }}
-          </span>
-        </template>
-      </Column>
+          <span>{{ data.nombre }}</span>
+        </div>
+      </template>
+    </Column>
 
       <Column field="tipo" header="Tipo" />
       <Column field="tamano_bytes" header="Tamaño" />
@@ -58,7 +58,7 @@ const emit = defineEmits(['open'])
 
 
 
-function openItem(item) {
+function abrirItem(item) {
   emit('open', item)
 }
 </script>

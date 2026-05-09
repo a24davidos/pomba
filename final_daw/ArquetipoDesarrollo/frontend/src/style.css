@@ -58,8 +58,5 @@
     position: absolute;
     top: 5vh;
   }
-  .p-overlay-mask {
-  background: transparent !important;
-    color: var(--p-button-primary-background);
-} 
+
 }
