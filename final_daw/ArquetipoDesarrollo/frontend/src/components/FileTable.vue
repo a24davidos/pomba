@@ -1,15 +1,14 @@
 <template>
   <section class="w-full">
-    <h2 class="text-xl font-bold mb-4">{{ title }}</h2>
 
     <DataTable
       :value="items"
-      v-model:selection="selectedItems"
+      v-model:selection="selected"
       dataKey="id"
       selectionMode="multiple"
       class="w-full"
-      
     >
+
       <Column selectionMode="multiple" headerStyle="width: 3rem" />
 
       <Column field="nombre" header="Nombre">
@@ -19,7 +18,10 @@
             class="mr-2"
           ></i>
 
-          <span @click="abrirItem(data)" class="cursor-pointer hover:underline">
+          <span
+            @click="openItem(data)"
+            class="cursor-pointer hover:underline"
+          >
             {{ data.nombre }}
           </span>
         </template>
@@ -27,32 +29,40 @@
 
       <Column field="tipo" header="Tipo" />
       <Column field="tamano_bytes" header="Tamaño" />
+
       <Column field="fecha_modificacion" header="Modificado">
         <template #body="{ data }">
         {{ formatDate(data.fecha_modificacion) }}
         </template>
       </Column>
     </DataTable>
+
   </section>
 </template>
 
 <script setup>
-import { ref, defineEmits } from 'vue'
+import { computed } from 'vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
-import { formatDate } from '../utils/date';
+import { formatDate } from '../utils/date'
 
-const emit = defineEmits(['open'])
-
-defineProps({
+const props = defineProps({
   items: { type: Array, default: () => [] },
-  title: { type: String, default: 'Mi Unidad' },
-  loading: { type: Boolean, default: true },
+  loading: Boolean,
+  selected: { type: Array, default: () => [] }
 })
 
-const selectedItems = ref([])
+const emit = defineEmits(['open', 'update:selected'])
 
-function abrirItem(item) {
-    emit('open', item) 
+//puente v-model
+const selected = computed({
+  get: () => props.selected,
+  set: (val) => {
+    console.log('Items seleccionados actualmente:', val)
+    emit('update:selected', val)}
+})
+
+function openItem(item) {
+  emit('open', item)
 }
 </script>
