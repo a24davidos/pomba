@@ -17,9 +17,10 @@ const modalNuevaCarpeta = ref(false)
 const nombreNuevaCarpeta = ref('')
 
 // --- BREADCRUMB ---
+// El home siempre es fijo
 const breadcrumbInicio = ref({
   icon: 'pi pi-home',
-  command: () => resetearBreadcrumb()
+  command: () => cargarItems(null) // Carga la raíz
 })
 
 const rutaBreadcrumb = ref([])
@@ -33,12 +34,23 @@ async function cargarItems(carpetaId = null) {
       params: carpetaId ? { carpeta: carpetaId } : {}
     })
 
-    items.value = response.data
+    // Recogemos los Items que nos devuelve el servidor
+    items.value = response.data.items 
     carpetaActualId.value = carpetaId
+
+    // Actualizamos el breadcrumb automáticamente con lo que devuelve el servidor
+    const breadcrumbData = response.data.breadcrumb || []
+    
+    rutaBreadcrumb.value = breadcrumbData
+      .filter(nodo => nodo.id !== null) // Evitamos duplicar el "Inicio" que ya está en :home
+      .map(nodo => ({
+        label: nodo.label,
+        id: nodo.id,
+        command: () => cargarItems(nodo.id) // Navegación directa
+      }))
 
   } catch (error) {
     console.error("Error cargando items:", error)
-
   } finally {
     cargandoTabla.value = false
     itemsSeleccionados.value = []
@@ -49,30 +61,7 @@ async function cargarItems(carpetaId = null) {
 
 function abrirCarpeta(carpeta) {
   if (carpeta.tipo !== 'carpeta') return
-
-  rutaBreadcrumb.value.push({
-    label: carpeta.nombre,
-    id: carpeta.id,
-    command: () => navegarBreadcrumb(carpeta.id)
-  })
-
   cargarItems(carpeta.id)
-}
-
-function navegarBreadcrumb(carpetaId) {
-  const index = rutaBreadcrumb.value.findIndex(r => r.id === carpetaId)
-
-  if (index !== -1) {
-    rutaBreadcrumb.value = rutaBreadcrumb.value.slice(0, index + 1)
-  }
-
-  cargarItems(carpetaId)
-}
-
-function resetearBreadcrumb() {
-  rutaBreadcrumb.value = []
-  cargarItems(null)
-  carpetaActualId.value = null
 }
 
 // --- MODAL CREAR CARPETA ---
