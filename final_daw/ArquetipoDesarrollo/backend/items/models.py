@@ -12,7 +12,11 @@ class Item(models.Model):
     nombre = models.CharField(max_length=255)
     tipo = models.CharField(max_length=10, choices=Tipo.choices)
     padre = models.ForeignKey(
-        "self", on_delete=models.CASCADE, null=True, blank=True, related_name="hijos"
+        "self", 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True, 
+        related_name="hijos",
     )
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name="items")
 
@@ -36,10 +40,10 @@ class Item(models.Model):
 
     def clean(self):
         # Lógica anti-ciclos: no puedes ser padre de ti mismo ni de tus hijos
-        if self.padre and self.id:
+        if self.padre and self.pk:
             actual = self.padre
             while actual:
-                if actual.id == self.id:
+                if actual.id == self.pk:
                     raise ValidationError("No puedes crear ciclos en la jerarquía.")
                 actual = actual.padre
 
@@ -72,13 +76,9 @@ class Item(models.Model):
             ),
         ]
 
-        indexes = [
-            # Indice para los archivos de cada usuario
-            models.Index(fields=["usuario"], name="idx_items_usuario"),
-            # Indice para los hijos de la carpeta
-            models.Index(fields=["padre"], name="idx_items_padre"),
-            # Índice para filtrar archivos/carpetas por usuario y carpeta
-            models.Index(fields=["usuario", "padre"], name="idx_items_usuario_padre"),
-            # Indice papelera
-            models.Index(fields=["usuario", "eliminado"], name="idx_items_eliminado"),
-        ]
+    indexes = [
+        #Para entrar en carpetas (Lo que más usará el usuario)
+        models.Index(fields=["usuario", "padre", "eliminado"], name="idx_items_navegacion"),
+
+        models.Index(fields=["usuario", "eliminado"], name="idx_items_papelera"),
+    ]

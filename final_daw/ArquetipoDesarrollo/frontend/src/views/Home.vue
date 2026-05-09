@@ -90,13 +90,21 @@ async function crearCarpeta() {
 
 // --- SOFT DELETE ---
 async function eliminar() {
-  const id = itemsSeleccionados.value[0].id
-  try{
-    await api.delete(`items/${id}/`)
-    cargarItems(carpetaActualId.value)
-  }catch (error){
-    console.error("Error:", error)
-  }
+
+  const seleccion = [itemsSeleccionados.value].flat();
+  const idsParaEliminar = seleccion.map(item => item.id);
+
+  if (idsParaEliminar.length === 0) return;
+
+  const url = "items/trash/";
+
+  try {
+      await api.post(url, { ids: idsParaEliminar });
+      cargarItems(carpetaActualId.value);
+      itemsSeleccionados.value = []; 
+    } catch (error) {
+      console.error("Error al mover a la papelera:", error);
+    }
 }
 
 

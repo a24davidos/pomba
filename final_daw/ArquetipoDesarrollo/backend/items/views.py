@@ -1,9 +1,9 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-
+from django.utils import timezone
 from django.db.models import Exists, OuterRef
 
 from .models import Item
@@ -16,12 +16,13 @@ class ItemViewSet(viewsets.ModelViewSet):
 
     # Filtramos que el usuario solo pueda trabajar sobre el queryset que le pertenece
     def get_queryset(self):
+        request = self.request
         hijos = Item.objects.filter(padre=OuterRef("pk"), eliminado=False)
 
         qs = Item.objects.filter(usuario=self.request.user)
 
-        carpeta_id = self.request.query_params.get("carpeta")
-        es_papelera = self.request.query_params.get("papelera") == "true"
+        carpeta_id = request.query_params.get("carpeta")
+        es_papelera = request.query_params.get("papelera") == "true"
 
         if es_papelera:
             qs = qs.filter(eliminado=True)
@@ -66,12 +67,12 @@ class ItemViewSet(viewsets.ModelViewSet):
             curr = actual
             while curr is not None:
                 nodos_padre.append({
-                    "id": curr.id,
+                    "id": curr.pk,
                     "label": curr.nombre
                 })
                 curr = curr.padre
             
-            # Invertimos para que vaya de Raíz -> Carpeta Actual
+            # Invertimos para que vaya de la Raíz a la Carpeta Actual
             ruta.extend(reversed(nodos_padre))
             
         except (Item.DoesNotExist, ValueError):
@@ -122,12 +123,44 @@ class ItemViewSet(viewsets.ModelViewSet):
         """
         pass
 
-    @action(detail=True, methods=["post"])
-    def trash(self, request, pk=None):
+    def _obtener_ids_recursivos(self, padre_id, lista_ids):
         """
-        TODO: mover a papelera
+        Cogemos solo los IDs de todos los descendientes.
         """
-        pass
+        # Obtenemos los IDs de los hijos directos
+        hijos_ids = Item.objects.filter(padre_id=padre_id).values_list('id', flat=True)
+        
+        for h_id in hijos_ids:
+            lista_ids.append(h_id)
+            self._obtener_ids_recursivos(h_id, lista_ids)
+
+    @action(detail=False, methods=["post"])
+    def trash(self, request):
+        """
+        Función para mandar a la papelera (Soft Delete)
+        """
+        data_ids = request.data.get("ids", [])
+        
+        if not data_ids:
+            return Response({"detail": "No se proporcionaron IDs."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        ahora = timezone.now()
+        ids_totales = []
+
+        # Ejecutamos la recursión para cada ID recibido para capturar hijos
+        for root_id in data_ids:
+            ids_totales.append(root_id)
+            self._obtener_ids_recursivos(root_id, ids_totales)
+
+        # Actualizamos todo de un golpe (usamos set para no repetir IDs)
+        filas_afectadas = Item.objects.filter(id__in=set(ids_totales)).update(
+            eliminado=True, 
+            fecha_eliminado=ahora
+        )
+
+        return Response({
+            "detail": f"Se han movido {filas_afectadas} elementos a la papelera (incluyendo subcarpetas/archivos)."
+        }, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["post"])
     def restore(self, request, pk=None):
