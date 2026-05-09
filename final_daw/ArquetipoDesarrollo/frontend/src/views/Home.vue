@@ -87,10 +87,25 @@ async function crearCarpeta() {
   }
 }
 
+
+// --- SOFT DELETE ---
+async function eliminar() {
+  const id = itemsSeleccionados.value[0].id
+  try{
+    await api.delete(`items/${id}/`)
+    cargarItems(carpetaActualId.value)
+  }catch (error){
+    console.error("Error:", error)
+  }
+}
+
+
 // --- WATCHERS ---
 watch(itemsSeleccionados, (nuevoValor) => {
   console.log('items seleccionados:', nuevoValor)
 }, { deep: true })
+
+
 
 // --- INIT ---
 onMounted(() => {
@@ -107,6 +122,12 @@ onMounted(() => {
       @click="modalNuevaCarpeta = true" 
     />
     
+    <Button
+      icon="pi pi-trash"
+      label="Eliminar"
+      @click="eliminar"
+    />
+
     <!-- Breadcrumb sincronizado con rutaBreadcrumb -->
     <Breadcrumb 
       :home="breadcrumbInicio" 
