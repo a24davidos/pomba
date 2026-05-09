@@ -5,22 +5,33 @@ import api from '@/api/api'
 
 const datos = ref([])
 const loading = ref(false)
+const currentFolder = ref()
 
-
-async function loadItems() {
+async function loadItems(folderId = null) {
   loading.value = true
-  const res = await api.get('items/')  
-  loading.value = false
+
+
+  const res = await api.get('items/', {
+    params: folderId ? { carpeta: folderId } : {}
+  })
+
   datos.value = res.data
-  console.log(datos.value);
-  
-  
+  loading.value = false
+
+  currentFolder.value = folderId
 }
 
+function handlerAbrir(item) {
+  if (item.tipo === 'carpeta') {
+    loadItems(item.id)
+  }
+}
+
+//Al cargar por primera vez cargamos la tabla
 onMounted(loadItems)
 
 </script>
 
 <template>
-  <FileTable :items="datos" :loading="loading"/>
+  <FileTable :items="datos" :loading="loading" @open="handlerAbrir"/>
 </template>

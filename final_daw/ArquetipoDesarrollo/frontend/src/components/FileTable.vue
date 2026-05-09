@@ -19,7 +19,7 @@
             class="mr-2"
           ></i>
 
-          <span @click="openItem(data)" class="cursor-pointer hover:underline">
+          <span @click="abrirItem(data)" class="cursor-pointer hover:underline">
             {{ data.nombre }}
           </span>
         </template>
@@ -37,11 +37,12 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, defineEmits } from 'vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import { formatDate } from '../utils/date';
 
+const emit = defineEmits(['open'])
 
 defineProps({
   items: { type: Array, default: () => [] },
@@ -51,7 +52,7 @@ defineProps({
 
 const selectedItems = ref([])
 
-function openItem(item) {
-  console.log('Abrir:', item)
+function abrirItem(item) {
+    emit('open', item) 
 }
 </script>
