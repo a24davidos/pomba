@@ -3,7 +3,7 @@
 
     <DataTable
       :value="items"
-      v-model:selection="selected"
+      v-model:selection="seleccionados"
       dataKey="id"
       selectionMode="multiple"
       class="w-full"
@@ -49,18 +49,14 @@ import { formatDate } from '../utils/date'
 const props = defineProps({
   items: { type: Array, default: () => [] },
   loading: Boolean,
-  selected: { type: Array, default: () => [] }
 })
+//Uso este modelo para tener comunicación bidireccional
+const seleccionados = defineModel('seleccionados', { default: [] })
 
-const emit = defineEmits(['open', 'update:selected'])
 
-//puente v-model
-const selected = computed({
-  get: () => props.selected,
-  set: (val) => {
-    console.log('Items seleccionados actualmente:', val)
-    emit('update:selected', val)}
-})
+const emit = defineEmits(['open'])
+
+
 
 function openItem(item) {
   emit('open', item)
