@@ -3,143 +3,169 @@ import { onMounted, ref, watch } from 'vue'
 import FileTable from '../components/FileTable.vue'
 import Breadcrumb from 'primevue/breadcrumb'
 import Button from 'primevue/button'
-import api from '@/api/api'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
+import api from '@/api/api'
 
 // --- ESTADO ---
-const isTableLoading = ref(false)
-const fileList = ref([]) //Datos que vienen del backend
-const currentFolderId = ref(null) 
-const selectedFiles = ref([]) 
+const cargandoTabla = ref(false)
+const items = ref([])
+const carpetaActualId = ref(null)
+const itemsSeleccionados = ref([])
+
 const modalNuevaCarpeta = ref(false)
-const nuevoNombreCarpeta = ref('')
+const nombreNuevaCarpeta = ref('')
 
 // --- BREADCRUMB ---
-const breadcrumbHome = ref({
+const breadcrumbInicio = ref({
   icon: 'pi pi-home',
-  command: () => resetBreadcrumb()
+  command: () => resetearBreadcrumb()
 })
-const breadcrumbSteps = ref([])
 
-// --- ACCIONES ---
+const rutaBreadcrumb = ref([])
 
-// Carga los archivos de la API
-async function fetchFiles(folderId = null) {
-  isTableLoading.value = true
+// --- CARGA DE ITEMS ---
+async function cargarItems(carpetaId = null) {
+  cargandoTabla.value = true
+
   try {
     const response = await api.get('items/', {
-      params: folderId ? { carpeta: folderId } : {}
+      params: carpetaId ? { carpeta: carpetaId } : {}
     })
-    fileList.value = response.data
-    currentFolderId.value = folderId
+
+    items.value = response.data
+    carpetaActualId.value = carpetaId
+
   } catch (error) {
-    console.error("Error cargando archivos:", error)
+    console.error("Error cargando items:", error)
+
   } finally {
-    isTableLoading.value = false
-    selectedFiles.value = [] // Reset selección al navegar
+    cargandoTabla.value = false
+    itemsSeleccionados.value = []
   }
 }
 
-// Navegar a una carpeta (desde la tabla)
-function navegarCarpeta(folder) {
-  if (folder.tipo !== 'carpeta') return
+// --- NAVEGACIÓN ---
 
-  // Añadimos el paso al breadcrumb
-  breadcrumbSteps.value.push({
-    label: folder.nombre,
-    id: folder.id,
-    command: () => navegarBreadcrumb(folder.id)
+function abrirCarpeta(carpeta) {
+  if (carpeta.tipo !== 'carpeta') return
+
+  rutaBreadcrumb.value.push({
+    label: carpeta.nombre,
+    id: carpeta.id,
+    command: () => navegarBreadcrumb(carpeta.id)
   })
 
-  fetchFiles(folder.id)
+  cargarItems(carpeta.id)
 }
 
-// Navegar desde el breadcrumb
-function navegarBreadcrumb(folderId) {  
-  const index = breadcrumbSteps.value.findIndex(step => step.id === folderId)
+function navegarBreadcrumb(carpetaId) {
+  const index = rutaBreadcrumb.value.findIndex(r => r.id === carpetaId)
 
   if (index !== -1) {
-    // Cortamos el camino del breadcrumb hasta la carpeta clickeada
-    breadcrumbSteps.value = breadcrumbSteps.value.slice(0, index + 1)
+    rutaBreadcrumb.value = rutaBreadcrumb.value.slice(0, index + 1)
   }
-  fetchFiles(folderId)
+
+  cargarItems(carpetaId)
 }
 
-function resetBreadcrumb() {
-  breadcrumbSteps.value = []
-  fetchFiles(null)
+function resetearBreadcrumb() {
+  rutaBreadcrumb.value = []
+  cargarItems(null)
+  carpetaActualId.value = null
 }
 
-
-// --- WATCHERS ---
-watch(selectedFiles, (newList) => {
-  console.log('Archivos seleccionados:', newList)
-}, { deep: true })
-
-
-async function crearCarpeta(){
-  try {
-    const response = await api.post('items/', {
-      nombre: nuevoNombreCarpeta.value,
-      tipo: "carpeta",
-      padre: currentFolderId.value
-    })
-    cerrarModalNuevaCarpeta()
-
-    fetchFiles(currentFolderId.value)
-
-  } catch (error) {
-    console.error("Error cargando archivos:", error)
-  }
-}
+// --- MODAL CREAR CARPETA ---
 
 function cerrarModalNuevaCarpeta() {
-  modalNuevaCarpeta.value = false 
-  nuevoNombreCarpeta.value = ''
+  modalNuevaCarpeta.value = false
+  nombreNuevaCarpeta.value = ''
 }
 
+async function crearCarpeta() {
+  try {
+    await api.post('items/', {
+      nombre: nombreNuevaCarpeta.value,
+      tipo: "carpeta",
+      padre: carpetaActualId.value
+    })
+
+    cerrarModalNuevaCarpeta()
+    cargarItems(carpetaActualId.value)
+
+  } catch (error) {
+    console.error("Error creando carpeta:", error)
+  }
+}
+
+// --- WATCHERS ---
+watch(itemsSeleccionados, (nuevoValor) => {
+  console.log('items seleccionados:', nuevoValor)
+}, { deep: true })
+
+// --- INIT ---
 onMounted(() => {
-  fetchFiles()
+  cargarItems()
 })
 </script>
 
 <template>
   <div class="p-4 space-y-4">
-    <Button icon="pi pi-folder" label="Nueva carpeta" @click="modalNuevaCarpeta = true" />
+    <!-- Botón para abrir el modal -->
+    <Button 
+      icon="pi pi-folder" 
+      label="Nueva carpeta" 
+      @click="modalNuevaCarpeta = true" 
+    />
     
-    <Breadcrumb :home="breadcrumbHome" :model="breadcrumbSteps" />
-
-    <FileTable
-      :items="fileList"
-      :loading="isTableLoading" 
-      v-model:seleccionados="selectedFiles"
-      @open="navegarCarpeta"
+    <!-- Breadcrumb sincronizado con rutaBreadcrumb -->
+    <Breadcrumb 
+      :home="breadcrumbInicio" 
+      :model="rutaBreadcrumb" 
     />
 
-    <Dialog 
-    v-model:visible="modalNuevaCarpeta" 
-    header="Nueva Carpeta" 
-    :style="{ width: '25rem' }" 
-    modal
-    :draggable="false"
-    :closable="false"
-    >
-    <div class="flex flex-col gap-2 mb-4">
-      <InputText 
-        id="folderName" 
-        v-model="nuevoNombreCarpeta" 
-        class="flex-auto" 
-        autocomplete="off" 
-        placeholder="Introduzca el nombre de la carpeta"
-        @keyup.enter="crearCarpeta" 
-      />
-    </div>
+    <!-- Tabla de items sincronizada -->
+    <FileTable
+      :items="items"
+      :loading="cargandoTabla" 
+      v-model:seleccionados="itemsSeleccionados"
+      @open="abrirCarpeta"
+    />
 
-    <template #footer>
-      <Button label="Cancelar" text severity="secondary" @click="cerrarModalNuevaCarpeta" />
-      <Button label="Crear" @click="crearCarpeta" :disabled="!nuevoNombreCarpeta.trim()" />
-    </template>
+    <!-- Modal de Nueva Carpeta -->
+    <Dialog 
+      v-model:visible="modalNuevaCarpeta" 
+      header="Nueva Carpeta" 
+      :style="{ width: '25rem' }" 
+      modal
+      :draggable="false"
+      :closable="false"
+    >
+      <div class="flex flex-col gap-2 mb-4">
+        <InputText 
+          id="folderName" 
+          v-model="nombreNuevaCarpeta" 
+          class="flex-auto" 
+          autocomplete="off" 
+          placeholder="Introduzca el nombre de la carpeta"
+          @keyup.enter="crearCarpeta" 
+          autofocus
+        />
+      </div>
+
+      <template #footer>
+        <Button 
+          label="Cancelar" 
+          text 
+          severity="secondary" 
+          @click="cerrarModalNuevaCarpeta" 
+        />
+        <Button 
+          label="Crear" 
+          @click="crearCarpeta" 
+          :disabled="!nombreNuevaCarpeta.trim()" 
+        />
+      </template>
     </Dialog>
   </div>
 </template>
