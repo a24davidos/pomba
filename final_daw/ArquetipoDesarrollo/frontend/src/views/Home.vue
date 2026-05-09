@@ -1,8 +1,9 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref , watch } from 'vue'
 import FileTable from '../components/FileTable.vue'
 import Breadcrumb from 'primevue/breadcrumb'
 import api from '@/api/api'
+
 
 const loading = ref(false)
 const datos = ref([])
@@ -66,6 +67,10 @@ function goHome() {
   loadItems(null)
 }
 
+watch(selectedItems, (nuevoValor) => {
+  console.log('La selección ha cambiado:', nuevoValor);
+}, { deep: true }); 
+
 onMounted(() => {
   loadItems()
 })
@@ -77,7 +82,7 @@ onMounted(() => {
   <FileTable
     :items="datos"
     :loading="loading" 
-    v-model:selected="selectedItems"
+    v-model:seleccionados="selectedItems"
     @open="handlerAbrir"
   />
 </template>
