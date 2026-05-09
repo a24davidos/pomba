@@ -33,6 +33,52 @@ class ItemViewSet(viewsets.ModelViewSet):
             qs = qs.filter(padre__isnull=True, eliminado=False)
 
         return qs.annotate(tiene_hijos=Exists(hijos)).order_by("-tipo", "nombre")
+    
+    def list(self, request, *args, **kwargs):
+        """
+        Sobrescribimos list para devolver los items Y el breadcrumb en una sola petición.
+        """
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        
+        carpeta_id = request.query_params.get("carpeta")
+        
+        return Response({
+            "items": serializer.data,
+            "breadcrumb": self._get_breadcrumb(carpeta_id)
+        })
+
+    def _get_breadcrumb(self, carpeta_id):
+        """
+        Calcula la ruta desde la raíz hasta la carpeta actual.
+        """
+        ruta = [{"id": None, "label": "Inicio"}]
+        
+        if not carpeta_id:
+            return ruta
+
+        try:
+            # Buscamos la carpeta actual del usuario
+            actual = Item.objects.get(id=carpeta_id, usuario=self.request.user, tipo='carpeta')
+            nodos_padre = []
+            
+            # Bucle para subir por el árbol de carpetas
+            curr = actual
+            while curr is not None:
+                nodos_padre.append({
+                    "id": curr.id,
+                    "label": curr.nombre
+                })
+                curr = curr.padre
+            
+            # Invertimos para que vaya de Raíz -> Carpeta Actual
+            ruta.extend(reversed(nodos_padre))
+            
+        except (Item.DoesNotExist, ValueError):
+            # Si el ID no existe o es inválido, devolvemos solo el Inicio
+            pass
+            
+        return ruta
 
     # CREATE (delegado a service)
     def perform_create(self, serializer):
