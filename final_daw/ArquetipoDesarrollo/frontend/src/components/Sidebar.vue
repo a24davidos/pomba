@@ -32,7 +32,6 @@ const router = useRouter();
 const active = computed(() => route.params.view || 'drive');
 
 const items = [
-  { key: "home", label: "Página principal", icon: "pi pi-home" },
   { key: "drive", label: "Mi unidad", icon: "pi pi-folder" },
   { key: "fav", label: "Favoritos", icon: "pi pi-star" },
   { key: "recent", label: "Reciente", icon: "pi pi-clock" },
