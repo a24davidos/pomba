@@ -64,7 +64,6 @@ async function cargarItems(carpetaId = null) {
   //Obtenemos la configuración de esa vista
   const config = CONFIGURACION_VISTAS[vistaActual] || CONFIGURACION_VISTAS.drive;
 
-  //
   const parametros = {
     ...config.paramsBase, // Copiamos los filtros base (papelera, fav, etc.)
     carpeta: carpetaId    // Añadimos la carpeta si existe
@@ -137,6 +136,22 @@ async function eliminar() {
     }
 }
 
+async function marcarFavoritos() {
+  const seleccion = [itemsSeleccionados.value].flat();
+  const ids = seleccion.map(item => item.id);
+
+  if (ids.length === 0) return;
+
+  const url = "items/favorite/"
+
+  try{
+    await api.post(url, {ids:ids})
+    itemsSeleccionados.value = []
+  } catch (error){
+    console.error("Error al marcar como favorito", error)
+  }
+
+}
 
 // --- WATCHERS ---
 watch(itemsSeleccionados, (nuevoValor) => {
@@ -169,6 +184,11 @@ onMounted(() => {
       @click="eliminar"
     />
 
+    <Button
+      icon="pi pi-star"
+      label="Marcar Favorito"
+      @click="marcarFavoritos"
+    />
     <!-- Breadcrumb sincronizado con rutaBreadcrumb -->
     <Breadcrumb 
       :home="breadcrumbInicio" 

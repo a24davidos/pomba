@@ -97,12 +97,30 @@ class ItemViewSet(viewsets.ModelViewSet):
         """
         pass
 
-    @action(detail=True, methods=["post"])
-    def favorite(self, request, pk=None):
+    @action(detail=False, methods=["post"])
+    def favorite(self, request):
         """
-        TODO: marcar/desmarcar favorito
+        Función para marcar como favorito
         """
-        pass
+        ids = request.data.get("ids", [])
+
+        if not ids:
+            return Response(
+                {"detail": "No se han enviado elementos."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            ItemService.marcar_favorito(
+                ids=ids,
+                usuario=request.user
+            )
+            return Response({
+                "detail": "Se ha marcado correctamente como favorito"
+            })
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 
     
     @action(detail=False, methods=["post"])
