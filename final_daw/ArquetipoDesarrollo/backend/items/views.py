@@ -27,6 +27,9 @@ class ItemViewSet(viewsets.ModelViewSet):
         if es_papelera:
             qs = qs.filter(eliminado=True)
 
+            if carpeta_id:
+                qs = qs.filter(padre_id=carpeta_id)
+
         elif carpeta_id:
             qs = qs.filter(padre_id=carpeta_id, eliminado=False)
 

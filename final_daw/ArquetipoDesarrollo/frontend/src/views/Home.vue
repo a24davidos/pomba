@@ -1,5 +1,7 @@
 <script setup>
 import { onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from "vue-router";
+
 import FileTable from '../components/FileTable.vue'
 import Breadcrumb from 'primevue/breadcrumb'
 import Button from 'primevue/button'
@@ -16,6 +18,9 @@ const itemsSeleccionados = ref([])
 const modalNuevaCarpeta = ref(false)
 const nombreNuevaCarpeta = ref('')
 
+const route = useRoute();
+const router = useRouter();
+
 // --- BREADCRUMB ---
 // El home siempre es fijo
 const breadcrumbInicio = ref({
@@ -25,35 +30,60 @@ const breadcrumbInicio = ref({
 
 const rutaBreadcrumb = ref([])
 
+
+const CONFIGURACION_VISTAS = {
+  drive: {
+    titulo: 'Mi unidad',
+    paramsBase: { papelera: 'false', favoritos: 'false' }
+  },
+  trash: {
+    titulo: 'Papelera',
+    paramsBase: { papelera: 'true' }
+  },
+}
+
+const actualizarBreadcrumb = (data) => {
+  const breadcrumbData = data || [];
+  
+  rutaBreadcrumb.value = breadcrumbData
+    .filter(nodo => nodo.id !== null) 
+    .map(nodo => ({
+      label: nodo.label,
+      id: nodo.id,
+      command: () => cargarItems(nodo.id) 
+    }));
+};
+
 // --- CARGA DE ITEMS ---
 async function cargarItems(carpetaId = null) {
-  cargandoTabla.value = true
+  cargandoTabla.value = true;
+
+  //Identificamos en qué vista estamos (por defecto 'drive')
+  const vistaActual = route.params.view || 'drive';
+  
+  //Obtenemos la configuración de esa vista
+  const config = CONFIGURACION_VISTAS[vistaActual] || CONFIGURACION_VISTAS.drive;
+
+  //
+  const parametros = {
+    ...config.paramsBase, // Copiamos los filtros base (papelera, fav, etc.)
+    carpeta: carpetaId    // Añadimos la carpeta si existe
+  };
 
   try {
-    const response = await api.get('items/', {
-      params: carpetaId ? { carpeta: carpetaId } : {}
-    })
+    const response = await api.get('items/', { params: parametros });
 
-    // Recogemos los Items que nos devuelve el servidor
-    items.value = response.data.items 
-    carpetaActualId.value = carpetaId
-
-    // Actualizamos el breadcrumb automáticamente con lo que devuelve el servidor
-    const breadcrumbData = response.data.breadcrumb || []
+    items.value = response.data.items;
+    carpetaActualId.value = carpetaId;
     
-    rutaBreadcrumb.value = breadcrumbData
-      .filter(nodo => nodo.id !== null) // Evitamos duplicar el "Inicio" que ya está en :home
-      .map(nodo => ({
-        label: nodo.label,
-        id: nodo.id,
-        command: () => cargarItems(nodo.id) // Navegación directa
-      }))
+    // Actualización del breadcrumb...
+    actualizarBreadcrumb(response.data.breadcrumb);
 
   } catch (error) {
-    console.error("Error cargando items:", error)
+    console.error("Error cargando items:", error);
   } finally {
-    cargandoTabla.value = false
-    itemsSeleccionados.value = []
+    cargandoTabla.value = false;
+    itemsSeleccionados.value = [];
   }
 }
 
@@ -113,7 +143,10 @@ watch(itemsSeleccionados, (nuevoValor) => {
   console.log('items seleccionados:', nuevoValor)
 }, { deep: true })
 
-
+watch(() => route.params.view, () => {
+  // Cuando cambias de sección, reseteamos a la raíz (carpetaId = null)
+  cargarItems(null);
+});
 
 // --- INIT ---
 onMounted(() => {

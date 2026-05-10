@@ -23,9 +23,13 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
+import { useRoute, useRouter } from "vue-router";
 
-const active = ref("home");
+const route = useRoute();
+const router = useRouter();
+
+const active = computed(() => route.params.view || 'drive');
 
 const items = [
   { key: "home", label: "Página principal", icon: "pi pi-home" },
@@ -35,5 +39,9 @@ const items = [
   { key: "trash", label: "Papelera", icon: "pi pi-trash" },
 ];
 
-const setActive = (key) => active.value = key;
+
+const setActive = (key) => {
+  router.push({name: 'home', params: {view: key}})
+}
+
 </script>
