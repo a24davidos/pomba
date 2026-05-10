@@ -17,8 +17,9 @@ const routes = [
     component: AppLayout,
     meta: { requiresAuth: true },
     children: [
+      {path: '', redirec: {name: 'home', params: {view: 'drive'}} },
       {
-        path: '',
+        path: ':view?',
         name: 'home',
         component: Home
       }
