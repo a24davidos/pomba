@@ -5,6 +5,9 @@ from .models import Item
 
 
 class ItemService:
+    # =========================================================
+    # SECCIÓN 1: Validaciones y auxiliares
+    # =========================================================
 
     # Validamos que no se den bucles en el arbol (Por ejemplo mover una carpeta dentro de si misma)
     @staticmethod
@@ -38,6 +41,10 @@ class ItemService:
         item.mime_type = fichero.content_type
 
         return item
+    
+    # =========================================================
+    # SECCIÓN 2: Consultas y navegacion
+    # =========================================================
 
     @staticmethod
     def obtener_breadcrumb(usuario, carpeta_id):
@@ -48,13 +55,12 @@ class ItemService:
             return ruta_base
 
         try:
-            # IMPORTANTE: Asegurarnos de que el ID sea un entero para que coincida con el diccionario
+            # Aseguro que id sea un entero para no tener problema
             id_actual = int(carpeta_id)
         except (ValueError, TypeError):
             return ruta_base
 
         # 1. Traemos TODAS las carpetas (incluidas las eliminadas)
-        # Si no traemos las eliminadas, el breadcrumb fallará dentro de la papelera
         carpetas = Item.objects.filter(
             usuario=usuario, 
             tipo='carpeta'
@@ -86,17 +92,12 @@ class ItemService:
         ruta_base.extend(reversed(nodos_padre))
         return ruta_base
 
-    # GUARDADO CENTRALIZADO
-    @staticmethod
-    def guardar_item(item):
-        item.full_clean()
-        item.save()
-        return item
+    # =========================================================
+    # SECCIÓN 3: Operaciones de escritura (CRUD)
+    # =========================================================
 
-    # CREAR ITEM
     @staticmethod
     def crear_item(usuario, datos, fichero=None): 
-        
         # Creamos la instancia del modelo con los datos del formulario
         nuevo_item = Item(usuario=usuario, **datos)
 
@@ -109,10 +110,8 @@ class ItemService:
         
         return ItemService.guardar_item(nuevo_item)
 
-    # MOVER ITEM
     @staticmethod
     def mover_item(item, nueva_carpeta_padre):
-
         if ItemService.check_cycle(item, nueva_carpeta_padre):
             raise ValidationError("No puedes crear ciclos")
 
@@ -120,6 +119,16 @@ class ItemService:
 
         return ItemService.guardar_item(item)
     
+    @staticmethod
+    def guardar_item(item):
+        item.full_clean()
+        item.save()
+        return item
+
+    # =========================================================
+    # SECCIÓN 4: Gestión de estados (Papelera, Favoritos etc.)
+    # =========================================================
+
     # Método Soft Delete - Mandar a la papelera
     @staticmethod
     def mover_a_papelera(ids, usuario):
