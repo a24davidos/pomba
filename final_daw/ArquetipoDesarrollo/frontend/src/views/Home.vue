@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref, watch } from 'vue'
+import { onMounted, ref, watch, computed } from 'vue'
 import { useRoute, useRouter } from "vue-router";
 
 import FileTable from '../components/FileTable.vue'
@@ -26,9 +26,16 @@ const router = useRouter();
 
 // --- BREADCRUMB ---
 // El home siempre es fijo
-const breadcrumbInicio = ref({
-  icon: 'pi pi-home',
-  command: () => cargarItems(null) // Carga la raíz
+const breadcrumbInicio = computed(() => {
+  const vistaActual = route.params.view || 'drive'
+
+  const config = CONFIGURACION_VISTAS[vistaActual]
+
+  return {
+    label: config?.titulo || 'Mi unidad',
+    icon: config?.icono || 'pi pi-home',
+    command: () => cargarItems(null)
+  }
 })
 
 const rutaBreadcrumb = ref([])
@@ -37,15 +44,26 @@ const rutaBreadcrumb = ref([])
 const CONFIGURACION_VISTAS = {
   drive: {
     titulo: 'Mi unidad',
+    icono: 'pi pi-folder',
     paramsBase: { papelera: 'false', favoritos: 'false' }
   },
+
   trash: {
     titulo: 'Papelera',
+    icono: 'pi pi-trash',
     paramsBase: { papelera: 'true' }
   },
+
   fav: {
-    titulo: 'Mis favoritos',
-    paramsBase: {papelera: 'false', favorito: 'true'}
+    titulo: 'Favoritos',
+    icono: 'pi pi-star',
+    paramsBase: { papelera: 'false', favorito: 'true' }
+  },
+
+  recent: {
+    titulo: 'Recientes',
+    icono: 'pi pi-clock',
+    paramsBase: {}
   }
 }
 
@@ -172,9 +190,7 @@ async function renombrar(){
   if (itemsSeleccionados.value.length !== 1){
     return
   }
-  
   const id = itemsSeleccionados.value[0].id
-
   const url = `items/${id}/renombrar/`
   
   try{
@@ -187,7 +203,6 @@ async function renombrar(){
   }
 
 }
-
 
 // --- WATCHERS ---
 watch(itemsSeleccionados, (nuevoValor) => {
