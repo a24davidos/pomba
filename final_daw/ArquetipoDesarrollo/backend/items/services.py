@@ -167,3 +167,9 @@ class ItemService:
             eliminado=True, 
             fecha_eliminado=ahora
         )
+    
+    @staticmethod
+    def marcar_favorito(ids, usuario):
+        return Item.objects.filter(id__in=ids, usuario=usuario).update(
+            favorito=True
+        )
