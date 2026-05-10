@@ -16,7 +16,10 @@ const carpetaActualId = ref(null)
 const itemsSeleccionados = ref([])
 
 const modalNuevaCarpeta = ref(false)
-const nombreNuevaCarpeta = ref('')
+const inputNuevaCarpeta = ref('')
+
+const modalRenombrar = ref(false)
+const inputRenombrar = ref('')
 
 const route = useRoute();
 const router = useRouter();
@@ -99,20 +102,22 @@ function abrirCarpeta(carpeta) {
 
 // --- MODAL CREAR CARPETA ---
 
-function cerrarModalNuevaCarpeta() {
+function cerrarModal() {
   modalNuevaCarpeta.value = false
-  nombreNuevaCarpeta.value = ''
+  inputNuevaCarpeta.value = ''
+  modalRenombrar.value = false
+  inputRenombrar.value = ""
 }
 
 async function crearCarpeta() {
   try {
     await api.post('items/', {
-      nombre: nombreNuevaCarpeta.value,
+      nombre: inputNuevaCarpeta.value,
       tipo: "carpeta",
       padre: carpetaActualId.value
     })
 
-    cerrarModalNuevaCarpeta()
+    cerrarModal()
     cargarItems(carpetaActualId.value)
 
   } catch (error) {
@@ -156,6 +161,11 @@ async function marcarFavoritos() {
   }
 }
 
+function abirModalRenombrar() {
+  inputRenombrar.value = itemsSeleccionados.value[0].nombre
+  modalRenombrar.value = true
+}
+
 //CONTROLAR AQUI QUE NO SE PUEDA RENOMBRAR MAS DE UNO A LA VEZ, O POR LO MENOS QUE NO DE LA OPCION NOSE SI DEBERÍA DE MANDAR UN MENSAJE O QUE
 async function renombrar(){
   //Solo debería de dejar coger 1!!!!
@@ -168,14 +178,14 @@ async function renombrar(){
   const url = `items/${id}/renombrar/`
   
   try{
-    await api.post(url, {nombre: "probando si va"})
+    await api.post(url, {nombre: inputRenombrar.value})
     cargarItems(carpetaActualId.value);
-    itemsSeleccionados.value = []; 
+    itemsSeleccionados.value = [];
+    cerrarModal()
   } catch (error){
-    console.error("Erorr al renombrar", error)
+    console.error("Error al renombrar", error)
   }
 
-  
 }
 
 
@@ -219,7 +229,7 @@ onMounted(() => {
     <Button
       icon="pi pi-pencil"
       label="renombrar"
-      @click="renombrar"
+      @click="abirModalRenombrar"
     />
     <!-- Breadcrumb sincronizado con rutaBreadcrumb -->
     <Breadcrumb 
@@ -247,7 +257,7 @@ onMounted(() => {
       <div class="flex flex-col gap-2 mb-4">
         <InputText 
           id="folderName" 
-          v-model="nombreNuevaCarpeta" 
+          v-model="inputNuevaCarpeta" 
           class="flex-auto" 
           autocomplete="off" 
           placeholder="Introduzca el nombre de la carpeta"
@@ -261,12 +271,48 @@ onMounted(() => {
           label="Cancelar" 
           text 
           severity="secondary" 
-          @click="cerrarModalNuevaCarpeta" 
+          @click="cerrarModal" 
         />
         <Button 
           label="Crear" 
           @click="crearCarpeta" 
-          :disabled="!nombreNuevaCarpeta.trim()" 
+          :disabled="!inputNuevaCarpeta.trim()" 
+        />
+      </template>
+    </Dialog>
+
+    <!-- Modal Renombrar -->
+    <Dialog 
+      v-model:visible="modalRenombrar" 
+      header="Renombrar" 
+      :style="{ width: '25rem' }" 
+      modal
+      :draggable="false"
+      :closable="false"
+    >
+      <div class="flex flex-col gap-2 mb-4">
+        <InputText 
+          id="inputRename" 
+          v-model="inputRenombrar" 
+          class="flex-auto" 
+          autocomplete="off" 
+          placeholder="Introduzca el nuevo nombre"
+          @keyup.enter="renombrar" 
+          autofocus
+        />
+      </div>
+
+      <template #footer>
+        <Button 
+          label="Cancelar" 
+          text 
+          severity="secondary" 
+          @click="cerrarModal" 
+        />
+        <Button 
+          label="Confirmar" 
+          @click="renombrar" 
+          :disabled="!inputRenombrar.trim()" 
         />
       </template>
     </Dialog>
