@@ -17,31 +17,35 @@ class ItemViewSet(viewsets.ModelViewSet):
     # FILTRADO BASE
     def get_queryset(self):
         user = self.request.user
-
-        # 1.- Cogemos los Items del usuario
         qs = Item.objects.filter(usuario=user)
 
-        # 2.- Captura de parámetros
+        # 1. Parámetros
         carpeta_id = self.request.query_params.get("carpeta")
         es_papelera = self.request.query_params.get("papelera") == "true"
         es_favorito = self.request.query_params.get("favorito") == "true"
         
-        # 3.- Aplicación de filtros (Lógica de negocio)
+        # 2. Estado de eliminación (Papelera vs Normal)
         if es_papelera:
             qs = qs.filter(eliminado=True)
         else:
             qs = qs.filter(eliminado=False)
         
-        if es_favorito:
-            qs = qs.filter(favorito=True)
-
-        # 4.- Navegación por carpetas (independiente del modo)
+        # 3. Lógica de Navegación vs Filtrado
         if carpeta_id:
+            # Si el usuario ha entrado en una carpeta, mostramos el contenido 
+            # de esa carpeta independientemente de si los hijos son favoritos o no.
             qs = qs.filter(padre_id=carpeta_id)
-        elif not es_papelera and not es_favorito:
-            # Si no hay carpeta y es modo normal, mostramos la raíz
-            qs = qs.filter(padre__isnull=True)
+        else:
+            # Estamos en la "Raíz" de alguna sección
+            if es_favorito:
+                # Si es la sección de favoritos y no hay carpeta seleccionada,
+                # mostramos TODO lo que sea favorito en una lista plana inicial.
+                qs = qs.filter(favorito=True)
+            elif not es_papelera:
+                # Si es el Home normal, mostramos solo los de nivel superior (raíz)
+                qs = qs.filter(padre__isnull=True)
 
+        # 4. Optimización y orden
         hijos = Item.objects.filter(padre=OuterRef("pk"), eliminado=False)
         return qs.annotate(tiene_hijos=Exists(hijos)).order_by("-tipo", "nombre")
     
@@ -96,7 +100,7 @@ class ItemViewSet(viewsets.ModelViewSet):
         pass
 
     @action(detail=False, methods=["post"])
-    def favorite(self, request):
+    def favorito(self, request):
         """
         Función para marcar como favorito
         """
