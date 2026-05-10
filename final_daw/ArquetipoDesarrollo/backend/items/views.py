@@ -14,7 +14,7 @@ from .services import ItemService
 class ItemViewSet(viewsets.ModelViewSet):
     serializer_class = ItemSerializer
 
-    # Filtramos que el usuario solo pueda trabajar sobre el queryset que le pertenece
+    # FILTRADO BASE
     def get_queryset(self):
         user = self.request.user
 
@@ -47,7 +47,7 @@ class ItemViewSet(viewsets.ModelViewSet):
         hijos = Item.objects.filter(padre=OuterRef("pk"), eliminado=False)
         return qs.annotate(tiene_hijos=Exists(hijos)).order_by("-tipo", "nombre")
     
-
+    # MÉTODOS ESTÁNDAR
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(queryset, many=True)
@@ -76,7 +76,7 @@ class ItemViewSet(viewsets.ModelViewSet):
         serializer.instance = item
 
     # =========================================================
-    # ACTIONS
+    # ACCIONES SOBRE ITEMS
     # =========================================================
 
     @action(detail=True, methods=["post"])
