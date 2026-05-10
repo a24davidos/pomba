@@ -154,8 +154,30 @@ async function marcarFavoritos() {
   } catch (error){
     console.error("Error al marcar como favorito", error)
   }
-
 }
+
+//CONTROLAR AQUI QUE NO SE PUEDA RENOMBRAR MAS DE UNO A LA VEZ, O POR LO MENOS QUE NO DE LA OPCION NOSE SI DEBERÍA DE MANDAR UN MENSAJE O QUE
+async function renombrar(){
+  //Solo debería de dejar coger 1!!!!
+  if (itemsSeleccionados.value.length !== 1){
+    return
+  }
+  
+  const id = itemsSeleccionados.value[0].id
+
+  const url = `items/${id}/renombrar/`
+  
+  try{
+    await api.post(url, {nombre: "probando si va"})
+    cargarItems(carpetaActualId.value);
+    itemsSeleccionados.value = []; 
+  } catch (error){
+    console.error("Erorr al renombrar", error)
+  }
+
+  
+}
+
 
 // --- WATCHERS ---
 watch(itemsSeleccionados, (nuevoValor) => {
@@ -192,6 +214,12 @@ onMounted(() => {
       icon="pi pi-star"
       label="Marcar Favorito"
       @click="marcarFavoritos"
+    />
+
+    <Button
+      icon="pi pi-pencil"
+      label="renombrar"
+      @click="renombrar"
     />
     <!-- Breadcrumb sincronizado con rutaBreadcrumb -->
     <Breadcrumb 

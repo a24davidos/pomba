@@ -159,3 +159,12 @@ class ItemViewSet(viewsets.ModelViewSet):
         TODO: restaurar de papelera
         """
         pass
+
+    @action(detail=True, methods=['post'])
+    def renombrar(self, request, pk=None):
+        producto = self.get_object()
+        nuevo_nombre = request.data.get("nombre")
+
+        producto.nombre = nuevo_nombre
+        producto.save()
+        return Response({"mensaje": "Renombrado correctamente", "nombre": producto.nombre})
