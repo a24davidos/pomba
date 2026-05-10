@@ -28,14 +28,12 @@ class ItemViewSet(viewsets.ModelViewSet):
         
         # 3.- Aplicación de filtros (Lógica de negocio)
         if es_papelera:
-            #Eliminados
             qs = qs.filter(eliminado=True)
-            # Favoritos
-        elif es_favorito:
-            qs = qs.filter(favorito=True, eliminado=False)
         else:
-            # Mi unidad
             qs = qs.filter(eliminado=False)
+        
+        if es_favorito:
+            qs = qs.filter(favorito=True)
 
         # 4.- Navegación por carpetas (independiente del modo)
         if carpeta_id:

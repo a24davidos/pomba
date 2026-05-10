@@ -40,6 +40,10 @@ const CONFIGURACION_VISTAS = {
     titulo: 'Papelera',
     paramsBase: { papelera: 'true' }
   },
+  fav: {
+    titulo: 'Mis favoritos',
+    paramsBase: {papelera: 'false', favorito: 'true'}
+  }
 }
 
 const actualizarBreadcrumb = (data) => {
@@ -142,7 +146,7 @@ async function marcarFavoritos() {
 
   if (ids.length === 0) return;
 
-  const url = "items/favorite/"
+  const url = "items/favorito/"
 
   try{
     await api.post(url, {ids:ids})
