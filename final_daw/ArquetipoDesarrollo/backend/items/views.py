@@ -16,73 +16,51 @@ class ItemViewSet(viewsets.ModelViewSet):
 
     # Filtramos que el usuario solo pueda trabajar sobre el queryset que le pertenece
     def get_queryset(self):
-        request = self.request
-        hijos = Item.objects.filter(padre=OuterRef("pk"), eliminado=False)
+        user = self.request.user
 
-        qs = Item.objects.filter(usuario=self.request.user)
+        # 1.- Cogemos los Items del usuario
+        qs = Item.objects.filter(usuario=user)
 
-        carpeta_id = request.query_params.get("carpeta")
-        es_papelera = request.query_params.get("papelera") == "true"
-
+        # 2.- Captura de parámetros
+        carpeta_id = self.request.query_params.get("carpeta")
+        es_papelera = self.request.query_params.get("papelera") == "true"
+        es_favorito = self.request.query_params.get("favorito") == "true"
+        
+        # 3.- Aplicación de filtros (Lógica de negocio)
         if es_papelera:
+            #Eliminados
             qs = qs.filter(eliminado=True)
-
-            if carpeta_id:
-                qs = qs.filter(padre_id=carpeta_id)
-
-        elif carpeta_id:
-            qs = qs.filter(padre_id=carpeta_id, eliminado=False)
-
+            # Favoritos
+        elif es_favorito:
+            qs = qs.filter(favorito=True, eliminado=False)
         else:
-            qs = qs.filter(padre__isnull=True, eliminado=False)
+            # Mi unidad
+            qs = qs.filter(eliminado=False)
 
+        # 4.- Navegación por carpetas (independiente del modo)
+        if carpeta_id:
+            qs = qs.filter(padre_id=carpeta_id)
+        elif not es_papelera and not es_favorito:
+            # Si no hay carpeta y es modo normal, mostramos la raíz
+            qs = qs.filter(padre__isnull=True)
+
+        hijos = Item.objects.filter(padre=OuterRef("pk"), eliminado=False)
         return qs.annotate(tiene_hijos=Exists(hijos)).order_by("-tipo", "nombre")
     
+
     def list(self, request, *args, **kwargs):
-        """
-        Sobrescribimos list para devolver los items Y el breadcrumb en una sola petición.
-        """
         queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(queryset, many=True)
         
         carpeta_id = request.query_params.get("carpeta")
         
+        breadcrumb = ItemService.obtener_breadcrumb(request.user, carpeta_id)
+        
         return Response({
             "items": serializer.data,
-            "breadcrumb": self._get_breadcrumb(carpeta_id)
+            "breadcrumb": breadcrumb
         })
 
-    def _get_breadcrumb(self, carpeta_id):
-        """
-        Calcula la ruta desde la raíz hasta la carpeta actual.
-        """
-        ruta = [{"id": None, "label": "Inicio"}]
-        
-        if not carpeta_id:
-            return ruta
-
-        try:
-            # Buscamos la carpeta actual del usuario
-            actual = Item.objects.get(id=carpeta_id, usuario=self.request.user, tipo='carpeta')
-            nodos_padre = []
-            
-            # Bucle para subir por el árbol de carpetas
-            curr = actual
-            while curr is not None:
-                nodos_padre.append({
-                    "id": curr.pk,
-                    "label": curr.nombre
-                })
-                curr = curr.padre
-            
-            # Invertimos para que vaya de la Raíz a la Carpeta Actual
-            ruta.extend(reversed(nodos_padre))
-            
-        except (Item.DoesNotExist, ValueError):
-            # Si el ID no existe o es inválido, devolvemos solo el Inicio
-            pass
-            
-        return ruta
 
     # CREATE (delegado a service)
     def perform_create(self, serializer):
@@ -126,44 +104,34 @@ class ItemViewSet(viewsets.ModelViewSet):
         """
         pass
 
-    def _obtener_ids_recursivos(self, padre_id, lista_ids):
-        """
-        Cogemos solo los IDs de todos los descendientes.
-        """
-        # Obtenemos los IDs de los hijos directos
-        hijos_ids = Item.objects.filter(padre_id=padre_id).values_list('id', flat=True)
-        
-        for h_id in hijos_ids:
-            lista_ids.append(h_id)
-            self._obtener_ids_recursivos(h_id, lista_ids)
-
+    
     @action(detail=False, methods=["post"])
     def trash(self, request):
         """
         Función para mandar a la papelera (Soft Delete)
         """
-        data_ids = request.data.get("ids", [])
-        
-        if not data_ids:
-            return Response({"detail": "No se proporcionaron IDs."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        ahora = timezone.now()
-        ids_totales = []
+        ids = request.data.get("ids", [])
 
-        # Ejecutamos la recursión para cada ID recibido para capturar hijos
-        for root_id in data_ids:
-            ids_totales.append(root_id)
-            self._obtener_ids_recursivos(root_id, ids_totales)
+        if not ids:
+            return Response(
+                {"detail": "No se han enviado elementos."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        # Actualizamos todo de un golpe (usamos set para no repetir IDs)
-        filas_afectadas = Item.objects.filter(id__in=set(ids_totales)).update(
-            eliminado=True, 
-            fecha_eliminado=ahora
-        )
+        try:
+            cantidad = ItemService.mover_a_papelera(
+                ids=ids,
+                usuario=request.user
+            )
+            return Response({
+                "detail": f"Se han movido {cantidad} elementos a la papelera"
+            })
 
-        return Response({
-            "detail": f"Se han movido {filas_afectadas} elementos a la papelera (incluyendo subcarpetas/archivos)."
-        }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
     @action(detail=True, methods=["post"])
     def restore(self, request, pk=None):
