@@ -12,7 +12,6 @@ import api from '@/api/api'
 // --- ESTADO ---
 const cargandoTabla = ref(false)
 const items = ref([])
-const carpetaActualId = ref(null)
 const itemsSeleccionados = ref([])
 
 const modalNuevaCarpeta = ref(false)
@@ -25,19 +24,21 @@ const route = useRoute();
 const router = useRouter();
 
 // --- BREADCRUMB ---
-// El home siempre es fijo
 const breadcrumbInicio = computed(() => {
   const vistaActual = route.params.view || 'drive'
-
   const config = CONFIGURACION_VISTAS[vistaActual]
 
   return {
     label: config?.titulo || 'Mi unidad',
     icon: config?.icono || 'pi pi-home',
-    command: () => cargarItems(null)
+    command: () => {
+      router.push({ 
+        name: 'home', 
+        params: { view: vistaActual }
+      });
+    }
   }
 })
-
 const rutaBreadcrumb = ref([])
 
 
@@ -75,7 +76,11 @@ const actualizarBreadcrumb = (data) => {
     .map(nodo => ({
       label: nodo.label,
       id: nodo.id,
-      command: () => cargarItems(nodo.id) 
+      // Usamos router.push para que el botón "Atrás" funcione desde el breadcrumb también
+      command: () => router.push({
+        name: 'home',
+        params: { view: route.params.view || 'drive', folderId: nodo.id }
+      })
     }));
 };
 
@@ -98,7 +103,6 @@ async function cargarItems(carpetaId = null) {
     const response = await api.get('items/', { params: parametros });
 
     items.value = response.data.items;
-    carpetaActualId.value = carpetaId;
     
     // Actualización del breadcrumb...
     actualizarBreadcrumb(response.data.breadcrumb);
@@ -112,10 +116,16 @@ async function cargarItems(carpetaId = null) {
 }
 
 // --- NAVEGACIÓN ---
-
 function abrirCarpeta(carpeta) {
-  if (carpeta.tipo !== 'carpeta') return
-  cargarItems(carpeta.id)
+  if (carpeta.tipo !== 'carpeta') return;
+  
+  router.push({
+    name: 'home',
+    params: { 
+      view: route.params.view || 'drive', 
+      folderId: carpeta.id 
+    }
+  });
 }
 
 // --- MODAL CREAR CARPETA ---
@@ -128,15 +138,16 @@ function cerrarModal() {
 }
 
 async function crearCarpeta() {
+  const idPadre = route.params.folderId || null
   try {
     await api.post('items/', {
       nombre: inputNuevaCarpeta.value,
       tipo: "carpeta",
-      padre: carpetaActualId.value
+      padre: idPadre
     })
 
     cerrarModal()
-    cargarItems(carpetaActualId.value)
+    cargarItems(idPadre)
 
   } catch (error) {
     console.error("Error creando carpeta:", error)
@@ -146,7 +157,7 @@ async function crearCarpeta() {
 
 // --- SOFT DELETE ---
 async function eliminar() {
-
+  const idPadre = route.params.folderId || null
   const seleccion = [itemsSeleccionados.value].flat();
   const idsParaEliminar = seleccion.map(item => item.id);
 
@@ -156,7 +167,7 @@ async function eliminar() {
 
   try {
       await api.post(url, { ids: idsParaEliminar });
-      cargarItems(carpetaActualId.value);
+      cargarItems(idPadre);
       itemsSeleccionados.value = []; 
     } catch (error) {
       console.error("Error al mover a la papelera:", error);
@@ -187,15 +198,17 @@ function abirModalRenombrar() {
 //CONTROLAR AQUI QUE NO SE PUEDA RENOMBRAR MAS DE UNO A LA VEZ, O POR LO MENOS QUE NO DE LA OPCION NOSE SI DEBERÍA DE MANDAR UN MENSAJE O QUE
 async function renombrar(){
   //Solo debería de dejar coger 1!!!!
+
   if (itemsSeleccionados.value.length !== 1){
     return
   }
   const id = itemsSeleccionados.value[0].id
   const url = `items/${id}/renombrar/`
+  const idPadre = route.params.folderId || null
   
   try{
     await api.post(url, {nombre: inputRenombrar.value})
-    cargarItems(carpetaActualId.value);
+    cargarItems(idPadre.value);
     itemsSeleccionados.value = [];
     cerrarModal()
   } catch (error){
@@ -209,15 +222,14 @@ watch(itemsSeleccionados, (nuevoValor) => {
   console.log('items seleccionados:', nuevoValor)
 }, { deep: true })
 
-watch(() => route.params.view, () => {
-  // Cuando cambias de sección, reseteamos a la raíz (carpetaId = null)
-  cargarItems(null);
-});
-
-// --- INIT ---
-onMounted(() => {
-  cargarItems()
-})
+// Observamos tanto la vista (drive, trash...) como el folderId
+watch(
+  () => [route.params.view, route.params.folderId],
+  ([nuevaVista, nuevoFolderId]) => {
+    // Si cambia la vista o la carpeta en la URL, cargamos los datos correspondientes
+    cargarItems(nuevoFolderId || null);
+  },{ immediate: true }
+);
 </script>
 
 <template>

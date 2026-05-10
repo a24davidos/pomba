@@ -19,7 +19,7 @@ const routes = [
     children: [
       {path: '', redirec: {name: 'home', params: {view: 'drive'}} },
       {
-        path: ':view?',
+        path: '/home/:view/:folderId?',
         name: 'home',
         component: Home
       }
