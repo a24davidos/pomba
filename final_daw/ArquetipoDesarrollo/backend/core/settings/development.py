@@ -1,12 +1,25 @@
 from .base import *
 import os
 
-# --- VARIABLES DE ENTORNO ---
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'fallback-insecure-key')
+
+# =========================================================
+# SEGURIDAD / CONFIG GENERAL
+# =========================================================
+
+# Clave secreta de Django (NO usar fallback en producción)
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+
+# Debug controlado por variable de entorno
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+
+# En producción deberías restringir esto
 ALLOWED_HOSTS = ['*']
 
-# --- DATABASE (POSTGRESQL) ---
+
+# =========================================================
+# BASE DE DATOS (POSTGRESQL)
+# =========================================================
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -18,41 +31,88 @@ DATABASES = {
     }
 }
 
-# --- ELASTICSEARCH ---
+
+# =========================================================
+# ELASTICSEARCH (búsqueda avanzada)
+# =========================================================
+
 ELASTICSEARCH_DSL = {
     'default': {
-        'hosts': os.environ.get('ELASTICSEARCH_URL', 'http://elasticsearch:9200')
+        'hosts': os.environ.get(
+            'ELASTICSEARCH_URL',
+            'http://elasticsearch:9200'
+        )
     },
 }
 
-# --- CONFIGURACIÓN DE GARAGE (S3 STORAGE PARA MEDIA) ---
+
+# =========================================================
+# GARAGE (S3 COMPATIBLE STORAGE)
+# =========================================================
+# Aquí conectas Django con Garage (S3 API compatible)
+
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
-AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', 'mi-bucket-app')
 
-# En desarrollo, si accedes desde fuera del contenedor (browser del Mac), 
-# usa http://localhost:3900. Si todo va por Nginx, usa el endpoint del proxy.
-AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL', 'http://localhost:3900')
+# Bucket donde se almacenan los archivos
+AWS_STORAGE_BUCKET_NAME = os.environ.get(
+    'AWS_STORAGE_BUCKET_NAME',
+    'mi-bucket-app'
+)
 
-# Configuración necesaria para Garage v2
+# Endpoint interno del cluster Docker (Garage)
+AWS_S3_ENDPOINT_URL = os.environ.get(
+    'AWS_S3_ENDPOINT_URL',
+    'http://garage:3900'
+)
+
+# Región ficticia (Garage no usa AWS real)
 AWS_S3_REGION_NAME = 'garage'
-AWS_S3_SIGNATURE_VERSION = 's3v4'
-AWS_S3_FILE_OVERWRITE = False
-AWS_DEFAULT_ACL = None  # Garage v2 prefiere manejar permisos vía bucket allow
 
-# IMPORTANTE: Forzamos el estilo de ruta para evitar problemas de DNS con el nombre del bucket
+# Firma S3 estándar
+AWS_S3_SIGNATURE_VERSION = 's3v4'
+
+# =========================================================
+# COMPORTAMIENTO DE ARCHIVOS
+# =========================================================
+
+# No sobrescribir archivos con mismo nombre
+AWS_S3_FILE_OVERWRITE = False
+
+# Sin permisos públicos automáticos (IMPORTANTE para seguridad)
+AWS_DEFAULT_ACL = None
+
+# Usar rutas estilo /bucket/key (OBLIGATORIO en Garage)
 AWS_S3_ADDRESSING_STYLE = "path"
 
-# Configuramos para que SOLO los archivos multimedia suban a Garage
-DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-MEDIA_URL = "/media/"
+# Desactivar SSL en entorno local
+AWS_S3_USE_SSL = False
+AWS_S3_VERIFY = False
 
-# --- STATIC FILES (LOCAL EN DESARROLLO) ---
-# Se mantienen en el sistema de archivos local, servidos por Nginx
+
+# =========================================================
+# STORAGE BACKEND (MEDIA EN S3 / GARAGE)
+# =========================================================
+
+# Django usará S3 como almacenamiento principal de archivos
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
+# URL base de archivos (usada solo si necesitas referencia directa)
+MEDIA_URL = f"{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/"
+
+# URLs firmadas (tipo Google Drive)
+AWS_QUERYSTRING_AUTH = True
+AWS_QUERYSTRING_EXPIRE = 3600  # 1 hora
+
+
+# =========================================================
+# STATIC FILES (FRONTEND BACKEND)
+# =========================================================
+
 STATIC_URL = '/static_backend/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# --- INTERNATIONALIZATION ---
+
 LANGUAGE_CODE = 'es-ES'
 TIME_ZONE = 'Europe/Madrid'
 USE_I18N = True
