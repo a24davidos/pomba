@@ -208,7 +208,7 @@ async function renombrar(){
   
   try{
     await api.post(url, {nombre: inputRenombrar.value})
-    cargarItems(idPadre.value);
+    cargarItems(idPadre);
     itemsSeleccionados.value = [];
     cerrarModal()
   } catch (error){
