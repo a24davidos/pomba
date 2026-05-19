@@ -6,10 +6,10 @@ up:
 	@echo "🐍 Preparando contorna local de Python..."
 	@chmod +x local_setup.sh
 	@./local_setup.sh
-	@echo "🏗️ Configurando infraestrutura de Garage..."
-	@chmod +x scripts/setup_infrastructure.sh
-	@./scripts/setup_infrastructure.sh
-	@echo "✨ Todo listo! Xa podes empezar a traballar."
+# 	@echo "🏗️ Configurando infraestrutura de Garage..."
+# 	@chmod +x scripts/setup_infrastructure.sh
+# 	@./scripts/setup_infrastructure.sh
+# 	@echo "✨ Todo listo! Xa podes empezar a traballar."
 
 down:
 	@echo "🛑 Parando servizos..."
