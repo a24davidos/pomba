@@ -20,27 +20,6 @@ class ItemService:
             actual = actual.padre
 
         return False
-
-    # Aplicamos reglas de almacenamietno
-    @staticmethod
-    def aplicar_reglas_almacenamiento(item, usuario=None, fichero=None):
-
-        # Si es carpeta, no tiene datos de archivo
-        if item.tipo == Item.Tipo.CARPETA:
-            item.ruta = None
-            item.tamano_bytes = None
-            item.mime_type = None
-            return item
-
-        # Si es archivo, debe existir archivo
-        if not fichero:
-            raise ValidationError("Archivo requerido")
-
-        item.ruta = f"uploads/{usuario.id}/{fichero.name}"
-        item.tamano_bytes = fichero.size
-        item.mime_type = fichero.content_type
-
-        return item
     
     # =========================================================
     # SECCIÓN 2: Consultas y navegacion
@@ -98,17 +77,25 @@ class ItemService:
 
     @staticmethod
     def crear_item(usuario, datos, fichero=None): 
-        # Creamos la instancia del modelo con los datos del formulario
-        nuevo_item = Item(usuario=usuario, **datos)
+        # Creo el item base
+        item = Item(usuario=usuario, **datos)
 
-        # Pasamos el archivo  a las reglas de almacenamiento
-        nuevo_item = ItemService.aplicar_reglas_almacenamiento(
-            item=nuevo_item,
-            usuario=usuario,
-            fichero=fichero # Aquí le pasas el objeto que recibiste arriba
-        )
+        # Si es Carpeta
+        if item.tipo == Item.Tipo.CARPETA:
+            return ItemService.guardar_item(item)
         
-        return ItemService.guardar_item(nuevo_item)
+        # Si es Archivo
+        if not fichero:
+            raise ValidationError("Archivo requerido")
+        
+        # Guardo el fichero real en Garage a través de Django
+        item.file = fichero
+
+        item.tamano_bytes = fichero.size
+        item.mime_type = fichero.content_type
+
+        return ItemService.guardar_item(item)        
+
 
     @staticmethod
     def mover_item(item, nueva_carpeta_padre):
