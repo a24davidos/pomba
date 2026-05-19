@@ -51,69 +51,41 @@ ELASTICSEARCH_DSL = {
 # =========================================================
 # Aquí conectas Django con Garage (S3 API compatible)
 
-AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
-AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
+AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME", "mi-bucket-app")
+AWS_S3_ENDPOINT_URL = os.environ.get("AWS_S3_ENDPOINT_URL", "http://garage:3900")
+AWS_S3_REGION_NAME = os.environ.get("AWS_S3_REGION_NAME", "garage")
 
-# Bucket donde se almacenan los archivos
-AWS_STORAGE_BUCKET_NAME = os.environ.get(
-    'AWS_STORAGE_BUCKET_NAME',
-    'mi-bucket-app'
-)
-
-# Endpoint interno del cluster Docker (Garage)
-AWS_S3_ENDPOINT_URL = os.environ.get(
-    'AWS_S3_ENDPOINT_URL',
-    'http://garage:3900'
-)
-
-# Región ficticia (Garage no usa AWS real)
-AWS_S3_REGION_NAME = 'garage'
-
-# Firma S3 estándar
-AWS_S3_SIGNATURE_VERSION = 's3v4'
-
-# =========================================================
-# COMPORTAMIENTO DE ARCHIVOS
-# =========================================================
-
-# No sobrescribir archivos con mismo nombre
+AWS_S3_ADDRESSING_STYLE = "path"
+AWS_S3_SIGNATURE_VERSION = "s3v4"
+AWS_DEFAULT_ACL = None
 AWS_S3_FILE_OVERWRITE = False
 
-# Sin permisos públicos automáticos (IMPORTANTE para seguridad)
-AWS_DEFAULT_ACL = None
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "bucket_name": AWS_STORAGE_BUCKET_NAME,
+            "access_key": AWS_ACCESS_KEY_ID,
+            "secret_key": AWS_SECRET_ACCESS_KEY,
+            "endpoint_url": AWS_S3_ENDPOINT_URL,
+            "region_name": AWS_S3_REGION_NAME,
+            "addressing_style": "path",
+            "signature_version": "s3v4",
+            "default_acl": None,
+            "file_overwrite": False,
+        },
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
 
-# Usar rutas estilo /bucket/key (OBLIGATORIO en Garage)
-AWS_S3_ADDRESSING_STYLE = "path"
+STATIC_URL = "/static_backend/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# Desactivar SSL en entorno local
-AWS_S3_USE_SSL = False
-AWS_S3_VERIFY = False
-
-
-# =========================================================
-# STORAGE BACKEND (MEDIA EN S3 / GARAGE)
-# =========================================================
-
-# Django usará S3 como almacenamiento principal de archivos
-DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-
-# URL base de archivos (usada solo si necesitas referencia directa)
-MEDIA_URL = f"{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/"
-
-# URLs firmadas (tipo Google Drive)
-AWS_QUERYSTRING_AUTH = True
-AWS_QUERYSTRING_EXPIRE = 3600  # 1 hora
-
-
-# =========================================================
-# STATIC FILES (FRONTEND BACKEND)
-# =========================================================
-
-STATIC_URL = '/static_backend/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-
-
-LANGUAGE_CODE = 'es-ES'
-TIME_ZONE = 'Europe/Madrid'
+LANGUAGE_CODE = "es-ES"
+TIME_ZONE = "Europe/Madrid"
 USE_I18N = True
 USE_TZ = True

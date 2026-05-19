@@ -28,7 +28,6 @@ class ItemSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "usuario",
-            
             "tamano_bytes",
             "mime_type",
             "eliminado",
@@ -36,6 +35,12 @@ class ItemSerializer(serializers.ModelSerializer):
             "fecha_creacion",
             "fecha_modificacion",
         ]
+
+    # 
+    def get_url(self, obj):
+        if obj.file:
+            return obj.file.url
+        return None
 
     # Hacemos una validación basica (Esto solo se llama cuando se hace post, put o patch)
     def validate_padre(self, value):

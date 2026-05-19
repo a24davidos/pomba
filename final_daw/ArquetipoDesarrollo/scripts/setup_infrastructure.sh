@@ -42,23 +42,22 @@ docker exec garage /garage layout apply --version "$LAYOUT_VERSION" || echo "Lay
 echo "⏳ Esperando estabilización..."
 sleep 3
 
-# 4. Crear key se non existe
+# 4. Crear key si no existe
 if ! docker exec garage /garage key list | grep -q "django-key"; then
   echo "🔑 Creando API key..."
 
-  KEY_INFO=$(docker exec garage /garage key create django-key)
-  
-  ACCESS_KEY=$(echo "$KEY_INFO" | grep "Key ID:" | awk '{print $3}')
-  SECRET_KEY=$(echo "$KEY_INFO" | grep "Secret key:" | awk '{print $3}')
+  docker exec garage /garage key create django-key > /tmp/key.txt
+
+  ACCESS_KEY=$(grep "Key ID:" /tmp/key.txt | awk '{print $3}')
+  SECRET_KEY=$(grep "Secret key:" /tmp/key.txt | awk '{print $3}')
+
+  echo "AWS_ACCESS_KEY_ID=$ACCESS_KEY"
+  echo "AWS_SECRET_ACCESS_KEY=$SECRET_KEY"
 
   ENV_PATH="./Docker/.env"
 
-  echo "🔐 Gardando credenciais en $ENV_PATH..."
-  # NOTA: sed -i "" es para macOS, sino usar sin ""
   sed -i "" "s/^AWS_ACCESS_KEY_ID=.*/AWS_ACCESS_KEY_ID=$ACCESS_KEY/" "$ENV_PATH"
   sed -i "" "s/^AWS_SECRET_ACCESS_KEY=.*/AWS_SECRET_ACCESS_KEY=$SECRET_KEY/" "$ENV_PATH"
-
-  echo "✅ Keys gardadas"
 fi
 
 # 5. Crear bucket
