@@ -2,9 +2,12 @@ from django.db import models
 from users.models import User
 from django.core.exceptions import ValidationError
 
+def upload_item_path(instance, filename):
+    return f"users/{instance.usuario.id}/{filename}"
 
 # Create your models here.
 class Item(models.Model):
+
     class Tipo(models.TextChoices):
         ARCHIVO = "archivo", "Archivo"
         CARPETA = "carpeta", "Carpeta"
@@ -23,7 +26,7 @@ class Item(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name="items")
 
     # --- STORAGE (SOLO ARCHIVOS) ---
-    file = models.FileField(upload_to="uploads/", null=True, blank=True)
+    file = models.FileField(upload_to=upload_item_path, null=True, blank=True)
     tamano_bytes = models.BigIntegerField(null=True, blank=True)
     mime_type = models.CharField(max_length=100, null=True, blank=True)
 
@@ -52,6 +55,7 @@ class Item(models.Model):
     # Controlo que al crear una carpeta no se guarden, rutas, ni tamaño de bytes, ni el mime
     def save(self, *args, **kwargs):
         if self.tipo == self.Tipo.CARPETA:
+            self.file = None
             self.tamano_bytes = None
             self.mime_type = None
 
@@ -76,9 +80,9 @@ class Item(models.Model):
             ),
         ]
 
-    indexes = [
-        #Para entrar en carpetas (Lo que más usará el usuario)
-        models.Index(fields=["usuario", "padre", "eliminado"], name="idx_items_navegacion"),
+        indexes = [
+            #Para entrar en carpetas (Lo que más usará el usuario)
+            models.Index(fields=["usuario", "padre", "eliminado"], name="idx_items_navegacion"),
 
-        models.Index(fields=["usuario", "eliminado"], name="idx_items_papelera"),
-    ]
+            models.Index(fields=["usuario", "eliminado"], name="idx_items_papelera"),
+        ]
