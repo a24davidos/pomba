@@ -14,7 +14,7 @@ class ItemSerializer(serializers.ModelSerializer):
             "tipo",
             "padre",
             "usuario",
-            "ruta",
+            "file",
             "tamano_bytes",
             "mime_type",
             "metadatos",
@@ -28,7 +28,7 @@ class ItemSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "usuario",
-            "ruta",
+            
             "tamano_bytes",
             "mime_type",
             "eliminado",
