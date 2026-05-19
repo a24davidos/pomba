@@ -11,6 +11,7 @@ class Item(models.Model):
 
     nombre = models.CharField(max_length=255)
     tipo = models.CharField(max_length=10, choices=Tipo.choices)
+
     padre = models.ForeignKey(
         "self", 
         on_delete=models.CASCADE, 
@@ -18,10 +19,11 @@ class Item(models.Model):
         blank=True, 
         related_name="hijos",
     )
+
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name="items")
 
     # --- STORAGE (SOLO ARCHIVOS) ---
-    ruta = models.CharField(max_length=1024, null=True, blank=True, db_index=True)
+    file = models.FileField(upload_to="uploads/", null=True, blank=True)
     tamano_bytes = models.BigIntegerField(null=True, blank=True)
     mime_type = models.CharField(max_length=100, null=True, blank=True)
 
@@ -49,9 +51,7 @@ class Item(models.Model):
 
     # Controlo que al crear una carpeta no se guarden, rutas, ni tamaño de bytes, ni el mime
     def save(self, *args, **kwargs):
-
         if self.tipo == self.Tipo.CARPETA:
-            self.ruta = None
             self.tamano_bytes = None
             self.mime_type = None
 
