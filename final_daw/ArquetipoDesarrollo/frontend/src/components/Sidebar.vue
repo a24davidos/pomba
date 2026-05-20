@@ -6,7 +6,7 @@
         v-for="item in items"
         :key="item.key"
         @click="setActive(item.key)"
-        @contextmenu.prevent="item.key === 'trash' && onTrashRightClick($event)"
+        @contextmenu.prevent="item.key === 'trash' && modalPapelera($event)"
         :class="[
           'flex items-center gap-5 px-3 py-2 rounded-lg transition-all duration-200 cursor-pointer border-none outline-none text-sm',
           active === item.key 
@@ -66,7 +66,7 @@ const setActive = (key) => {
   router.push({name: 'home', params: {view: key}})
 }
 
-const onTrashRightClick = (event) => {
+const modalPapelera = (event) => {
   menu.value.show(event);
 };
 
