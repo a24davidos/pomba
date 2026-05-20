@@ -1,7 +1,11 @@
+import boto3
 from django.utils import timezone
 
 from django.core.exceptions import ValidationError
 from .models import Item
+from django.db import transaction
+from django.conf import settings
+
 
 
 class ItemService:
@@ -21,6 +25,101 @@ class ItemService:
 
         return False
     
+    @staticmethod
+    def recolectar_descendientes_id(root_ids, usuario):
+        """
+        Devuelve todos los ids raíz + descendientes del usuario
+        sin hacer N+1.
+        """
+        all_ids = set(int(i) for i in root_ids)
+        frontier = set(all_ids)
+
+        while frontier:
+            children = set(
+                Item.objects.filter(
+                    usuario=usuario,
+                    padre_id__in=frontier,
+                ).values_list("id", flat=True)
+            )
+            children -= all_ids
+            if not children:
+                break
+
+            all_ids |= children
+            frontier = children
+
+        return all_ids
+
+    @staticmethod
+    def get_s3_client():
+        return boto3.client(
+            "s3",
+            endpoint_url=settings.AWS_S3_ENDPOINT_URL,
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name=settings.AWS_S3_REGION_NAME,
+        )
+
+    @staticmethod
+    def get_s3_keys_for_items(items_qs):
+        """
+        Extrae las keys de S3 de los items tipo archivo.
+        """
+        return list(
+            items_qs.exclude(file="").exclude(file__isnull=True).values_list("file", flat=True)
+        )
+    
+    @staticmethod
+    def delete_s3_keys(keys, bucket_name):
+        if not keys:
+            return
+
+        s3 = ItemService.get_s3_client()
+
+        for i in range(0, len(keys), 1000):
+            batch = keys[i:i + 1000]
+            s3.delete_objects(
+                Bucket=bucket_name,
+                Delete={
+                    "Objects": [{"Key": key} for key in batch],
+                    "Quiet": True,
+                }
+            )
+
+    @staticmethod
+    def eliminar_items_fisicos(ids, usuario, bucket_name):
+        """
+        Borra físicamente items y sus descendientes.
+        """
+        all_ids = ItemService.recolectar_descendientes_id(ids, usuario)
+
+        items_qs = Item.objects.filter(usuario=usuario, id__in=all_ids)
+
+        s3_keys = ItemService.get_s3_keys_for_items(items_qs)
+
+        with transaction.atomic():
+            ItemService.delete_s3_keys(s3_keys, bucket_name)
+            deleted_count, _ = items_qs.delete()
+
+        return {
+            "deleted_count": deleted_count,
+            "s3_keys_deleted": len(s3_keys),
+        }
+    
+    @staticmethod
+    def vaciar_papelera(usuario, bucket_name):
+        trash_ids = list(
+            Item.objects.filter(usuario=usuario, eliminado=True).values_list("id", flat=True)
+        )
+
+        if not trash_ids:
+            return {
+                "deleted_count": 0,
+                "s3_keys_deleted": 0,
+            }
+
+        return ItemService.eliminar_items_fisicos(trash_ids, usuario, bucket_name)
+
     # =========================================================
     # SECCIÓN 2: Consultas y navegacion
     # =========================================================
