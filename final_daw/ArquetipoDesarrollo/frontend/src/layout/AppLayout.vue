@@ -47,10 +47,8 @@
     </aside>
 
     <!-- MAIN -->
-    <main class="p-6 overflow-x-hidden bg-surface-0 dark:bg-surface-900 rounded-2xl ml-3 mr-3">
-      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        <router-view />
-      </div>
+    <main class="p-6 overflow-auto bg-surface-0 dark:bg-surface-900 rounded-2xl ml-3 mr-3">
+      <router-view />
     </main>
 
   </div>

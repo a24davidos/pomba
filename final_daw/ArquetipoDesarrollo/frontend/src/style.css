@@ -44,4 +44,19 @@
     background-color: var(--p-surface-950); /* Un negro más profundo para el dark */
     color: var(--p-surface-0);
   }
+  
+}
+
+@layer primevue-overrides {
+  .p-datatable-tbody > tr:focus-visible,
+  .p-datatable-tbody > tr.p-datatable-contextmenu-row-selected {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  .p-datatable-mask{
+    position: absolute;
+    top: 5vh;
+  }
+
 }

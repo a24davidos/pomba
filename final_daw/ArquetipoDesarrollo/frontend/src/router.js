@@ -13,17 +13,21 @@ const routes = [
   
   // --- App General ---
   {
-    path: '/home',
-    component: AppLayout,
-    meta: { requiresAuth: true },
-    children: [
-      {
-        path: '',
-        name: 'home',
-        component: Home
-      }
-    ]
-  },
+      path: '/home',
+      component: AppLayout,
+      meta: { requiresAuth: true },
+      children: [
+        { 
+          path: '', 
+          redirect: { name: 'home', params: { view: 'drive' } } 
+        },
+        {
+          path: ':view/:folderId?', 
+          name: 'home',
+          component: Home
+        }
+      ]
+    },
 ]
 
 const router = createRouter({
