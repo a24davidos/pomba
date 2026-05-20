@@ -1,4 +1,5 @@
 import { createApp } from 'vue'
+import {createPinia} from 'pinia'
 import './style.css'
 import App from './App.vue'
 import router from './router.js'
@@ -8,7 +9,9 @@ import Aura from '@primeuix/themes/aura'
 import { definePreset } from '@primeuix/themes'
 import 'primeicons/primeicons.css'
 
+const pinia = createPinia()
 const app = createApp(App)
+
 
 // Paleta Clara
 const stoneSurface = {
@@ -67,6 +70,6 @@ app.use(PrimeVue, {
         }
     }
 });
-
+app.use(pinia)
 app.use(router)
 app.mount('#app')
