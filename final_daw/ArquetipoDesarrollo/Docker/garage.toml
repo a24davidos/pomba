@@ -5,19 +5,16 @@ consistency_mode = "consistent"
 
 rpc_bind_addr = "0.0.0.0:3901"
 rpc_public_addr = "garage:3901"
-# Asegúrate de que este secreto sea el mismo que en el .env
 rpc_secret = "66079f0326ae751c8fc39ea9cd765d547ad4d35e6d457ff18a253d9f29347372"
 
 [s3_api]
 s3_region = "garage"
-s3_bind_addr = "0.0.0.0:3900"
+api_bind_addr = "0.0.0.0:3900"
 root_domain = ".s3.garage.localhost"
 
 [s3_web]
-bind_addr = "0.0.0.0:3902" # Por si quieres servir archivos web directamente
+bind_addr = "0.0.0.0:3902"
 root_domain = ".web.garage.localhost"
 
 [admin]
 api_bind_addr = "0.0.0.0:3903"
-# Opcional: puedes añadir un token de administración si quieres usar garage CLI desde fuera
-# admin_token = "tu_token_aqui"

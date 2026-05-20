@@ -1,0 +1,163 @@
+from django.utils import timezone
+
+from django.core.exceptions import ValidationError
+from .models import Item
+
+
+class ItemService:
+    # =========================================================
+    # SECCIÓN 1: Validaciones y auxiliares
+    # =========================================================
+
+    # Validamos que no se den bucles en el arbol (Por ejemplo mover una carpeta dentro de si misma)
+    @staticmethod
+    def check_cycle(item, nueva_carpeta_padre):
+        actual = nueva_carpeta_padre
+
+        while actual:
+            if actual.id == item.id:
+                return True
+            actual = actual.padre
+
+        return False
+    
+    # =========================================================
+    # SECCIÓN 2: Consultas y navegacion
+    # =========================================================
+
+    @staticmethod
+    def obtener_breadcrumb(usuario, carpeta_id):
+        ruta_base = [{"id": None, "label": "Inicio"}]
+        
+        # Si no hay ID o es la raíz, devolvemos solo inicio
+        if not carpeta_id:
+            return ruta_base
+
+        try:
+            # Aseguro que id sea un entero para no tener problema
+            id_actual = int(carpeta_id)
+        except (ValueError, TypeError):
+            return ruta_base
+
+        # 1. Traemos TODAS las carpetas (incluidas las eliminadas)
+        carpetas = Item.objects.filter(
+            usuario=usuario, 
+            tipo='carpeta'
+        ).values('id', 'nombre', 'padre_id')
+
+        # 2. Mapa en memoria
+        mapa_carpetas = {c['id']: c for c in carpetas}
+
+        # 3. Construcción del camino
+        nodos_padre = []
+
+        while id_actual is not None:
+            carpeta = mapa_carpetas.get(id_actual)
+            
+            if not carpeta:
+                # Si no encontramos la carpeta en el mapa, 
+                # puede ser que el ID no exista o no sea del usuario
+                break
+            
+            nodos_padre.append({
+                "id": carpeta['id'],
+                "label": carpeta['nombre']
+            })
+            
+            # Saltamos al padre
+            id_actual = carpeta['padre_id']
+
+        # 4. Invertimos para ir de Raíz -> Hijo
+        ruta_base.extend(reversed(nodos_padre))
+        return ruta_base
+
+    # =========================================================
+    # SECCIÓN 3: Operaciones de escritura (CRUD)
+    # =========================================================
+
+    @staticmethod
+    def crear_item(usuario, datos, fichero=None): 
+        # Creo el item base
+        item = Item(usuario=usuario, **datos)
+
+        print(datos)
+        # Si es Carpeta
+        if item.tipo == Item.Tipo.CARPETA:
+            return ItemService.guardar_item(item)
+        
+        # Si es Archivo
+        if not fichero:
+            raise ValidationError("Archivo requerido")
+        
+        # Guardo el fichero real en Garage a través de Django
+        item.file = fichero
+
+        item.tamano_bytes = fichero.size
+        item.mime_type = fichero.content_type
+
+        return ItemService.guardar_item(item)        
+
+
+    @staticmethod
+    def mover_item(item, nueva_carpeta_padre):
+        if ItemService.check_cycle(item, nueva_carpeta_padre):
+            raise ValidationError("No puedes crear ciclos")
+
+        item.padre = nueva_carpeta_padre
+
+        return ItemService.guardar_item(item)
+    
+    @staticmethod
+    def guardar_item(item):
+        item.full_clean()
+        item.save()
+        return item
+
+    # =========================================================
+    # SECCIÓN 4: Gestión de estados (Papelera, Favoritos etc.)
+    # =========================================================
+
+    # Método Soft Delete - Mandar a la papelera
+    @staticmethod
+    def mover_a_papelera(ids, usuario):
+        ahora = timezone.now()
+        
+        # 1. Traemos los items que no estan en la papelera
+        todos_los_items = Item.objects.filter(usuario=usuario, eliminado=False).values('id', 'padre_id')
+        
+        # 2. Creamos un mapa de adyacencia: {padre_id: [lista_de_hijos]}
+        # Esto facilita buscar los hijos de cualquier carpeta en memoria
+        hijos_por_padre = {}
+        for item in todos_los_items:
+            p_id = item['padre_id']
+            if p_id not in hijos_por_padre:
+                hijos_por_padre[p_id] = []
+            hijos_por_padre[p_id].append(item['id'])
+
+        # 3. Función recursiva pero SOLO sobre el diccionario de Python (instantánea)
+        ids_totales = set()
+
+        def buscar_descendientes_en_memoria(id_actual):
+            # Buscamos en el diccionario, no en la BD
+            hijos = hijos_por_padre.get(id_actual, [])
+            for h_id in hijos:
+                if h_id not in ids_totales:
+                    ids_totales.add(h_id)
+                    buscar_descendientes_en_memoria(h_id)
+
+        # 4. Procesamos los IDs iniciales
+        for root_id in ids:
+            ids_totales.add(root_id)
+            buscar_descendientes_en_memoria(root_id)
+
+        # 5. Aplicamos el update
+        return Item.objects.filter(id__in=ids_totales, usuario=usuario).update(
+            eliminado=True, 
+            fecha_eliminado=ahora
+        )
+    
+    @staticmethod
+    def marcar_favorito(ids, usuario):
+        return Item.objects.filter(id__in=ids, usuario=usuario).update(
+            favorito=True
+        )
