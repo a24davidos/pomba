@@ -1,261 +1,227 @@
 <script setup>
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { useItemsStore } from '@/stores/items'
+import { useItemsStore } from "@/stores/items";
 
-
-import FileTable from '../components/FileTable.vue'
-import Breadcrumb from 'primevue/breadcrumb'
-import Button from 'primevue/button'
-import Dialog from 'primevue/dialog'
-import InputText from 'primevue/inputtext'
-import api from '@/api/api'
+import FileTable from "../components/FileTable.vue";
+import Breadcrumb from "primevue/breadcrumb";
+import Button from "primevue/button";
+import Dialog from "primevue/dialog";
+import InputText from "primevue/inputtext";
 
 // --- ESTADO ---
-const itemsSeleccionados = ref([])
-const store = useItemsStore()
-
-
-const fileInput = ref(null)
-
-const modalNuevaCarpeta = ref(false)
-const inputNuevaCarpeta = ref('')
-
-const modalRenombrar = ref(false)
-const inputRenombrar = ref('')
+const store = useItemsStore();
 
 const route = useRoute();
 const router = useRouter();
 
-// --- BREADCRUMB ---
-const breadcrumbInicio = computed(() => {
-  const vistaActual = route.params.view || 'drive'
-  const config = CONFIGURACION_VISTAS[vistaActual]
+const itemsSeleccionados = ref([]);
 
-  return {
-    label: config?.titulo || 'Mi unidad',
-    icon: config?.icono || 'pi pi-home',
-    command: () => {
-      router.push({ 
-        name: 'home', 
-        params: { view: vistaActual }
-      });
-    }
-  }
-})
-const rutaBreadcrumb = ref([])
+const fileInput = ref(null);
 
+const modalNuevaCarpeta = ref(false);
+const inputNuevaCarpeta = ref("");
 
+const modalRenombrar = ref(false);
+const inputRenombrar = ref("");
+
+// ---VISTAS---
 const CONFIGURACION_VISTAS = {
   drive: {
-    titulo: 'Mi unidad',
-    icono: 'pi pi-folder',
-    paramsBase: { papelera: 'false', favoritos: 'false' }
+    titulo: "Mi unidad",
+    icono: "pi pi-folder",
+    paramsBase: { papelera: "false", favoritos: "false" },
   },
 
   trash: {
-    titulo: 'Papelera',
-    icono: 'pi pi-trash',
-    paramsBase: { papelera: 'true' }
+    titulo: "Papelera",
+    icono: "pi pi-trash",
+    paramsBase: { papelera: "true" },
   },
 
   fav: {
-    titulo: 'Favoritos',
-    icono: 'pi pi-star',
-    paramsBase: { papelera: 'false', favorito: 'true' }
+    titulo: "Favoritos",
+    icono: "pi pi-star",
+    paramsBase: { papelera: "false", favorito: "true" },
   },
 
   recent: {
-    titulo: 'Recientes',
-    icono: 'pi pi-clock',
-    paramsBase: {}
-  }
-}
-
-const actualizarBreadcrumb = (data) => {
-  const breadcrumbData = data || [];
-  
-  rutaBreadcrumb.value = breadcrumbData
-    .filter(nodo => nodo.id !== null) 
-    .map(nodo => ({
-      label: nodo.label,
-      id: nodo.id,
-      // Usamos router.push para que el botón "Atrás" funcione desde el breadcrumb también
-      command: () => router.push({
-        name: 'home',
-        params: { view: route.params.view || 'drive', folderId: nodo.id }
-      })
-    }));
+    titulo: "Recientes",
+    icono: "pi pi-clock",
+    paramsBase: {},
+  },
 };
 
+const breadcrumbInicio = computed(() => {
+  const vistaActual = route.params.view || "drive";
+  const config = CONFIGURACION_VISTAS[vistaActual];
 
-// --- NAVEGACIÓN ---
-function abrirCarpeta(carpeta) {
-  if (carpeta.tipo !== 'carpeta') return;
-  
-  router.push({
-    name: 'home',
-    params: { 
-      view: route.params.view || 'drive', 
-      folderId: carpeta.id 
-    }
-  });
-}
+  return {
+    label: config?.titulo || "Mi unidad",
+    icon: config?.icono || "pi pi-home",
 
-// --- SUBIR ARCHIVOS ---
-function abrirSelectorArchivo() {
-  fileInput.value?.click()
-}
+    command: () => {
+      router.push({
+        name: "home",
+        params: {
+          view: vistaActual,
+        },
+      });
+    },
+  };
+});
 
-async function subirArchivo(event){
-  const archivo = event.target.files[0]
+const rutaBreadcrumb = computed(() => {
+  return store.breadcrumb
+    .filter((nodo) => nodo.id !== null)
+    .map((nodo) => ({
+      label: nodo.label,
+      id: nodo.id,
 
-  if (!archivo) return
-
-  const formData = new FormData()
-
-  formData.append("nombre", archivo.name)
-  formData.append("tipo", "archivo")
-  formData.append("file", archivo)
-
-  const idPadre = route.params.folderId || null
-
-  if (idPadre) {
-    formData.append("padre", idPadre)
-  }
-
-  try {
-    await api.post("items/", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data"
-      }
-    })
-
-    await cargarDesdeRuta()
-
-    console.log("Archivo subido correctamente");
-  
-  } catch (error){
-    console.log("Error subiendo archivo: ", error);
-  } finally {
-    event.target.value = ""
-  }
-}
-
-// --- MODAL CREAR CARPETA ---
-
-function cerrarModal() {
-  modalNuevaCarpeta.value = false
-  inputNuevaCarpeta.value = ''
-  modalRenombrar.value = false
-  inputRenombrar.value = ""
-}
-
-async function crearCarpeta() {
-  const idPadre = route.params.folderId || null
-  try {
-    await api.post('items/', {
-      nombre: inputNuevaCarpeta.value,
-      tipo: "carpeta",
-      padre: idPadre
-    })
-
-    cerrarModal()
-    await cargarDesdeRuta()
-
-  } catch (error) {
-    console.error("Error creando carpeta:", error)
-  }
-}
-
-
-// --- SOFT DELETE ---
-async function eliminar() {
-  const idPadre = route.params.folderId || null
-  const seleccion = [itemsSeleccionados.value].flat();
-  const idsParaEliminar = seleccion.map(item => item.id);
-
-  if (idsParaEliminar.length === 0) return;
-
-  const url = "items/trash/";
-
-  try {
-      await api.post(url, { ids: idsParaEliminar });
-      await cargarDesdeRuta()
-      itemsSeleccionados.value = []; 
-    } catch (error) {
-      console.error("Error al mover a la papelera:", error);
-    }
-}
-
-async function marcarFavoritos() {
-  const seleccion = [itemsSeleccionados.value].flat();
-  const ids = seleccion.map(item => item.id);
-
-  if (ids.length === 0) return;
-
-  const url = "items/favorito/"
-
-  try{
-    await api.post(url, {ids:ids})
-    itemsSeleccionados.value = []
-  } catch (error){
-    console.error("Error al marcar como favorito", error)
-  }
-}
-
-function abirModalRenombrar() {
-  inputRenombrar.value = itemsSeleccionados.value[0].nombre
-  modalRenombrar.value = true
-}
-
-//CONTROLAR AQUI QUE NO SE PUEDA RENOMBRAR MAS DE UNO A LA VEZ, O POR LO MENOS QUE NO DE LA OPCION NOSE SI DEBERÍA DE MANDAR UN MENSAJE O QUE
-async function renombrar(){
-  //Solo debería de dejar coger 1!!!!
-
-  if (itemsSeleccionados.value.length !== 1){
-    return
-  }
-  const id = itemsSeleccionados.value[0].id
-  const url = `items/${id}/renombrar/`
-  const idPadre = route.params.folderId || null
-  
-  try{
-    await api.post(url, {nombre: inputRenombrar.value})
-    itemsSeleccionados.value = [];
-    cerrarModal()
-    await cargarDesdeRuta()
-  } catch (error){
-    console.error("Error al renombrar", error)
-  }
-
-}
-
+      command: () => {
+        router.push({
+          name: "home",
+          params: {
+            view: route.params.view || "drive",
+            folderId: nodo.id,
+          },
+        });
+      },
+    }));
+});
 
 function cargarDesdeRuta() {
-  const vista = route.params.view || 'drive'
-  const folderId = route.params.folderId || null
-  const config = CONFIGURACION_VISTAS[vista] || CONFIGURACION_VISTAS.drive
+  const vista = route.params.view || "drive";
+  const folderId = route.params.folderId || null;
+
+  const config = CONFIGURACION_VISTAS[vista] || CONFIGURACION_VISTAS.drive;
 
   return store.cargarItems({
     ...config.paramsBase,
-    carpeta: folderId
-  })
+    carpeta: folderId,
+  });
 }
-// --- WATCHERS ---
-watch(itemsSeleccionados, (nuevoValor) => {
-  console.log('items seleccionados:', nuevoValor)
-}, { deep: true })
 
+function abrirCarpeta(carpeta) {
+  if (carpeta.tipo !== "carpeta") return;
 
-// Observamos tanto la vista (drive, trash...) como el folderId
+  router.push({
+    name: "home",
+    params: {
+      view: route.params.view || "drive",
+      folderId: carpeta.id,
+    },
+  });
+}
+
+function abrirSelectorArchivo() {
+  fileInput.value?.click();
+}
+
+async function subirArchivo(event) {
+  const archivo = event.target.files[0];
+
+  if (!archivo) return;
+
+  const formData = new FormData();
+
+  formData.append("nombre", archivo.name);
+  formData.append("tipo", "archivo");
+  formData.append("file", archivo);
+
+  const idPadre = route.params.folderId || null;
+
+  if (idPadre) {
+    formData.append("padre", idPadre);
+  }
+
+  await store.subirArchivo(formData);
+
+  await cargarDesdeRuta();
+
+  event.target.value = "";
+}
+
+function cerrarModal() {
+  modalNuevaCarpeta.value = false;
+  inputNuevaCarpeta.value = "";
+
+  modalRenombrar.value = false;
+  inputRenombrar.value = "";
+}
+
+async function crearCarpeta() {
+  const idPadre = route.params.folderId || null;
+
+  await store.crearCarpeta({
+    nombre: inputNuevaCarpeta.value,
+    tipo: "carpeta",
+    padre: idPadre,
+  });
+
+  cerrarModal();
+
+  await cargarDesdeRuta();
+}
+
+async function eliminar() {
+  const ids = itemsSeleccionados.value.map((item) => item.id);
+
+  if (!ids.length) return;
+
+  await store.eliminarItems(ids);
+
+  itemsSeleccionados.value = [];
+
+  await cargarDesdeRuta();
+}
+
+async function marcarFavoritos() {
+  const ids = itemsSeleccionados.value.map((item) => item.id);
+
+  if (!ids.length) return;
+
+  await store.marcarFavoritos(ids);
+
+  itemsSeleccionados.value = [];
+
+  await cargarDesdeRuta();
+}
+
+function abrirModalRenombrar() {
+  if (itemsSeleccionados.value.length !== 1) return;
+
+  inputRenombrar.value = itemsSeleccionados.value[0].nombre;
+
+  modalRenombrar.value = true;
+}
+
+async function renombrar() {
+  if (itemsSeleccionados.value.length !== 1) return;
+
+  const id = itemsSeleccionados.value[0].id;
+
+  await store.renombrarItem(id, inputRenombrar.value);
+
+  itemsSeleccionados.value = [];
+
+  cerrarModal();
+
+  await cargarDesdeRuta();
+}
+
 watch(
   () => [route.params.view, route.params.folderId],
-  () => {
-    cargarDesdeRuta()
+  async () => {
+    itemsSeleccionados.value = []
+
+    await cargarDesdeRuta()
   },
-  { immediate: true }
+  {
+    immediate: true,
+  },
 )
+
 </script>
 
 <template>
@@ -268,24 +234,15 @@ watch(
       @click="abrirSelectorArchivo"
     />
 
-    <input
-      ref="fileInput"
-      type="file"
-      class="hidden"
-      @change="subirArchivo"
+    <input ref="fileInput" type="file" class="hidden" @change="subirArchivo" />
+
+    <Button
+      icon="pi pi-folder"
+      label="Nueva carpeta"
+      @click="modalNuevaCarpeta = true"
     />
 
-    <Button 
-      icon="pi pi-folder" 
-      label="Nueva carpeta" 
-      @click="modalNuevaCarpeta = true" 
-    />
-    
-    <Button
-      icon="pi pi-trash"
-      label="Eliminar"
-      @click="eliminar"
-    />
+    <Button icon="pi pi-trash" label="Eliminar" @click="eliminar" />
 
     <Button
       icon="pi pi-star"
@@ -293,93 +250,86 @@ watch(
       @click="marcarFavoritos"
     />
 
-    <Button
-      icon="pi pi-pencil"
-      label="renombrar"
-      @click="abirModalRenombrar"
-    />
+    <Button icon="pi pi-pencil" label="renombrar" @click="abrirModalRenombrar" />
     <!-- Breadcrumb sincronizado con rutaBreadcrumb -->
-    <Breadcrumb 
-      :home="breadcrumbInicio" 
-      :model="rutaBreadcrumb" 
-    />
+    <Breadcrumb :home="breadcrumbInicio" :model="rutaBreadcrumb" />
 
     <!-- Tabla de items sincronizada -->
     <FileTable
       :items="store.items"
-      :loading="store.cargandoTabla" 
+      :loading="store.loading"
       v-model:seleccionados="itemsSeleccionados"
       @open="abrirCarpeta"
     />
 
     <!-- Modal de Nueva Carpeta -->
-    <Dialog 
-      v-model:visible="modalNuevaCarpeta" 
-      header="Nueva Carpeta" 
-      :style="{ width: '25rem' }" 
+    <Dialog
+      v-model:visible="modalNuevaCarpeta"
+      header="Nueva Carpeta"
+      :style="{ width: '25rem' }"
       modal
       :draggable="false"
       :closable="false"
     >
       <div class="flex flex-col gap-2 mb-4">
-        <InputText 
-          id="folderName" 
-          v-model="inputNuevaCarpeta" 
-          class="flex-auto" 
-          autocomplete="off" 
+        <InputText
+          id="folderName"
+          v-model="inputNuevaCarpeta"
+          class="flex-auto"
+          autocomplete="off"
           placeholder="Introduzca el nombre de la carpeta"
-          @keyup.enter="crearCarpeta" 
+          @keyup.enter="crearCarpeta"
           autofocus
         />
       </div>
 
       <template #footer>
-        <Button 
-          label="Cancelar" 
-          text 
-          severity="secondary" 
-          @click="cerrarModal" 
+        <Button
+          label="Cancelar"
+          text
+          severity="secondary"
+          @click="cerrarModal"
         />
-        <Button 
-          label="Crear" 
-          @click="crearCarpeta" 
-          :disabled="!inputNuevaCarpeta.trim()" 
+        <Button
+          label="Crear"
+          @click="crearCarpeta"
+          :disabled="!inputNuevaCarpeta.trim()"
         />
       </template>
     </Dialog>
 
     <!-- Modal Renombrar -->
-    <Dialog 
-      v-model:visible="modalRenombrar" 
-      header="Renombrar" 
-      :style="{ width: '25rem' }" 
+    <Dialog
+      v-model:visible="modalRenombrar"
+      header="Renombrar"
+      :style="{ width: '25rem' }"
       modal
       :draggable="false"
       :closable="false"
     >
       <div class="flex flex-col gap-2 mb-4">
-        <InputText 
-          id="inputRename" 
-          v-model="inputRenombrar" 
-          class="flex-auto" 
-          autocomplete="off" 
+        <InputText
+          id="inputRename"
+          v-model="inputRenombrar"
+          class="flex-auto"
+          autocomplete="off"
           placeholder="Introduzca el nuevo nombre"
-          @keyup.enter="renombrar" 
+          @keyup.enter="renombrar"
           autofocus
         />
       </div>
 
       <template #footer>
-        <Button 
-          label="Cancelar" 
-          text 
-          severity="secondary" 
-          @click="cerrarModal" 
+        <Button
+          label="Cancelar"
+          text
+          severity="secondary"
+          @click="cerrarModal"
         />
-        <Button 
-          label="Confirmar" 
-          @click="renombrar" 
-          :disabled="!inputRenombrar.trim()" 
+        <Button
+          label="Confirmar"
+          @click="renombrar"
+          :disabled="!inputRenombrar.trim()"
         />
       </template>
     </Dialog>
