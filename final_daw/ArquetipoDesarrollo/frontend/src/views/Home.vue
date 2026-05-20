@@ -1,6 +1,8 @@
 <script setup>
-import { onMounted, ref, watch, computed } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useRoute, useRouter } from "vue-router";
+import { useItemsStore } from '@/stores/items'
+
 
 import FileTable from '../components/FileTable.vue'
 import Breadcrumb from 'primevue/breadcrumb'
@@ -10,9 +12,9 @@ import InputText from 'primevue/inputtext'
 import api from '@/api/api'
 
 // --- ESTADO ---
-const cargandoTabla = ref(false)
-const items = ref([])
 const itemsSeleccionados = ref([])
+const store = useItemsStore()
+
 
 const fileInput = ref(null)
 
@@ -86,36 +88,6 @@ const actualizarBreadcrumb = (data) => {
     }));
 };
 
-// --- CARGA DE ITEMS ---
-async function cargarItems(carpetaId = null) {
-  cargandoTabla.value = true;
-
-  //Identificamos en qué vista estamos (por defecto 'drive')
-  const vistaActual = route.params.view || 'drive';
-  
-  //Obtenemos la configuración de esa vista
-  const config = CONFIGURACION_VISTAS[vistaActual] || CONFIGURACION_VISTAS.drive;
-
-  const parametros = {
-    ...config.paramsBase, // Copiamos los filtros base (papelera, fav, etc.)
-    carpeta: carpetaId    // Añadimos la carpeta si existe
-  };
-
-  try {
-    const response = await api.get('items/', { params: parametros });
-
-    items.value = response.data.items;
-    
-    // Actualización del breadcrumb...
-    actualizarBreadcrumb(response.data.breadcrumb);
-
-  } catch (error) {
-    console.error("Error cargando items:", error);
-  } finally {
-    cargandoTabla.value = false;
-    itemsSeleccionados.value = [];
-  }
-}
 
 // --- NAVEGACIÓN ---
 function abrirCarpeta(carpeta) {
@@ -159,7 +131,7 @@ async function subirArchivo(event){
       }
     })
 
-    await cargarItems(idPadre)
+    await cargarDesdeRuta()
 
     console.log("Archivo subido correctamente");
   
@@ -189,7 +161,7 @@ async function crearCarpeta() {
     })
 
     cerrarModal()
-    cargarItems(idPadre)
+    await cargarDesdeRuta()
 
   } catch (error) {
     console.error("Error creando carpeta:", error)
@@ -209,7 +181,7 @@ async function eliminar() {
 
   try {
       await api.post(url, { ids: idsParaEliminar });
-      cargarItems(idPadre);
+      await cargarDesdeRuta()
       itemsSeleccionados.value = []; 
     } catch (error) {
       console.error("Error al mover a la papelera:", error);
@@ -250,28 +222,40 @@ async function renombrar(){
   
   try{
     await api.post(url, {nombre: inputRenombrar.value})
-    cargarItems(idPadre);
     itemsSeleccionados.value = [];
     cerrarModal()
+    await cargarDesdeRuta()
   } catch (error){
     console.error("Error al renombrar", error)
   }
 
 }
 
+
+function cargarDesdeRuta() {
+  const vista = route.params.view || 'drive'
+  const folderId = route.params.folderId || null
+  const config = CONFIGURACION_VISTAS[vista] || CONFIGURACION_VISTAS.drive
+
+  return store.cargarItems({
+    ...config.paramsBase,
+    carpeta: folderId
+  })
+}
 // --- WATCHERS ---
 watch(itemsSeleccionados, (nuevoValor) => {
   console.log('items seleccionados:', nuevoValor)
 }, { deep: true })
 
+
 // Observamos tanto la vista (drive, trash...) como el folderId
 watch(
   () => [route.params.view, route.params.folderId],
-  ([nuevaVista, nuevoFolderId]) => {
-    // Si cambia la vista o la carpeta en la URL, cargamos los datos correspondientes
-    cargarItems(nuevoFolderId || null);
-  },{ immediate: true }
-);
+  () => {
+    cargarDesdeRuta()
+  },
+  { immediate: true }
+)
 </script>
 
 <template>
@@ -322,8 +306,8 @@ watch(
 
     <!-- Tabla de items sincronizada -->
     <FileTable
-      :items="items"
-      :loading="cargandoTabla" 
+      :items="store.items"
+      :loading="store.cargandoTabla" 
       v-model:seleccionados="itemsSeleccionados"
       @open="abrirCarpeta"
     />
