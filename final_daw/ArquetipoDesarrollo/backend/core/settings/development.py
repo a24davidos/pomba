@@ -66,15 +66,7 @@ STORAGES = {
     "default": {
         "BACKEND": "storages.backends.s3.S3Storage",
         "OPTIONS": {
-            "bucket_name": AWS_STORAGE_BUCKET_NAME,
-            "access_key": AWS_ACCESS_KEY_ID,
-            "secret_key": AWS_SECRET_ACCESS_KEY,
-            "endpoint_url": AWS_S3_ENDPOINT_URL,
-            "region_name": AWS_S3_REGION_NAME,
             "addressing_style": "path",
-            "signature_version": "s3v4",
-            "default_acl": None,
-            "file_overwrite": False,
         },
     },
     "staticfiles": {

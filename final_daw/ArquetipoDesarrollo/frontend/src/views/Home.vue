@@ -14,6 +14,8 @@ const cargandoTabla = ref(false)
 const items = ref([])
 const itemsSeleccionados = ref([])
 
+const fileInput = ref(null)
+
 const modalNuevaCarpeta = ref(false)
 const inputNuevaCarpeta = ref('')
 
@@ -128,6 +130,46 @@ function abrirCarpeta(carpeta) {
   });
 }
 
+// --- SUBIR ARCHIVOS ---
+function abrirSelectorArchivo() {
+  fileInput.value?.click()
+}
+
+async function subirArchivo(event){
+  const archivo = event.target.files[0]
+
+  if (!archivo) return
+
+  const formData = new FormData()
+
+  formData.append("nombre", archivo.name)
+  formData.append("tipo", "archivo")
+  formData.append("file", archivo)
+
+  const idPadre = route.params.folderId || null
+
+  if (idPadre) {
+    formData.append("padre", idPadre)
+  }
+
+  try {
+    await api.post("items/", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data"
+      }
+    })
+
+    await cargarItem(idPadre)
+
+    console.log("Archivo subido correctamente");
+  
+  } catch (error){
+    console.log("Error subiendo archivo: ", error);
+  } finally {
+    event.target.value = ""
+  }
+}
+
 // --- MODAL CREAR CARPETA ---
 
 function cerrarModal() {
@@ -235,6 +277,20 @@ watch(
 <template>
   <div class="p-4 space-y-4">
     <!-- Botón para abrir el modal -->
+
+    <Button
+      icon="pi pi-file"
+      label="Nuevo archivo"
+      @click="abrirSelectorArchivo"
+    />
+
+    <input
+      ref="fileInput"
+      type="file"
+      class="hidden"
+      @change="subirArchivo"
+    />
+
     <Button 
       icon="pi pi-folder" 
       label="Nueva carpeta" 

@@ -1,7 +1,7 @@
 from rest_framework import viewsets, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.decorators import action
-from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
@@ -14,7 +14,7 @@ from .services import ItemService
 
 class ItemViewSet(viewsets.ModelViewSet):
     serializer_class = ItemSerializer
-    parser_classes = (MultiPartParser, FormParser)
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
 
     # FILTRADO BASE
     def get_queryset(self):
