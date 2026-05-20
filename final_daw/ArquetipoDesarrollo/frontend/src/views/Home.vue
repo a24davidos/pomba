@@ -159,7 +159,7 @@ async function subirArchivo(event){
       }
     })
 
-    await cargarItem(idPadre)
+    await cargarItems(idPadre)
 
     console.log("Archivo subido correctamente");
   
