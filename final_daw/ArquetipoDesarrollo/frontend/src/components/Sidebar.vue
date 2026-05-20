@@ -26,6 +26,8 @@
 import { ref, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import ContextMenu from "primevue/contextmenu";
+import api from '@/api/api'
+
 
 const route = useRoute();
 const router = useRouter();
@@ -36,8 +38,12 @@ const trashMenuItems = [
   {
     label: "Vaciar papelera",
     icon: "pi pi-trash",
-    command: () => {
-      console.log("Vaciar papelera");
+    command: async () => {
+      try {
+        const response = await api.post("items/vaciar_papelera/")
+      } catch (error){
+        console.log("Error vaciando la papelera:", error);
+      }
     }
   },
   {
