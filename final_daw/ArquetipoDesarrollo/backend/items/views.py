@@ -7,6 +7,8 @@ from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 from django.db.models import Exists, OuterRef
 
+from core.settings import development
+
 from .models import Item
 from .serializers import ItemSerializer
 from .services import ItemService
@@ -154,6 +156,57 @@ class ItemViewSet(viewsets.ModelViewSet):
                 {"detail": str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+    @action(detail=False, methods=["post"])
+    def vaciar_papelera(self, request):
+        try:
+            result = ItemService.vaciar_papelera(
+                usuario=request.user,
+                bucket_name=development.AWS_STORAGE_BUCKET_NAME,
+            )
+            return Response(
+                {
+                    "detail": "Papelera vaciada correctamente.",
+                    "deleted_count": result["deleted_count"],
+                    "s3_keys_deleted": result["s3_keys_deleted"],
+                },
+                status=status.HTTP_200_OK
+            )
+        except Exception as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    # @action(detail=False, methods=["post"])
+    # def borrar_fisico(self, request):
+    #     ids = request.data.get("ids", [])
+
+    #     if not ids:
+    #         return Response(
+    #             {"detail": "No se enviaron ids."},
+    #             status=status.HTTP_400_BAD_REQUEST
+    #         )
+
+    #     try:
+    #         result = ItemService.eliminar_items_fisicos(
+    #             ids=ids,
+    #             usuario=request.user,
+    #             bucket_name=settings.AWS_STORAGE_BUCKET_NAME,
+    #         )
+    #         return Response(
+    #             {
+    #                 "detail": "Elementos borrados correctamente.",
+    #                 "deleted_count": result["deleted_count"],
+    #                 "s3_keys_deleted": result["s3_keys_deleted"],
+    #             },
+    #             status=status.HTTP_200_OK
+    #         )
+    #     except Exception as e:
+    #         return Response(
+    #             {"detail": str(e)},
+    #             status=status.HTTP_400_BAD_REQUEST
+    #         )
 
     @action(detail=True, methods=["post"])
     def restore(self, request, pk=None):
