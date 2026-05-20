@@ -1,12 +1,12 @@
 <template>
   <aside class="w-55 h-full  flex flex-col p-3">
     <nav class="flex flex-col gap-1">
-      
+      <ContextMenu ref="menu" :model="trashMenuItems" />
       <button
         v-for="item in items"
         :key="item.key"
         @click="setActive(item.key)"
-
+        @contextmenu.prevent="item.key === 'trash' && onTrashRightClick($event)"
         :class="[
           'flex items-center gap-5 px-3 py-2 rounded-lg transition-all duration-200 cursor-pointer border-none outline-none text-sm',
           active === item.key 
@@ -25,9 +25,29 @@
 <script setup>
 import { ref, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import ContextMenu from "primevue/contextmenu";
 
 const route = useRoute();
 const router = useRouter();
+
+const menu = ref(null);
+
+const trashMenuItems = [
+  {
+    label: "Vaciar papelera",
+    icon: "pi pi-trash",
+    command: () => {
+      console.log("Vaciar papelera");
+    }
+  },
+  {
+    label: "Restaurar todo",
+    icon: "pi pi-replay",
+    command: () => {
+      console.log("Restaurar todo");
+    }
+  }
+];
 
 const active = computed(() => route.params.view || 'drive');
 
@@ -42,5 +62,9 @@ const items = [
 const setActive = (key) => {
   router.push({name: 'home', params: {view: key}})
 }
+
+const onTrashRightClick = (event) => {
+  menu.value.show(event);
+};
 
 </script>
