@@ -103,6 +103,7 @@ export const useItemsStore = defineStore('items', {
         await api.post('items/', formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         })
+        await this.cargarItems(this.currentParams)  // ← Recarga automática
       } catch (error) {
         console.error('Error subiendo archivo:', error)
       }
