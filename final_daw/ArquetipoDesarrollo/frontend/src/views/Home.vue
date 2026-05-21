@@ -21,7 +21,6 @@ const fileInput = ref(null);
 
 const inputNuevaCarpeta = ref("");
 
-const modalRenombrar = ref(false);
 const inputRenombrar = ref("");
 
 // ---VISTAS---
@@ -123,20 +122,16 @@ async function subirArchivo(event) {
   if (!archivo) return;
 
   const formData = new FormData();
-
   formData.append("nombre", archivo.name);
   formData.append("tipo", "archivo");
   formData.append("file", archivo);
 
   const idPadre = route.params.folderId || null;
-
   if (idPadre) {
     formData.append("padre", idPadre);
   }
 
   await store.subirArchivo(formData);
-
-  await cargarDesdeRuta();
 
   event.target.value = "";
 }
@@ -144,6 +139,8 @@ async function subirArchivo(event) {
 function cerrarModal() {
   store.cerrarModal();
   inputNuevaCarpeta.value = "";
+  inputRenombrar.value = "";
+
 }
 
 async function crearCarpeta() {
@@ -187,15 +184,15 @@ async function marcarFavoritos() {
 function abrirModalRenombrar() {
   if (itemsSeleccionados.value.length !== 1) return;
 
-  inputRenombrar.value = itemsSeleccionados.value[0].nombre;
-
-  modalRenombrar.value = true;
+  const item = itemsSeleccionados.value[0];
+  inputRenombrar.value = item.nombre;
+  store.abrirModal("renombrar", item);
 }
 
 async function renombrar() {
   if (itemsSeleccionados.value.length !== 1) return;
 
-  const id = itemsSeleccionados.value[0].id;
+  const id = store.ui.modal.payload.id
 
   await store.renombrarItem(id, inputRenombrar.value);
 
@@ -224,20 +221,6 @@ watch(
   <div class="p-4 space-y-4">
     <!-- Botón para abrir el modal -->
 
-    <Button
-      icon="pi pi-file"
-      label="Nuevo archivo"
-      @click="abrirSelectorArchivo"
-    />
-
-    <input ref="fileInput" type="file" class="hidden" @change="subirArchivo" />
-
-    <Button
-      icon="pi pi-folder"
-      label="Nueva carpeta"
-      @click="modalNuevaCarpeta = true"
-    />
-
     <Button icon="pi pi-trash" label="Eliminar" @click="eliminar" />
 
     <Button
@@ -260,6 +243,7 @@ watch(
 
     <!-- Modal de Nueva Carpeta -->
     <Dialog
+      v-if="store.ui.modal.name === 'crearCarpeta'" 
       v-model:visible="store.ui.modal.open"
       header="Nueva Carpeta"
       :style="{ width: '25rem' }"
@@ -296,7 +280,8 @@ watch(
 
     <!-- Modal Renombrar -->
     <Dialog
-      v-model:visible="modalRenombrar"
+      v-if="store.ui.modal.name === 'renombrar'"
+      v-model:visible="store.ui.modal.open"
       header="Renombrar"
       :style="{ width: '25rem' }"
       modal

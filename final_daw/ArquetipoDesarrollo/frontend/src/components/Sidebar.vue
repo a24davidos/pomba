@@ -163,22 +163,16 @@ async function subirArchivo(event) {
   if (!archivo) return;
 
   const formData = new FormData();
-
   formData.append("nombre", archivo.name);
-
   formData.append("tipo", "archivo");
-
   formData.append("file", archivo);
 
   const folderId = route.params.folderId || null;
-
   if (folderId) {
     formData.append("padre", folderId);
   }
 
-  await store.subirArchivo(formData);
-
-  await store.cargarItems(store.currentParams);
+  await store.subirArchivo(formData);  // ← SÓLO esto
 
   event.target.value = "";
 }
