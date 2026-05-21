@@ -46,8 +46,8 @@ const trashMenuItems = [
   }, {
     label: "Restaurar todo",
     icon: "pi pi-replay",
-    command: () => {
-      console.log("Restaurar todo");
+    command: async () => {
+      await store.restaurarPapelera()
     }
   }
 ];

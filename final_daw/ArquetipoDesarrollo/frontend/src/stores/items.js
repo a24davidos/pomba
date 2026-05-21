@@ -44,6 +44,15 @@ export const useItemsStore = defineStore('items', {
       }
     },
 
+    async restaurarPapelera(){
+        try{
+            await api.post('items/restaurar_papelera/')
+            await this.cargarItems(this.currentParams)
+        } catch (error){
+            console.error("Error restaurando papelera:", error);
+        }
+    },
+
     async eliminarItems(ids = []) {
       try {
         await api.post('items/trash/', { ids })

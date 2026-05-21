@@ -120,6 +120,17 @@ class ItemService:
 
         return ItemService.eliminar_items_fisicos(trash_ids, usuario, bucket_name)
 
+    @staticmethod
+    def restaurar_items(ids, usuario):
+        all_ids = ItemService.recolectar_descendientes_id(ids, usuario)
+
+        return Item.objects.filter(
+            usuario=usuario,
+            id__in=all_ids
+        ).update(
+            eliminado=False,
+            fecha_eliminado=None
+        )
     # =========================================================
     # SECCIÓN 2: Consultas y navegacion
     # =========================================================
@@ -219,40 +230,14 @@ class ItemService:
     # Método Soft Delete - Mandar a la papelera
     @staticmethod
     def mover_a_papelera(ids, usuario):
-        ahora = timezone.now()
-        
-        # 1. Traemos los items que no estan en la papelera
-        todos_los_items = Item.objects.filter(usuario=usuario, eliminado=False).values('id', 'padre_id')
-        
-        # 2. Creamos un mapa de adyacencia: {padre_id: [lista_de_hijos]}
-        # Esto facilita buscar los hijos de cualquier carpeta en memoria
-        hijos_por_padre = {}
-        for item in todos_los_items:
-            p_id = item['padre_id']
-            if p_id not in hijos_por_padre:
-                hijos_por_padre[p_id] = []
-            hijos_por_padre[p_id].append(item['id'])
+        all_ids = ItemService.recolectar_descendientes_id(ids, usuario)
 
-        # 3. Función recursiva pero SOLO sobre el diccionario de Python (instantánea)
-        ids_totales = set()
-
-        def buscar_descendientes_en_memoria(id_actual):
-            # Buscamos en el diccionario, no en la BD
-            hijos = hijos_por_padre.get(id_actual, [])
-            for h_id in hijos:
-                if h_id not in ids_totales:
-                    ids_totales.add(h_id)
-                    buscar_descendientes_en_memoria(h_id)
-
-        # 4. Procesamos los IDs iniciales
-        for root_id in ids:
-            ids_totales.add(root_id)
-            buscar_descendientes_en_memoria(root_id)
-
-        # 5. Aplicamos el update
-        return Item.objects.filter(id__in=ids_totales, usuario=usuario).update(
-            eliminado=True, 
-            fecha_eliminado=ahora
+        return Item.objects.filter(
+            usuario=usuario,
+            id__in=all_ids
+        ).update(
+            eliminado=True,
+            fecha_eliminado=timezone.now()
         )
     
     @staticmethod
