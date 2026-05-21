@@ -1,7 +1,11 @@
+import boto3
 from django.utils import timezone
 
 from django.core.exceptions import ValidationError
 from .models import Item
+from django.db import transaction
+from django.conf import settings
+
 
 
 class ItemService:
@@ -21,6 +25,112 @@ class ItemService:
 
         return False
     
+    @staticmethod
+    def recolectar_descendientes_id(root_ids, usuario):
+        """
+        Devuelve todos los ids raíz + descendientes del usuario
+        sin hacer N+1.
+        """
+        all_ids = set(int(i) for i in root_ids)
+        frontier = set(all_ids)
+
+        while frontier:
+            children = set(
+                Item.objects.filter(
+                    usuario=usuario,
+                    padre_id__in=frontier,
+                ).values_list("id", flat=True)
+            )
+            children -= all_ids
+            if not children:
+                break
+
+            all_ids |= children
+            frontier = children
+
+        return all_ids
+
+    @staticmethod
+    def get_s3_client():
+        return boto3.client(
+            "s3",
+            endpoint_url=settings.AWS_S3_ENDPOINT_URL,
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name=settings.AWS_S3_REGION_NAME,
+        )
+
+    @staticmethod
+    def get_s3_keys_for_items(items_qs):
+        """
+        Extrae las keys de S3 de los items tipo archivo.
+        """
+        return list(
+            items_qs.exclude(file="").exclude(file__isnull=True).values_list("file", flat=True)
+        )
+    
+    @staticmethod
+    def delete_s3_keys(keys, bucket_name):
+        if not keys:
+            return
+
+        s3 = ItemService.get_s3_client()
+
+        for i in range(0, len(keys), 1000):
+            batch = keys[i:i + 1000]
+            s3.delete_objects(
+                Bucket=bucket_name,
+                Delete={
+                    "Objects": [{"Key": key} for key in batch],
+                    "Quiet": True,
+                }
+            )
+
+    @staticmethod
+    def eliminar_items_fisicos(ids, usuario, bucket_name):
+        """
+        Borra físicamente items y sus descendientes.
+        """
+        all_ids = ItemService.recolectar_descendientes_id(ids, usuario)
+
+        items_qs = Item.objects.filter(usuario=usuario, id__in=all_ids)
+
+        s3_keys = ItemService.get_s3_keys_for_items(items_qs)
+
+        with transaction.atomic():
+            ItemService.delete_s3_keys(s3_keys, bucket_name)
+            deleted_count, _ = items_qs.delete()
+
+        return {
+            "deleted_count": deleted_count,
+            "s3_keys_deleted": len(s3_keys),
+        }
+    
+    @staticmethod
+    def vaciar_papelera(usuario, bucket_name):
+        trash_ids = list(
+            Item.objects.filter(usuario=usuario, eliminado=True).values_list("id", flat=True)
+        )
+
+        if not trash_ids:
+            return {
+                "deleted_count": 0,
+                "s3_keys_deleted": 0,
+            }
+
+        return ItemService.eliminar_items_fisicos(trash_ids, usuario, bucket_name)
+
+    @staticmethod
+    def restaurar_items(ids, usuario):
+        all_ids = ItemService.recolectar_descendientes_id(ids, usuario)
+
+        return Item.objects.filter(
+            usuario=usuario,
+            id__in=all_ids
+        ).update(
+            eliminado=False,
+            fecha_eliminado=None
+        )
     # =========================================================
     # SECCIÓN 2: Consultas y navegacion
     # =========================================================
@@ -120,40 +230,14 @@ class ItemService:
     # Método Soft Delete - Mandar a la papelera
     @staticmethod
     def mover_a_papelera(ids, usuario):
-        ahora = timezone.now()
-        
-        # 1. Traemos los items que no estan en la papelera
-        todos_los_items = Item.objects.filter(usuario=usuario, eliminado=False).values('id', 'padre_id')
-        
-        # 2. Creamos un mapa de adyacencia: {padre_id: [lista_de_hijos]}
-        # Esto facilita buscar los hijos de cualquier carpeta en memoria
-        hijos_por_padre = {}
-        for item in todos_los_items:
-            p_id = item['padre_id']
-            if p_id not in hijos_por_padre:
-                hijos_por_padre[p_id] = []
-            hijos_por_padre[p_id].append(item['id'])
+        all_ids = ItemService.recolectar_descendientes_id(ids, usuario)
 
-        # 3. Función recursiva pero SOLO sobre el diccionario de Python (instantánea)
-        ids_totales = set()
-
-        def buscar_descendientes_en_memoria(id_actual):
-            # Buscamos en el diccionario, no en la BD
-            hijos = hijos_por_padre.get(id_actual, [])
-            for h_id in hijos:
-                if h_id not in ids_totales:
-                    ids_totales.add(h_id)
-                    buscar_descendientes_en_memoria(h_id)
-
-        # 4. Procesamos los IDs iniciales
-        for root_id in ids:
-            ids_totales.add(root_id)
-            buscar_descendientes_en_memoria(root_id)
-
-        # 5. Aplicamos el update
-        return Item.objects.filter(id__in=ids_totales, usuario=usuario).update(
-            eliminado=True, 
-            fecha_eliminado=ahora
+        return Item.objects.filter(
+            usuario=usuario,
+            id__in=all_ids
+        ).update(
+            eliminado=True,
+            fecha_eliminado=timezone.now()
         )
     
     @staticmethod

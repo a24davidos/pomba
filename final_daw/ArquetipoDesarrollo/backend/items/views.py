@@ -7,6 +7,8 @@ from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 from django.db.models import Exists, OuterRef
 
+from core.settings import development
+
 from .models import Item
 from .serializers import ItemSerializer
 from .services import ItemService
@@ -155,12 +157,59 @@ class ItemViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-    @action(detail=True, methods=["post"])
-    def restore(self, request, pk=None):
-        """
-        TODO: restaurar de papelera
-        """
-        pass
+    @action(detail=False, methods=["post"])
+    def vaciar_papelera(self, request):
+        try:
+            result = ItemService.vaciar_papelera(
+                usuario=request.user,
+                bucket_name=development.AWS_STORAGE_BUCKET_NAME,
+            )
+            return Response(
+                {
+                    "detail": "Papelera vaciada correctamente.",
+                    "deleted_count": result["deleted_count"],
+                    "s3_keys_deleted": result["s3_keys_deleted"],
+                },
+                status=status.HTTP_200_OK
+            )
+        except Exception as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+    #Para restaurar un unico elemento
+    @action(detail=False, methods=["post"])
+    def restaurar(self, request):
+
+        ids = request.data.get("ids", [])
+
+        restaurados = ItemService.restaurar_items(
+            ids,
+            request.user
+        )
+
+        return Response({
+            "restaurados": restaurados
+        })
+    #Para resturar toda la papelera
+    @action(detail=False, methods=["post"])
+    def restaurar_papelera(self, request):
+        ids = list(
+                Item.objects.filter(
+                usuario=request.user,
+                eliminado=True
+                ).values_list("id", flat=True)
+            )
+
+        restaurados = ItemService.restaurar_items(
+            ids,
+            request.user
+        )
+
+        return Response({
+            "restaurados": restaurados
+        })
 
     @action(detail=True, methods=['post'])
     def renombrar(self, request, pk=None):
