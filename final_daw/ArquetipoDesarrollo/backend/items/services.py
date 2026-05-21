@@ -5,7 +5,8 @@ from django.core.exceptions import ValidationError
 from .models import Item
 from django.db import transaction
 from django.conf import settings
-
+from django.core.exceptions import ValidationError as DjangoValidationError
+from rest_framework.exceptions import ValidationError as DRFValidationError
 
 
 class ItemService:
@@ -219,7 +220,10 @@ class ItemService:
     
     @staticmethod
     def guardar_item(item):
-        item.full_clean()
+        try:
+            item.full_clean()
+        except DjangoValidationError as e:
+            raise DRFValidationError(e.message_dict)
         item.save()
         return item
 
