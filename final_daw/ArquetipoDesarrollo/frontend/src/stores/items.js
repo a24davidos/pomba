@@ -7,10 +7,31 @@ export const useItemsStore = defineStore('items', {
     breadcrumb: [],
     loading: false,
     currentParams: {},
-    loadToken: 0
+    loadToken: 0,
+    
+     ui: {
+      modal: {
+        open: false,
+        name: null,
+        payload: null
+      }
+     }
   }),
 
   actions: {
+
+    abrirModal(name, payload = null) {
+      this.ui.modal.open = true
+      this.ui.modal.name = name
+      this.ui.modal.payload = payload
+    },
+
+    cerrarModal() {
+      this.ui.modal.open = false
+      this.ui.modal.name = null
+      this.ui.modal.payload = null
+    },
+    
     async cargarItems(params = {}) {
       const token = ++this.loadToken
 

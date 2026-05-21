@@ -19,7 +19,6 @@ const itemsSeleccionados = ref([]);
 
 const fileInput = ref(null);
 
-const modalNuevaCarpeta = ref(false);
 const inputNuevaCarpeta = ref("");
 
 const modalRenombrar = ref(false);
@@ -143,11 +142,8 @@ async function subirArchivo(event) {
 }
 
 function cerrarModal() {
-  modalNuevaCarpeta.value = false;
+  store.cerrarModal();
   inputNuevaCarpeta.value = "";
-
-  modalRenombrar.value = false;
-  inputRenombrar.value = "";
 }
 
 async function crearCarpeta() {
@@ -264,7 +260,7 @@ watch(
 
     <!-- Modal de Nueva Carpeta -->
     <Dialog
-      v-model:visible="modalNuevaCarpeta"
+      v-model:visible="store.ui.modal.open"
       header="Nueva Carpeta"
       :style="{ width: '25rem' }"
       modal
