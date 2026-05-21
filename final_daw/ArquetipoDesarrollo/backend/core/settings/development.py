@@ -1,12 +1,25 @@
 from .base import *
 import os
 
-# --- VARIABLES DE ENTORNO ---
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'fallback-insecure-key')
+
+# =========================================================
+# SEGURIDAD / CONFIG GENERAL
+# =========================================================
+
+# Clave secreta de Django (NO usar fallback en producción)
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+
+# Debug controlado por variable de entorno
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+
+# En producción deberías restringir esto
 ALLOWED_HOSTS = ['*']
 
-# --- DATABASE (POSTGRESQL) ---
+
+# =========================================================
+# BASE DE DATOS (POSTGRESQL)
+# =========================================================
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -18,42 +31,53 @@ DATABASES = {
     }
 }
 
-# --- ELASTICSEARCH ---
+
+# =========================================================
+# ELASTICSEARCH (búsqueda avanzada)
+# =========================================================
+
 ELASTICSEARCH_DSL = {
     'default': {
-        'hosts': os.environ.get('ELASTICSEARCH_URL', 'http://elasticsearch:9200')
+        'hosts': os.environ.get(
+            'ELASTICSEARCH_URL',
+            'http://elasticsearch:9200'
+        )
     },
 }
 
-# --- CONFIGURACIÓN DE GARAGE (S3 STORAGE PARA MEDIA) ---
-AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
-AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
-AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', 'mi-bucket-app')
 
-# En desarrollo, si accedes desde fuera del contenedor (browser del Mac), 
-# usa http://localhost:3900. Si todo va por Nginx, usa el endpoint del proxy.
-AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL', 'http://localhost:3900')
+# =========================================================
+# GARAGE (S3 COMPATIBLE STORAGE)
+# =========================================================
+# Aquí conectas Django con Garage (S3 API compatible)
 
-# Configuración necesaria para Garage v2
-AWS_S3_REGION_NAME = 'garage'
-AWS_S3_SIGNATURE_VERSION = 's3v4'
-AWS_S3_FILE_OVERWRITE = False
-AWS_DEFAULT_ACL = None  # Garage v2 prefiere manejar permisos vía bucket allow
+AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
+AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME", "mi-bucket-app")
+AWS_S3_ENDPOINT_URL = os.environ.get("AWS_S3_ENDPOINT_URL", "http://garage:3900")
+AWS_S3_REGION_NAME = os.environ.get("AWS_S3_REGION_NAME", "garage")
 
-# IMPORTANTE: Forzamos el estilo de ruta para evitar problemas de DNS con el nombre del bucket
 AWS_S3_ADDRESSING_STYLE = "path"
+AWS_S3_SIGNATURE_VERSION = "s3v4"
+AWS_DEFAULT_ACL = None
+AWS_S3_FILE_OVERWRITE = False
 
-# Configuramos para que SOLO los archivos multimedia suban a Garage
-DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-MEDIA_URL = f'{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/'
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "addressing_style": "path",
+        },
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
 
-# --- STATIC FILES (LOCAL EN DESARROLLO) ---
-# Se mantienen en el sistema de archivos local, servidos por Nginx
-STATIC_URL = '/static_backend/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_URL = "/static_backend/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# --- INTERNATIONALIZATION ---
-LANGUAGE_CODE = 'es-ES'
-TIME_ZONE = 'Europe/Madrid'
+LANGUAGE_CODE = "es-ES"
+TIME_ZONE = "Europe/Madrid"
 USE_I18N = True
 USE_TZ = True

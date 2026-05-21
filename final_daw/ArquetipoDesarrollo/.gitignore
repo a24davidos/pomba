@@ -13,6 +13,7 @@ htmlcov/
 staticfiles/
 media/
 garage.toml
+libraries/
 
 # --- BASE DE DATOS & DOCKER ---
 postgres_data/
