@@ -62,9 +62,17 @@ AWS_S3_SIGNATURE_VERSION = "s3v4"
 AWS_DEFAULT_ACL = None
 AWS_S3_FILE_OVERWRITE = False
 
+# URL pública de Garage accesible desde el navegador.
+# Django usa AWS_S3_ENDPOINT_URL (http://garage:3900) para operar con S3 internamente,
+# pero las URLs presignadas deben generarse con el endpoint público para que el navegador
+# pueda resolverlas
+GARAGE_PUBLIC_URL = os.environ.get("GARAGE_PUBLIC_URL", "http://localhost:3900")
+
 STORAGES = {
     "default": {
-        "BACKEND": "storages.backends.s3.S3Storage",
+        # Backend personalizado: usa endpoint interno para operar en S3
+        # y endpoint público para generar URLs presignadas.
+        "BACKEND": "storage.backends.GarageStorage",
         "OPTIONS": {
             "addressing_style": "path",
         },

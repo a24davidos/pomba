@@ -48,9 +48,8 @@ function formatBytes(bytes) {
 <template>
   <div class="w-full min-h-96 select-none" @click="handleBackgroundClick">
 
-    <div class="grid grid-cols-[1fr_120px_100px_140px] gap-4 px-3 py-2 text-xs font-medium text-surface-400 dark:text-surface-500 border-b border-surface-100 dark:border-surface-800">
+    <div class="grid grid-cols-[1fr_120px_100px_140px] gap-4 px-3 py-2 text-lg font-medium text-surface-400 dark:text-surface-500 border-b border-surface-100 dark:border-surface-800">
       <span>Nombre</span>
-      <span>Tipo</span>
       <span>Tamaño</span>
       <span>Modificado</span>
     </div>
@@ -74,7 +73,7 @@ function formatBytes(bytes) {
         @click.stop="handleClick($event, item, index)"
         @dblclick.stop="handleDoubleClick(item)"
         :class="[
-          'grid grid-cols-[1fr_120px_100px_140px] gap-4 px-3 py-2 rounded-lg items-center cursor-pointer transition-colors duration-100 text-sm',
+          'grid grid-cols-[1fr_120px_100px_140px] gap-4 px-3 py-2 rounded-lg items-center cursor-pointer transition-colors duration-100 text-base',
           estaSeleccionado(item)
             ? 'bg-primary/10 dark:bg-primary/20'
             : 'hover:bg-surface-100 dark:hover:bg-surface-800',
@@ -88,10 +87,6 @@ function formatBytes(bytes) {
           <span class="truncate">{{ item.nombre }}</span>
           <i v-if="item.favorito" class="pi pi-star-fill text-yellow-400 text-xs shrink-0" />
         </div>
-
-        <span class="text-surface-500 dark:text-surface-400 capitalize">
-          {{ item.tipo === 'carpeta' ? 'Carpeta' : (item.mime_type || 'Archivo') }}
-        </span>
 
         <span class="text-surface-500 dark:text-surface-400">
           {{ item.tipo === 'carpeta' ? '—' : formatBytes(item.tamano_bytes) }}
