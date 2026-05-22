@@ -257,6 +257,11 @@ class ItemService:
     
     @staticmethod
     def marcar_favorito(ids, usuario):
-        return Item.objects.filter(id__in=ids, usuario=usuario).update(
-            favorito=True
-        )
+        items = Item.objects.filter(id__in=ids, usuario=usuario)
+        
+        # Si TODOS están en favorito → quitamos. Si alguno no lo está → marcamos todos.
+        todos_favoritos = all(item.favorito for item in items)
+        nuevo_valor = not todos_favoritos
+        
+        items.update(favorito=nuevo_valor)
+        return nuevo_valor

@@ -87,8 +87,11 @@ class ItemViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         try:
-            ItemService.marcar_favorito(ids=ids, usuario=request.user)
-            return Response({'detail': 'Marcado como favorito correctamente.'})
+            nuevo_valor = ItemService.marcar_favorito(ids=ids, usuario=request.user)
+            return Response({
+                'detail': 'Favorito actualizado correctamente.',
+                'favorito': nuevo_valor,
+            })
         except Exception as e:
             return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
