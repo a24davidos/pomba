@@ -6,6 +6,7 @@ export const useItemsStore = defineStore('items', {
     items: [],
     breadcrumb: [],
     loading: false,
+    descargando: false,
     currentParams: {},
     loadToken: 0,
 
@@ -143,6 +144,48 @@ export const useItemsStore = defineStore('items', {
         await this.cargarItems(this.currentParams)
       } catch (error) {
         console.error('Error vaciando papelera:', error)
+      }
+    },
+
+    async descargarItems() {
+      const seleccion = this.itemsSeleccionados
+      if (!seleccion.length) return
+
+      // Un solo archivo:  URL directa (sin pasar por Django)
+      if (seleccion.length === 1 && seleccion[0].tipo === 'archivo') {
+        try {
+          const resp = await api.get(`items/${seleccion[0].id}/descargar_archivo/`)
+          const a = document.createElement('a')
+          a.href = resp.data.url
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+        } catch (error) {
+          console.error('Error descargando archivo:', error)
+        }
+        return
+      }
+
+      // Carpeta o selección múltiple:  ZIP generamos con Django
+      this.descargando = true
+      try {
+        const ids = seleccion.map((i) => i.id)
+        const nombre = seleccion.length === 1 ? `${seleccion[0].nombre}.zip` : 'descarga.zip'
+
+        const resp = await api.post('items/descargar/', { ids }, { responseType: 'blob' })
+
+        const blobUrl = URL.createObjectURL(resp.data)
+        const a = document.createElement('a')
+        a.href = blobUrl
+        a.download = nombre
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(blobUrl)
+      } catch (error) {
+        console.error('Error descargando ZIP:', error)
+      } finally {
+        this.descargando = false
       }
     },
 

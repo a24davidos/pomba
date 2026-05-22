@@ -149,6 +149,10 @@ async function renombrar() {
   await cargarDesdeRuta()
 }
 
+async function descargar() {
+  await store.descargarItems()
+}
+
 watch(
   () => [route.params.view, route.params.folderId],
   async () => {
@@ -209,6 +213,15 @@ watch(
           </template>
 
           <template v-else>
+            <Button
+              icon="pi pi-download"
+              label="Descargar"
+              text
+              size="small"
+              rounded
+              :loading="store.descargando"
+              @click="descargar"
+            />
             <Button icon="pi pi-star" label="Favorito" text size="small" rounded @click="marcarFavoritos" />
             <Button
               v-if="store.itemsSeleccionados.length === 1"
@@ -228,6 +241,22 @@ watch(
 
     <!-- TABLA -->
     <FileTable @open="abrirCarpeta" />
+
+    <!-- SNACKBAR DESCARGA -->
+    <Transition
+      enter-active-class="transition-all duration-200 ease-out"
+      enter-from-class="opacity-0 translate-y-2"
+      leave-active-class="transition-all duration-150 ease-in"
+      leave-to-class="opacity-0 translate-y-2"
+    >
+      <div
+        v-if="store.descargando"
+        class="fixed bottom-6 left-6 z-50 flex items-center gap-3 bg-surface-800 dark:bg-surface-100 text-white dark:text-surface-900 text-sm font-medium px-4 py-3 rounded-xl shadow-lg"
+      >
+        <i class="pi pi-spin pi-spinner text-base" />
+        <span>Comprimiendo archivos…</span>
+      </div>
+    </Transition>
 
     <!-- MODAL NUEVA CARPETA -->
     <Dialog
