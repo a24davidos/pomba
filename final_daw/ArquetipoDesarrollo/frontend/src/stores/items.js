@@ -8,6 +8,12 @@ export const useItemsStore = defineStore('items', {
     loading: false,
     currentParams: {},
     loadToken: 0,
+
+    seleccion: {
+      ids: [],
+      lastIndex: null,
+    },
+
     ui: {
       modal: {
         open: false,
@@ -16,6 +22,13 @@ export const useItemsStore = defineStore('items', {
       },
     },
   }),
+
+  getters: {
+    itemsSeleccionados(state) {
+      const set = new Set(state.seleccion.ids)
+      return state.items.filter((i) => set.has(i.id))
+    },
+  },
 
   actions: {
     abrirModal(name, payload = null) {
@@ -34,7 +47,6 @@ export const useItemsStore = defineStore('items', {
       const token = ++this.loadToken
       this.loading = true
       this.currentParams = { ...params }
-
       try {
         const response = await api.get('items/', { params })
         if (token !== this.loadToken) return
@@ -74,15 +86,23 @@ export const useItemsStore = defineStore('items', {
       }
     },
 
+    actualizarItemsLocal(ids, cambios) {
+      const set = new Set(ids)
+      this.items = this.items.map((item) =>
+        set.has(item.id) ? { ...item, ...cambios } : item
+      )
+    },
+
     async marcarFavoritos(ids = []) {
       try {
-        await api.post('items/favorito/', { ids })
+        const response = await api.post('items/favorito/', { ids })
+        // Actualizamos local sin recargar
+        this.actualizarItemsLocal(ids, { favorito: response.data.favorito })
+        this.limpiarSeleccion()
       } catch (error) {
         console.error('Error marcando favoritos:', error)
       }
     },
-
-    // --- PAPELERA ---
 
     async eliminarItems(ids = []) {
       try {
@@ -124,6 +144,37 @@ export const useItemsStore = defineStore('items', {
       } catch (error) {
         console.error('Error vaciando papelera:', error)
       }
+    },
+
+    // --- SELECCIÓN ---
+
+    seleccionar(item, index) {
+      this.seleccion.ids = [item.id]
+      this.seleccion.lastIndex = index
+    },
+
+    toggleSeleccion(item, index) {
+      const ya = this.seleccion.ids.includes(item.id)
+      if (ya) {
+        this.seleccion.ids = this.seleccion.ids.filter((id) => id !== item.id)
+      } else {
+        this.seleccion.ids = [...this.seleccion.ids, item.id]
+      }
+      this.seleccion.lastIndex = index
+    },
+
+    seleccionarRango(index) {
+      if (this.seleccion.lastIndex === null) return
+      const desde = Math.min(this.seleccion.lastIndex, index)
+      const hasta = Math.max(this.seleccion.lastIndex, index)
+      const rango = this.items.slice(desde, hasta + 1).map((i) => i.id)
+      const merged = new Set([...this.seleccion.ids, ...rango])
+      this.seleccion.ids = [...merged]
+    },
+
+    limpiarSeleccion() {
+      this.seleccion.ids = []
+      this.seleccion.lastIndex = null
     },
   },
 })
