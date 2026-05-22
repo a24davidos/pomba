@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from django.db.models import Exists, OuterRef
+from django.http import FileResponse
 
 from core.settings import development
 from .models import Item
@@ -173,3 +174,57 @@ class ItemViewSet(viewsets.ModelViewSet):
             })
         except Exception as e:
             return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    # =========================================================
+    # DESCARGA
+    # =========================================================
+
+    @action(detail=True, methods=['get'])
+    def descargar_archivo(self, request, pk=None):
+        """Devuelve una presigned URL de descarga directa para un archivo."""
+        item = self.get_object()
+        if item.tipo != 'archivo' or not item.file:
+            return Response(
+                {'detail': 'El elemento no es un archivo descargable.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response({'url': ItemService.generar_url_descarga(item)})
+
+    @action(detail=False, methods=['post'])
+    def descargar(self, request):
+        """
+        Construye un ZIP en memoria con todos los ítems seleccionados
+        (resuelve carpetas recursivamente) y lo retorna como stream.
+
+        REVISAR ESTO PORQUE IGUAL SI TIENE QUE DEVOLVER UN ARCHIVO MUY GRANDE LA LIOOO, AHORA CARGA TDO EL OBJETO EN MEMORIA
+        """
+        ids = request.data.get('ids', [])
+        if not ids:
+            return Response(
+                {'detail': 'No se han enviado elementos.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        archivos_con_ruta = ItemService.recolectar_archivos_para_zip(
+            root_ids=ids,
+            usuario=request.user,
+        )
+
+        if not archivos_con_ruta:
+            return Response(
+                {'detail': 'No se encontraron archivos para descargar.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        zip_buffer = ItemService.construir_zip(
+            archivos_con_ruta=archivos_con_ruta,
+            bucket_name=development.AWS_STORAGE_BUCKET_NAME,
+        )
+
+        response = FileResponse(
+            zip_buffer,
+            as_attachment=True,
+            filename='descarga.zip',
+        )
+        response['Content-Type'] = 'application/zip'
+        return response
