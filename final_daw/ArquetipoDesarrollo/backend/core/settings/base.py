@@ -122,5 +122,17 @@ AUTH_PASSWORD_VALIDATORS = [
 
 AUTH_USER_MODEL = 'users.User'
 
+# SUBIDA DE ARCHIVOS
+
+#TENGOOO K REVISAR ESTO AUN ASI PORQUE ME ESTABA DANDO PROBLEMAS Y CON ARCHIVOS MAS GRANDES LOS SEGUIRE TENIENDO pero de momento me vale para subir imagenes
+
+# Archivos por encima de este tamaño se escriben en disco temporal en lugar de RAM.
+# Valor por defecto de Django: 2.5 MB. Lo subimos para no fragmentar uploads grandes.
+FILE_UPLOAD_MAX_MEMORY_SIZE = 30 * 1024 * 1024  # 30 MB
+
+# Límite máximo para datos no-fichero en un multipart (campos de texto, etc.)
+# No afecta al stream del fichero en sí, pero hay que dejarlo holgado.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 30 * 1024 * 1024  # 30 MB
+
 # SESSION_COOKIE_SECURE = True Asegura que la cookie de sesión solo se envíe por conexiones cifradas.
 # CSRF_COOKIE_SECURE = True Lo mismo para el token contra ataques maliciosos.
