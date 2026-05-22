@@ -90,12 +90,22 @@ class ItemService:
     @staticmethod
     def eliminar_items_fisicos(ids, usuario, bucket_name):
         """
-        Borra físicamente items y sus descendientes.
+        Borra físicamente items (solo los que están en papelera) y sus descendientes.
         """
-        all_ids = ItemService.recolectar_descendientes_id(ids, usuario)
+        # Filtramos solo items marcados como eliminados para mayor seguridad
+        ids_validados = list(
+            Item.objects.filter(
+                id__in=ids,
+                usuario=usuario,
+                eliminado=True,
+            ).values_list('id', flat=True)
+        )
 
+        if not ids_validados:
+            return {'deleted_count': 0, 's3_keys_deleted': 0}
+
+        all_ids = ItemService.recolectar_descendientes_id(ids_validados, usuario)
         items_qs = Item.objects.filter(usuario=usuario, id__in=all_ids)
-
         s3_keys = ItemService.get_s3_keys_for_items(items_qs)
 
         with transaction.atomic():
@@ -103,9 +113,10 @@ class ItemService:
             deleted_count, _ = items_qs.delete()
 
         return {
-            "deleted_count": deleted_count,
-            "s3_keys_deleted": len(s3_keys),
+            'deleted_count': deleted_count,
+            's3_keys_deleted': len(s3_keys),
         }
+
     
     @staticmethod
     def vaciar_papelera(usuario, bucket_name):
