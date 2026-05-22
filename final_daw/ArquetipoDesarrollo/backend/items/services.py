@@ -1,4 +1,8 @@
+import io
+import zipfile
+
 import boto3
+from botocore.client import Config
 from django.utils import timezone
 
 from django.core.exceptions import ValidationError
@@ -59,6 +63,13 @@ class ItemService:
             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
             region_name=settings.AWS_S3_REGION_NAME,
+            #Añado esto porque me estaba dando problema para descargar
+            config=Config(
+                signature_version="s3v4",
+                s3={"addressing_style": "path"},
+                response_checksum_validation="when_required",
+                request_checksum_calculation="when_required",
+            ),
         )
 
     @staticmethod
@@ -258,10 +269,100 @@ class ItemService:
     @staticmethod
     def marcar_favorito(ids, usuario):
         items = Item.objects.filter(id__in=ids, usuario=usuario)
-        
-        # Si TODOS están en favorito → quitamos. Si alguno no lo está → marcamos todos.
+
+        # Revisar esto!!! POrque si alguna esta y otro no, no tiene sentid oque ahora sean todos favoritos!!!!!!!!!!!!!!!
         todos_favoritos = all(item.favorito for item in items)
         nuevo_valor = not todos_favoritos
-        
+
         items.update(favorito=nuevo_valor)
         return nuevo_valor
+
+    # =========================================================
+    # SECCIÓN 5: Descarga de archivos
+    # =========================================================
+
+    @staticmethod
+    def generar_url_descarga(item):
+        """
+        Genera una presigned URL para descarga directa de un único archivo.
+        """
+        public_endpoint = getattr(settings, "GARAGE_PUBLIC_URL", settings.AWS_S3_ENDPOINT_URL)
+
+        client = boto3.client(
+            "s3",
+            endpoint_url=public_endpoint,
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name=settings.AWS_S3_REGION_NAME,
+            config=Config(
+                signature_version="s3v4",
+                s3={"addressing_style": "path"},
+            ),
+        )
+
+        return client.generate_presigned_url(
+            "get_object",
+            Params={
+                "Bucket": settings.AWS_STORAGE_BUCKET_NAME,
+                "Key": str(item.file),
+                "ResponseContentDisposition": f'attachment; filename="{item.nombre}"',
+            },
+            ExpiresIn=300,
+        )
+
+    @staticmethod
+    def recolectar_archivos_para_zip(root_ids, usuario):
+        """
+        Recorre el árbol de ítemsy devuelve una lista de manteniendo la estructura de carpetas.
+        """
+        resultado = []
+        # Mapa id
+        pendientes = {int(i): "" for i in root_ids}
+
+        while pendientes:
+            items = Item.objects.filter(
+                id__in=list(pendientes.keys()),
+                usuario=usuario,
+                eliminado=False,
+            )
+            carpetas_con_prefijo = {}
+
+            for item in items:
+                prefijo = pendientes[item.id]
+                if item.tipo == Item.Tipo.ARCHIVO:
+                    resultado.append((item, prefijo + item.nombre))
+                elif item.tipo == Item.Tipo.CARPETA:
+                    carpetas_con_prefijo[item.id] = prefijo + item.nombre + "/"
+
+            if not carpetas_con_prefijo:
+                break
+
+            hijos = Item.objects.filter(
+                padre_id__in=carpetas_con_prefijo.keys(),
+                usuario=usuario,
+                eliminado=False,
+            ).values("id", "padre_id")
+
+            pendientes = {
+                hijo["id"]: carpetas_con_prefijo[hijo["padre_id"]]
+                for hijo in hijos
+            }
+
+        return resultado
+
+    @staticmethod
+    def construir_zip(archivos_con_ruta, bucket_name):
+        """
+        Descarga cada archivo desde Garage S3 y lo empaqueta en un ZIP
+        en memoria (io.BytesIO). Devuelve el buffer listo para enviar.
+        """
+        s3 = ItemService.get_s3_client()
+        buffer = io.BytesIO()
+
+        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+            for item, zip_path in archivos_con_ruta:
+                obj = s3.get_object(Bucket=bucket_name, Key=str(item.file))
+                zf.writestr(zip_path, obj["Body"].read())
+
+        buffer.seek(0)
+        return buffer
