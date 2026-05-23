@@ -6,7 +6,7 @@ export const useItemsStore = defineStore('items', {
     items: [],
     breadcrumb: [],
     loading: false,
-    descargando: false,
+    notificaciones: [],
     currentParams: {},
     loadToken: 0,
 
@@ -29,9 +29,15 @@ export const useItemsStore = defineStore('items', {
       const set = new Set(state.seleccion.ids)
       return state.items.filter((i) => set.has(i.id))
     },
+    // Derivados del array de notificaciones (usados en el template)
+    descargando: (state) =>
+      state.notificaciones.some((n) => n.id === 'descargar' && n.tipo === 'cargando'),
   },
 
   actions: {
+
+    // MODALsS
+
     abrirModal(name, payload = null) {
       this.ui.modal.open = true
       this.ui.modal.name = name
@@ -43,6 +49,40 @@ export const useItemsStore = defineStore('items', {
       this.ui.modal.name = null
       this.ui.modal.payload = null
     },
+
+    // NOTIFICACIONES
+    agregarNotificacion({ id, tipo, mensaje, icono, severidad = 'neutro' }) {
+      this.eliminarNotificacion(id)
+      this.notificaciones.push({ id, tipo, mensaje, icono, severidad, timerId: null })
+      if (tipo === 'exito' || tipo === 'error') {
+        const notif = this.notificaciones.find((n) => n.id === id)
+        const secs = tipo === 'error' ? 5 : 3
+        if (notif) notif.timerId = setTimeout(() => this.eliminarNotificacion(id), secs * 1000)
+      }
+    },
+
+    actualizarNotificacion(id, cambios, autoCloseSeg = 3) {
+      const notif = this.notificaciones.find((n) => n.id === id)
+      if (!notif) return
+      if (notif.timerId) clearTimeout(notif.timerId)
+      Object.assign(notif, cambios)
+      if (cambios.tipo === 'exito' || cambios.tipo === 'error') {
+        const secs = cambios.tipo === 'error' ? 5 : autoCloseSeg
+        notif.timerId = setTimeout(() => this.eliminarNotificacion(id), secs * 1000)
+      }
+    },
+
+    eliminarNotificacion(id) {
+      const idx = this.notificaciones.findIndex((n) => n.id === id)
+      if (idx !== -1) {
+        if (this.notificaciones[idx].timerId) clearTimeout(this.notificaciones[idx].timerId)
+        this.notificaciones.splice(idx, 1)
+      }
+    },
+
+    // -------------------------------------------------------
+    // ITEMS — LECTURA
+    // -------------------------------------------------------
 
     async cargarItems(params = {}) {
       const token = ++this.loadToken
@@ -60,6 +100,10 @@ export const useItemsStore = defineStore('items', {
       }
     },
 
+    // -------------------------------------------------------
+    // ITEMS — ESCRITURA
+    // -------------------------------------------------------
+
     async crearCarpeta(data) {
       try {
         await api.post('items/', data)
@@ -69,6 +113,13 @@ export const useItemsStore = defineStore('items', {
     },
 
     async subirArchivo(formData) {
+      this.agregarNotificacion({
+        id: 'subir',
+        tipo: 'cargando',
+        mensaje: 'Subiendo archivo…',
+        icono: 'pi-upload',
+        severidad: 'neutro',
+      })
       try {
         await api.post('items/', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
@@ -76,12 +127,21 @@ export const useItemsStore = defineStore('items', {
         await this.cargarItems(this.currentParams)
       } catch (error) {
         console.error('Error subiendo archivo:', error)
+      } finally {
+        this.eliminarNotificacion('subir')
       }
     },
 
     async renombrarItem(id, nombre) {
       try {
         await api.post(`items/${id}/renombrar/`, { nombre })
+        this.agregarNotificacion({
+          id: 'renombrar',
+          tipo: 'exito',
+          mensaje: 'Elemento renombrado',
+          icono: 'pi-pencil',
+          severidad: 'exito',
+        })
       } catch (error) {
         console.error('Error renombrando item:', error)
       }
@@ -97,7 +157,6 @@ export const useItemsStore = defineStore('items', {
     async marcarFavoritos(ids = []) {
       try {
         const response = await api.post('items/favorito/', { ids })
-        // Actualizamos local sin recargar
         this.actualizarItemsLocal(ids, { favorito: response.data.favorito })
         this.limpiarSeleccion()
       } catch (error) {
@@ -105,18 +164,42 @@ export const useItemsStore = defineStore('items', {
       }
     },
 
+    // -------------------------------------------------------
+    // ITEMS — PAPELERA Y ELIMINACIÓN
+    // -------------------------------------------------------
+
     async eliminarItems(ids = []) {
       try {
         await api.post('items/trash/', { ids })
+        this.agregarNotificacion({
+          id: 'papelera',
+          tipo: 'exito',
+          mensaje: 'Movido a la papelera',
+          icono: 'pi-trash',
+          severidad: 'advertencia',
+        })
       } catch (error) {
         console.error('Error enviando a papelera:', error)
       }
     },
 
     async eliminarDefinitivamente(ids = []) {
+      this.agregarNotificacion({
+        id: 'eliminar',
+        tipo: 'cargando',
+        mensaje: 'Eliminando archivos de S3…',
+        icono: 'pi-times-circle',
+        severidad: 'peligro',
+      })
       try {
         await api.delete('items/eliminar_definitivo/', { data: { ids } })
+        this.actualizarNotificacion(
+          'eliminar',
+          { tipo: 'exito', mensaje: 'Eliminado definitivamente', icono: 'pi-check-circle' },
+          3,
+        )
       } catch (error) {
+        this.actualizarNotificacion('eliminar', { tipo: 'error', mensaje: 'Error al eliminar' }, 5)
         console.error('Error eliminando definitivamente:', error)
       }
     },
@@ -124,6 +207,13 @@ export const useItemsStore = defineStore('items', {
     async restaurarItems(ids = []) {
       try {
         await api.post('items/restaurar/', { ids })
+        this.agregarNotificacion({
+          id: 'restaurar',
+          tipo: 'exito',
+          mensaje: 'Elemento restaurado',
+          icono: 'pi-replay',
+          severidad: 'exito',
+        })
       } catch (error) {
         console.error('Error restaurando items:', error)
       }
@@ -133,25 +223,53 @@ export const useItemsStore = defineStore('items', {
       try {
         await api.post('items/restaurar_papelera/')
         await this.cargarItems(this.currentParams)
+        this.agregarNotificacion({
+          id: 'restaurar',
+          tipo: 'exito',
+          mensaje: 'Papelera restaurada',
+          icono: 'pi-replay',
+          severidad: 'exito',
+        })
       } catch (error) {
         console.error('Error restaurando papelera:', error)
       }
     },
 
     async vaciarPapelera() {
+      this.agregarNotificacion({
+        id: 'vaciar-papelera',
+        tipo: 'cargando',
+        mensaje: 'Vaciando papelera…',
+        icono: 'pi-trash',
+        severidad: 'peligro',
+      })
       try {
         await api.post('items/vaciar_papelera/')
         await this.cargarItems(this.currentParams)
+        this.actualizarNotificacion(
+          'vaciar-papelera',
+          { tipo: 'exito', mensaje: 'Papelera vaciada', icono: 'pi-check-circle' },
+          3,
+        )
       } catch (error) {
+        this.actualizarNotificacion(
+          'vaciar-papelera',
+          { tipo: 'error', mensaje: 'Error al vaciar la papelera' },
+          5,
+        )
         console.error('Error vaciando papelera:', error)
       }
     },
+
+    // -------------------------------------------------------
+    // DESCARGA
+    // -------------------------------------------------------
 
     async descargarItems() {
       const seleccion = this.itemsSeleccionados
       if (!seleccion.length) return
 
-      // Un solo archivo:  URL directa (sin pasar por Django)
+      // Un solo archivo  presigned URL directa (instantáneo, sin notificación)
       if (seleccion.length === 1 && seleccion[0].tipo === 'archivo') {
         try {
           const resp = await api.get(`items/${seleccion[0].id}/descargar_archivo/`)
@@ -166,8 +284,14 @@ export const useItemsStore = defineStore('items', {
         return
       }
 
-      // Carpeta o selección múltiple:  ZIP generamos con Django
-      this.descargando = true
+      // Carpeta o selección múltiple  ZIP generado en Django
+      this.agregarNotificacion({
+        id: 'descargar',
+        tipo: 'cargando',
+        mensaje: 'Comprimiendo archivos…',
+        icono: 'pi-download',
+        severidad: 'neutro',
+      })
       try {
         const ids = seleccion.map((i) => i.id)
         const nombre = seleccion.length === 1 ? `${seleccion[0].nombre}.zip` : 'descarga.zip'
@@ -185,11 +309,13 @@ export const useItemsStore = defineStore('items', {
       } catch (error) {
         console.error('Error descargando ZIP:', error)
       } finally {
-        this.descargando = false
+        this.eliminarNotificacion('descargar')
       }
     },
 
-    // --- SELECCIÓN ---
+    // -------------------------------------------------------
+    // SELECCIÓN
+    // -------------------------------------------------------
 
     seleccionar(item, index) {
       this.seleccion.ids = [item.id]

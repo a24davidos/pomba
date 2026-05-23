@@ -24,7 +24,7 @@ class GarageStorage(S3Storage):
       - Django usa http://garage:3900 (red interna Docker) para subir/bajar archivos
       - Pero boto3 también firma las URLs presignadas con host=garage:3900.
       - El navegador recibe esa URL, hace GET a localhost:3900 con host=localhost:3900,
-        Garage recalcula la firma con ese host y no coincide → 403 Forbidden.
+        Garage recalcula la firma con ese host y no coinciden 403 Forbidden.
 
     Solución:
       - Para operaciones S3 (subida, borrado...) se sigue usando el endpoint interno.

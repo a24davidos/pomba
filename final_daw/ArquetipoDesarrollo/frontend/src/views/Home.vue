@@ -152,6 +152,18 @@ async function renombrar() {
 async function descargar() {
   await store.descargarItems()
 }
+// COLORES PUESTOS UN POCO DE PLACEHOLDER REVISAR CUANDO LE DES ESTILOS GLOBALES QUE VAYA BIEN
+const CLASES_SNACKBAR = {
+  neutro:      'bg-surface-800 dark:bg-surface-100 text-white dark:text-surface-900',
+  exito:       'bg-green-700 dark:bg-green-100 text-white dark:text-green-900',
+  advertencia: 'bg-amber-600 dark:bg-amber-100 text-white dark:text-amber-900',
+  peligro:     'bg-red-700 dark:bg-red-100 text-white dark:text-red-900',
+}
+
+function clasesSnackbar(notif) {
+  if (notif.tipo === 'error') return CLASES_SNACKBAR.peligro
+  return CLASES_SNACKBAR[notif.severidad] ?? CLASES_SNACKBAR.neutro
+}
 
 watch(
   () => [route.params.view, route.params.folderId],
@@ -208,7 +220,7 @@ watch(
 
           <template v-if="enPapelera">
             <Button icon="pi pi-replay" label="Restaurar" text size="small" rounded @click="restaurar" />
-            <Divider layout="vertical" class="!h-4 !mx-1" />
+            <Divider layout="vertical" class="h-4! mx-1!" />
             <Button icon="pi pi-trash" label="Eliminar para siempre" text size="small" rounded severity="danger" @click="eliminarDefinitivamente" />
           </template>
 
@@ -232,7 +244,7 @@ watch(
               rounded
               @click="abrirModalRenombrar"
             />
-            <Divider layout="vertical" class="!h-4 !mx-1" />
+            <Divider layout="vertical" class="h-4! mx-1!" />
             <Button icon="pi pi-trash" label="Eliminar" text size="small" rounded severity="danger" @click="eliminar" />
           </template>
         </div>
@@ -242,21 +254,23 @@ watch(
     <!-- TABLA -->
     <FileTable @open="abrirCarpeta" />
 
-    <!-- SNACKBAR DESCARGA -->
-    <Transition
-      enter-active-class="transition-all duration-200 ease-out"
-      enter-from-class="opacity-0 translate-y-2"
-      leave-active-class="transition-all duration-150 ease-in"
-      leave-to-class="opacity-0 translate-y-2"
-    >
-      <div
-        v-if="store.descargando"
-        class="fixed bottom-6 left-6 z-50 flex items-center gap-3 bg-surface-800 dark:bg-surface-100 text-white dark:text-surface-900 text-sm font-medium px-4 py-3 rounded-xl shadow-lg"
-      >
-        <i class="pi pi-spin pi-spinner text-base" />
-        <span>Comprimiendo archivos…</span>
-      </div>
-    </Transition>
+    <!-- SNACKBARS -->
+    <div class="fixed bottom-6 left-6 z-50 flex flex-col-reverse gap-2">
+      <TransitionGroup name="snack">
+        <div
+          v-for="notif in store.notificaciones"
+          :key="notif.id"
+          class="flex items-center gap-3 text-sm font-medium px-4 py-3 rounded-xl shadow-lg"
+          :class="clasesSnackbar(notif)"
+        >
+          <i
+            class="pi text-base"
+            :class="notif.tipo === 'cargando' ? 'pi-spin pi-spinner' : notif.icono"
+          />
+          <span>{{ notif.mensaje }}</span>
+        </div>
+      </TransitionGroup>
+    </div>
 
     <!-- MODAL NUEVA CARPETA -->
     <Dialog
@@ -314,3 +328,18 @@ watch(
 
   </div>
 </template>
+
+<style scoped>
+.snack-enter-active,
+.snack-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.snack-enter-from,
+.snack-leave-to {
+  opacity: 0;
+  transform: translateY(0.5rem);
+}
+.snack-move {
+  transition: transform 0.2s ease;
+}
+</style>
