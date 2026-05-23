@@ -20,9 +20,9 @@ class RegisterView(generics.CreateAPIView):
 
 class MeView(APIView):
     """
-    GET    → devuelve el perfil del usuario autenticado.
-    PATCH  → actualiza nombre, apellidos o email.
-    DELETE → elimina la cuenta del usuario.
+    GET     devuelve el perfil del usuario autenticado.
+    PATCH   actualiza nombre, apellidos o email.
+    DELETE  elimina la cuenta del usuario.
     """
     permission_classes = [IsAuthenticated]
 
@@ -48,7 +48,7 @@ class MeView(APIView):
 
 
 class ChangePasswordView(APIView):
-    """POST → cambia la contraseña del usuario autenticado."""
+    """POST  cambia la contraseña del usuario autenticado."""
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -62,7 +62,7 @@ class ChangePasswordView(APIView):
 
 
 class ProfilePhotoView(APIView):
-    """POST → sube o reemplaza la foto de perfil del usuario (guardada en Garage/S3)."""
+    """POST  sube o reemplaza la foto de perfil del usuario (guardada en Garage/S3)."""
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
