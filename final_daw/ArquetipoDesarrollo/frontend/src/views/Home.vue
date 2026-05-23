@@ -163,7 +163,10 @@ watch(
 </script>
 
 <template>
-  <div class="p-4 space-y-4">
+  <div class="flex flex-col h-full">
+
+    <!-- ZONA FIJA: breadcrumb + action bar -->
+    <div class="px-4 pt-4 space-y-4 shrink-0">
 
     <!-- BREADCRUMB -->
     <Breadcrumb
@@ -238,11 +241,17 @@ watch(
         </div>
       </Transition>
     </div>
+    </div>
 
-    <!-- TABLA — escucha los eventos del menú ··· y del modo selección móvil -->
-    <FileTable
-      @rename="abrirModalRenombrar"
-    />
+    <!-- ZONA SCROLLABLE: tabla de archivos -->
+    <div class="flex-1 min-h-0 overflow-auto pb-24 lg:pb-0
+                [&::-webkit-scrollbar]:w-1.5
+                [&::-webkit-scrollbar-track]:bg-transparent
+                [&::-webkit-scrollbar-thumb]:rounded-full
+                [&::-webkit-scrollbar-thumb]:bg-surface-300
+                dark:[&::-webkit-scrollbar-thumb]:bg-surface-600">
+      <FileTable @rename="abrirModalRenombrar" />
+    </div>
 
     <!-- SNACKBARS -->
     <div class="fixed bottom-20 left-3 z-50 flex flex-col-reverse gap-2 sm:bottom-6 sm:left-6">
@@ -312,7 +321,7 @@ watch(
         <Button label="Confirmar" @click="renombrar" :disabled="!inputRenombrar.trim()" />
       </template>
     </Dialog>
-
+    
   </div>
 </template>
 
