@@ -61,7 +61,7 @@ const panelUsuarioMovil = ref(false)
 </script>
 
 <template>
-  <div class="grid grid-cols-1 sm:grid-cols-[60px_1fr] lg:grid-cols-[260px_1fr] grid-rows-[64px_1fr] min-h-screen w-full bg-surface-100 dark:bg-surface-950 gap-y-2 pt-2">
+  <div class="grid grid-cols-1 sm:grid-cols-[60px_1fr] lg:grid-cols-[260px_1fr] grid-rows-[64px_1fr] h-screen w-full bg-surface-100 dark:bg-surface-950 gap-y-2 pt-2">
 
     <!-- ── TOPBAR ───────────────────────────────────────────────── -->
     <!-- Sub-grid que espeja las mismas columnas del layout principal -->
@@ -139,7 +139,7 @@ const panelUsuarioMovil = ref(false)
     </aside>
 
     <!-- ── MAIN ─────────────────────────────────────────────────── -->
-    <main class="overflow-auto bg-surface-0 dark:bg-surface-900 rounded-2xl ml-3 mr-3 pb-24 lg:pb-0">
+    <main class="overflow-hidden bg-surface-0 dark:bg-surface-900 rounded-2xl ml-3 mr-3">
       <router-view />
     </main>
 

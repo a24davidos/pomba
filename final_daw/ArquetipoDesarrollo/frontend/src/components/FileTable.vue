@@ -108,11 +108,12 @@ function formatBytes(bytes) {
     @click="handleBackgroundClick"
   >
 
-    <!-- ── Cabecera  -->
+    <!-- ── Cabecera sticky -->
     <div
-      class="grid grid-cols-[1fr_80px_32px] sm:grid-cols-[1fr_100px_130px_32px] gap-3 px-3 py-2
+      class="sticky top-0 z-10 grid grid-cols-[1fr_80px_32px] sm:grid-cols-[1fr_100px_130px_32px] gap-3 px-4 py-2
              text-xs font-medium text-surface-400 dark:text-surface-500
-             border-b border-surface-100 dark:border-surface-800"
+             bg-surface-0 dark:bg-surface-900
+             border-b border-surface-200 dark:border-surface-800"
     >
       <span>Nombre</span>
       <span>Tamaño</span>
@@ -143,9 +144,9 @@ function formatBytes(bytes) {
         @click.stop="handleClick($event, item, index)"
         @dblclick.stop="handleDoubleClick(item)"
         :class="[
-          'group grid grid-cols-[1fr_80px_32px] sm:grid-cols-[1fr_100px_130px_32px] gap-3 px-3 py-2.5 rounded-lg items-center cursor-pointer transition-colors duration-100 mt-0.5',
+          'group grid grid-cols-[1fr_80px_32px] sm:grid-cols-[1fr_100px_130px_32px] gap-3 px-4 py-3 items-center cursor-pointer transition-colors duration-100 border-b border-surface-200 dark:border-surface-800',
           estaSeleccionado(item)
-            ? 'bg-primary/10 dark:bg-primary/20'
+            ? 'bg-primary/20 dark:bg-primary/25'
             : 'hover:bg-surface-100 dark:hover:bg-surface-800',
         ]"
       >
@@ -234,7 +235,7 @@ function formatBytes(bytes) {
               >
                 <i class="pi pi-star-fill text-yellow-400" /> Quitar favorito
               </button>
-              <div class="my-1 border-t border-surface-100 dark:border-surface-800" />
+              <div class="my-1 border-t border-surface-200 dark:border-surface-800" />
               <button
                 @click="accionMenu($event, 'delete', item)"
                 class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
