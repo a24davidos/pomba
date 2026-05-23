@@ -36,7 +36,7 @@ export const useItemsStore = defineStore('items', {
 
   actions: {
 
-    // MODALsS
+    // MODALS
 
     abrirModal(name, payload = null) {
       this.ui.modal.open = true
@@ -83,6 +83,10 @@ export const useItemsStore = defineStore('items', {
     // -------------------------------------------------------
     // ITEMS — LECTURA
     // -------------------------------------------------------
+
+    recargar() {
+      return this.cargarItems(this.currentParams)
+    },
 
     async cargarItems(params = {}) {
       const token = ++this.loadToken

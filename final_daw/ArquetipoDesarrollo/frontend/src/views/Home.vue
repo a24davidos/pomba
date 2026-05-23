@@ -48,40 +48,29 @@ const breadcrumbInicio = computed(() => {
   return {
     label: config?.titulo || 'Mi unidad',
     icon: config?.icono || 'pi pi-home',
-    command: () => {
-      router.push({ name: 'home', params: { view: vistaActual } })
-    },
+    command: () => router.push({ name: 'home', params: { view: vistaActual } }),
   }
 })
 
-const rutaBreadcrumb = computed(() => {
-  return store.breadcrumb
+const rutaBreadcrumb = computed(() =>
+  store.breadcrumb
     .filter((nodo) => nodo.id !== null)
     .map((nodo) => ({
       label: nodo.label,
       id: nodo.id,
-      command: () => {
+      command: () =>
         router.push({
           name: 'home',
           params: { view: route.params.view || 'drive', folderId: nodo.id },
-        })
-      },
+        }),
     }))
-})
+)
 
 function cargarDesdeRuta() {
   const vista = route.params.view || 'drive'
   const folderId = route.params.folderId || null
   const config = CONFIGURACION_VISTAS[vista] || CONFIGURACION_VISTAS.drive
   return store.cargarItems({ ...config.paramsBase, carpeta: folderId })
-}
-
-function abrirCarpeta(carpeta) {
-  if (carpeta.tipo !== 'carpeta') return
-  router.push({
-    name: 'home',
-    params: { view: route.params.view || 'drive', folderId: carpeta.id },
-  })
 }
 
 function cerrarModal() {
@@ -92,17 +81,14 @@ function cerrarModal() {
 
 async function crearCarpeta() {
   const idPadre = route.params.folderId || null
-  await store.crearCarpeta({
-    nombre: inputNuevaCarpeta.value,
-    tipo: 'carpeta',
-    padre: idPadre,
-  })
+  await store.crearCarpeta({ nombre: inputNuevaCarpeta.value, tipo: 'carpeta', padre: idPadre })
   cerrarModal()
   await cargarDesdeRuta()
 }
 
+// ── Barra de acciones para elementos seleccionados ─────────────────
 async function eliminar() {
-  const ids = store.itemsSeleccionados.map((item) => item.id)
+  const ids = store.itemsSeleccionados.map((i) => i.id)
   if (!ids.length) return
   await store.eliminarItems(ids)
   store.limpiarSeleccion()
@@ -110,7 +96,7 @@ async function eliminar() {
 }
 
 async function eliminarDefinitivamente() {
-  const ids = store.itemsSeleccionados.map((item) => item.id)
+  const ids = store.itemsSeleccionados.map((i) => i.id)
   if (!ids.length) return
   await store.eliminarDefinitivamente(ids)
   store.limpiarSeleccion()
@@ -118,7 +104,7 @@ async function eliminarDefinitivamente() {
 }
 
 async function restaurar() {
-  const ids = store.itemsSeleccionados.map((item) => item.id)
+  const ids = store.itemsSeleccionados.map((i) => i.id)
   if (!ids.length) return
   await store.restaurarItems(ids)
   store.limpiarSeleccion()
@@ -126,22 +112,22 @@ async function restaurar() {
 }
 
 async function marcarFavoritos() {
-  const ids = store.itemsSeleccionados.map((item) => item.id)
+  const ids = store.itemsSeleccionados.map((i) => i.id)
   if (!ids.length) return
   await store.marcarFavoritos(ids)
   store.limpiarSeleccion()
   await cargarDesdeRuta()
 }
 
-function abrirModalRenombrar() {
-  if (store.itemsSeleccionados.length !== 1) return
-  const item = store.itemsSeleccionados[0]
-  inputRenombrar.value = item.nombre
-  store.abrirModal('renombrar', item)
+function abrirModalRenombrar(item) {
+  // Se puede llamar desde la action bar o los ...
+  const objetivo = item ?? store.itemsSeleccionados[0]
+  if (!objetivo) return
+  inputRenombrar.value = objetivo.nombre
+  store.abrirModal('renombrar', objetivo)
 }
 
 async function renombrar() {
-  if (store.itemsSeleccionados.length !== 1) return
   const id = store.ui.modal.payload.id
   await store.renombrarItem(id, inputRenombrar.value)
   store.limpiarSeleccion()
@@ -152,6 +138,7 @@ async function renombrar() {
 async function descargar() {
   await store.descargarItems()
 }
+
 // COLORES PUESTOS UN POCO DE PLACEHOLDER REVISAR CUANDO LE DES ESTILOS GLOBALES QUE VAYA BIEN
 const CLASES_SNACKBAR = {
   neutro:      'bg-surface-800 dark:bg-surface-100 text-white dark:text-surface-900',
@@ -178,22 +165,24 @@ watch(
 <template>
   <div class="p-4 space-y-4">
 
-
-
-	<!-- BREADCRUMB -->
+    <!-- BREADCRUMB -->
     <Breadcrumb
-    :home="breadcrumbInicio"
-    :model="rutaBreadcrumb"
-    :pt="{
-      root: { class: 'p-0 bg-transparent border-none' },
-      homeItem: { class: ' text-lg font-semibold text-surface-900 dark:text-surface-0' },
-      item: { class: 'text-xl font-semibold text-surface-900 dark:text-surface-0' },
-      separator: { class: 'text-surface-400 dark:text-surface-500 mx-1' },
-    }"
+      :home="breadcrumbInicio"
+      :model="rutaBreadcrumb"
+      :pt="{
+        root: { class: 'p-0 bg-transparent border-none' },
+        homeItem: { class: 'text-lg font-semibold text-surface-900 dark:text-surface-0' },
+        item: { class: 'text-xl font-semibold text-surface-900 dark:text-surface-0' },
+        separator: { class: 'text-surface-400 dark:text-surface-500 mx-1' },
+      }"
     />
 
-    <!-- HUECO FIJO para la action bar -->
-    <div class="h-9">
+    <!--
+      ACTION BAR — solo desktop (sm:flex).
+      En móvil las acciones vienen del menú ··· y de la barra
+      de selección integrada en FileTable.
+    -->
+    <div class="h-9 hidden sm:block">
       <Transition
         enter-active-class="transition-all duration-150 ease-out"
         enter-from-class="opacity-0 -translate-y-1"
@@ -202,13 +191,18 @@ watch(
       >
         <div
           v-if="store.itemsSeleccionados.length > 0"
-          class="flex items-center gap-1 bg-surface-0 dark:bg-surface-900 border border-surface-200 dark:border-surface-700 rounded-full px-2 py-1 h-9 w-fit"
+          class="flex items-center gap-1
+                 bg-surface-0 dark:bg-surface-900
+                 border border-surface-200 dark:border-surface-700
+                 rounded-full px-2 py-1 h-9 w-fit"
         >
           <div class="flex items-center gap-2 pr-3 border-r border-surface-200 dark:border-surface-700 mr-1">
             <button
               @click="store.limpiarSeleccion()"
               aria-label="Deseleccionar todo"
-              class="w-6 h-6 rounded-full flex items-center justify-center text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
+              class="w-6 h-6 rounded-full flex items-center justify-center
+                     text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-800
+                     transition-colors cursor-pointer"
             >
               <i class="pi pi-times text-xs" />
             </button>
@@ -228,21 +222,15 @@ watch(
             <Button
               icon="pi pi-download"
               label="Descargar"
-              text
-              size="small"
-              rounded
+              text size="small" rounded
               :loading="store.descargando"
-              @click="descargar"
+              @click="descargar()"
             />
             <Button icon="pi pi-star" label="Favorito" text size="small" rounded @click="marcarFavoritos" />
             <Button
               v-if="store.itemsSeleccionados.length === 1"
-              icon="pi pi-pencil"
-              label="Renombrar"
-              text
-              size="small"
-              rounded
-              @click="abrirModalRenombrar"
+              icon="pi pi-pencil" label="Renombrar" text size="small" rounded
+              @click="abrirModalRenombrar()"
             />
             <Divider layout="vertical" class="h-4! mx-1!" />
             <Button icon="pi pi-trash" label="Eliminar" text size="small" rounded severity="danger" @click="eliminar" />
@@ -251,11 +239,14 @@ watch(
       </Transition>
     </div>
 
-    <!-- TABLA -->
-    <FileTable @open="abrirCarpeta" />
+    <!-- TABLA — escucha los eventos del menú ··· y del modo selección móvil -->
+    <FileTable
+      @rename="abrirModalRenombrar"
+    />
 
     <!-- SNACKBARS -->
-    <div class="fixed bottom-6 left-6 z-50 flex flex-col-reverse gap-2">
+    <div class="fixed bottom-20 left-3 z-50 flex flex-col-reverse gap-2 sm:bottom-6 sm:left-6">
+      <!-- ↑ bottom-20 en móvil para no quedar tapado por la bottom nav -->
       <TransitionGroup name="snack">
         <div
           v-for="notif in store.notificaciones"
@@ -278,9 +269,7 @@ watch(
       v-model:visible="store.ui.modal.open"
       header="Nueva Carpeta"
       :style="{ width: '25rem' }"
-      modal
-      :draggable="false"
-      :closable="false"
+      modal :draggable="false" :closable="false"
     >
       <div class="flex flex-col gap-2 mb-4">
         <InputText
@@ -288,7 +277,7 @@ watch(
           v-model="inputNuevaCarpeta"
           class="flex-auto"
           autocomplete="off"
-          placeholder="Introduzca el nombre de la carpeta"
+          placeholder="Nombre de la carpeta"
           @keyup.enter="crearCarpeta"
           autofocus
         />
@@ -305,9 +294,7 @@ watch(
       v-model:visible="store.ui.modal.open"
       header="Renombrar"
       :style="{ width: '25rem' }"
-      modal
-      :draggable="false"
-      :closable="false"
+      modal :draggable="false" :closable="false"
     >
       <div class="flex flex-col gap-2 mb-4">
         <InputText
@@ -315,7 +302,7 @@ watch(
           v-model="inputRenombrar"
           class="flex-auto"
           autocomplete="off"
-          placeholder="Introduzca el nuevo nombre"
+          placeholder="Nuevo nombre"
           @keyup.enter="renombrar"
           autofocus
         />
