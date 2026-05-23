@@ -124,7 +124,7 @@ const panelUsuarioMovil = ref(false)
             </div>
           </button>
 
-          <Menu ref="menuUsuario" :model="opcionesMenu" popup />
+          <Menu ref="menuUsuario" class="text-base" :model="opcionesMenu" popup />
         </div>
       </div>
     </header>

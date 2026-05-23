@@ -124,17 +124,20 @@ function togglePanelUsuario() {
     <!-- Botón Nuevo -->
     <button
       @click="toggleNuevoMenu"
-      class="mb-4 flex items-center justify-center gap-2 bg-primary text-primary-contrast rounded-full text-sm font-medium
+      class="mb-4 flex items-center justify-center gap-2 bg-primary text-primary-contrast rounded-full text-base font-medium
              hover:bg-primary/90 active:scale-[0.98] transition-all duration-150 shadow-sm
              sm:w-10 sm:h-10 sm:p-0
              lg:w-full lg:h-auto lg:px-4 lg:py-2.5"
       title="Nuevo"
     >
-      <i class="pi pi-plus text-xs" />
+      <i class="pi pi-plus text-sm" />
       <span class="hidden lg:inline">Nuevo</span>
     </button>
 
-    <Menu ref="nuevoMenu" :model="nuevoMenuItems" popup />
+    <Menu ref="nuevoMenu" :model="nuevoMenuItems" popup :pt="{
+      itemLabel: { class: 'text-s' },
+      itemIcon:  { class: 'text-s' },
+    }" />
     <ContextMenu ref="menuPapelera" :model="trashMenuItems" />
 
     <!-- Navegación -->

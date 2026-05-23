@@ -111,7 +111,7 @@ function formatBytes(bytes) {
     <!-- ── Cabecera sticky -->
     <div
       class="sticky top-0 z-10 grid grid-cols-[1fr_80px_32px] sm:grid-cols-[1fr_100px_130px_32px] gap-3 px-4 py-2
-             text-xs font-medium text-surface-400 dark:text-surface-500
+             text-sm font-medium text-surface-400 dark:text-surface-500
              bg-surface-0 dark:bg-surface-900
              border-b border-surface-200 dark:border-surface-800"
     >
