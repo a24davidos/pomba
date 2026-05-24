@@ -81,6 +81,15 @@ class ItemViewSet(viewsets.ModelViewSet):
             )
         item.nombre = nuevo_nombre
         item.save()
+
+        if item.tipo == Item.Tipo.ARCHIVO:
+            try:
+                from .documents import ItemDocument
+                doc = ItemDocument.get(id=item.pk)
+                doc.update(nombre=nuevo_nombre, nombre_raw=nuevo_nombre)
+            except Exception:
+                pass
+
         return Response({'mensaje': 'Renombrado correctamente', 'nombre': item.nombre})
 
     @action(detail=False, methods=['post'])
@@ -122,19 +131,34 @@ class ItemViewSet(viewsets.ModelViewSet):
                 {'detail': 'No se han enviado elementos.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        all_ids = ItemService.recolectar_descendientes_id(ids, request.user)
+        ids_archivos = list(
+            Item.objects.filter(
+                id__in=all_ids,
+                usuario=request.user,
+                tipo=Item.Tipo.ARCHIVO,
+                eliminado=True,
+            ).values_list('id', flat=True)
+        )
+
         try:
             result = ItemService.eliminar_items_fisicos(
                 ids=ids,
                 usuario=request.user,
                 bucket_name=development.AWS_STORAGE_BUCKET_NAME,
             )
-            return Response({
-                'detail': f"Se han eliminado {result['deleted_count']} elementos permanentemente.",
-                'deleted_count': result['deleted_count'],
-                's3_keys_deleted': result['s3_keys_deleted'],
-            })
         except Exception as e:
             return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        for item_id in ids_archivos:
+            ItemService.eliminar_del_indice(item_id)
+
+        return Response({
+            'detail': f"Se han eliminado {result['deleted_count']} elementos permanentemente.",
+            'deleted_count': result['deleted_count'],
+            's3_keys_deleted': result['s3_keys_deleted'],
+        })
 
     @action(detail=False, methods=['post'])
     def restaurar(self, request):
@@ -166,18 +190,30 @@ class ItemViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def vaciar_papelera(self, request):
+        ids_archivos = list(
+            Item.objects.filter(
+                usuario=request.user,
+                eliminado=True,
+                tipo=Item.Tipo.ARCHIVO,
+            ).values_list('id', flat=True)
+        )
+
         try:
             result = ItemService.vaciar_papelera(
                 usuario=request.user,
                 bucket_name=development.AWS_STORAGE_BUCKET_NAME,
             )
-            return Response({
-                'detail': 'Papelera vaciada correctamente.',
-                'deleted_count': result['deleted_count'],
-                's3_keys_deleted': result['s3_keys_deleted'],
-            })
         except Exception as e:
             return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        for item_id in ids_archivos:
+            ItemService.eliminar_del_indice(item_id)
+
+        return Response({
+            'detail': 'Papelera vaciada correctamente.',
+            'deleted_count': result['deleted_count'],
+            's3_keys_deleted': result['s3_keys_deleted'],
+        })
 
     # =========================================================
     # DESCARGA
@@ -290,6 +326,8 @@ class ItemViewSet(viewsets.ModelViewSet):
             )
         except Exception as e:
             return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        ItemService.indexar_item(item)
 
         serializer = self.get_serializer(item)
         return Response(serializer.data, status=status.HTTP_201_CREATED)

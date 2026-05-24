@@ -1,4 +1,5 @@
 import io
+import logging
 import os
 import zipfile
 
@@ -12,6 +13,8 @@ from django.db import transaction
 from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework.exceptions import ValidationError as DRFValidationError
+
+logger = logging.getLogger(__name__)
 
 
 class ItemService:
@@ -155,6 +158,17 @@ class ItemService:
             eliminado=False,
             fecha_eliminado=None
         )
+
+    @staticmethod
+    def eliminar_del_indice(item_id):
+        """Elimina el documento de Elasticsearch. Si no existe, no hace nada."""
+        try:
+            from .documents import ItemDocument
+            from elasticsearch.exceptions import NotFoundError
+            ItemDocument.get(id=item_id).delete()
+        except Exception as e:
+            logger.warning("No se pudo eliminar del índice item %s: %s", item_id, e)
+
     # =========================================================
     # SECCIÓN 2: Consultas y navegacion
     # =========================================================
@@ -413,6 +427,34 @@ class ItemService:
         )
         item.file = key
         return ItemService.guardar_item(item)
+
+    @staticmethod
+    def indexar_item(item):
+        """
+        Descarga el archivo de Garage, extrae metadatos/contenido, los guarda en BD y actualiza el índice de Elasticsearch. No interrumpimos el flujo principal.
+        """
+        if item.tipo != Item.Tipo.ARCHIVO or not item.file:
+            return
+        try:
+            from .extractors import extraer
+            from .documents import ItemDocument
+
+            s3 = ItemService.get_s3_client()
+            obj = s3.get_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=str(item.file))
+            datos = obj['Body'].read()
+
+            resultado = extraer(datos, item.mime_type or '', item.tamano_bytes or 0)
+
+            metadatos = resultado['metadatos']
+            if resultado['contenido']:
+                metadatos['contenido'] = resultado['contenido']
+
+            item.metadatos = metadatos
+            Item.objects.filter(pk=item.pk).update(metadatos=metadatos)
+
+            ItemDocument().update(item)
+        except Exception as e:
+            logger.warning("No se pudo indexar item %s: %s", item.id, e)
 
     @staticmethod
     def construir_zip(archivos_con_ruta, bucket_name):
