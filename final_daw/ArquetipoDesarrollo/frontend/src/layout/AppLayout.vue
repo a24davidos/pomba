@@ -61,11 +61,11 @@ const panelUsuarioMovil = ref(false)
 </script>
 
 <template>
-  <div class="grid grid-cols-1 sm:grid-cols-[60px_1fr] lg:grid-cols-[260px_1fr] grid-rows-[64px_1fr] h-screen w-full bg-surface-100 dark:bg-surface-950 gap-y-2 pt-2">
+  <div class="grid grid-cols-1 sm:grid-cols-[60px_1fr] lg:grid-cols-[260px_1fr] grid-rows-[64px_1fr] h-screen w-full bg-surface-100 dark:bg-surface-950 gap-y-2 py-2 pr-3">
 
     <!-- ── TOPBAR ───────────────────────────────────────────────── -->
     <!-- Sub-grid que espeja las mismas columnas del layout principal -->
-    <header class="col-span-full grid grid-cols-1 sm:grid-cols-[60px_1fr] lg:grid-cols-[260px_1fr] items-center z-10">
+    <header class="col-span-full grid grid-cols-subgrid items-center z-10">
 
       <!-- Logo — ocupa exactamente la columna del sidebar -->
       <div class="hidden sm:flex items-center justify-center sm:p-1 lg:p-3 lg:justify-start">
@@ -75,7 +75,7 @@ const panelUsuarioMovil = ref(false)
       </div>
 
       <!-- Buscador + controles — columna del main, con el mismo margen izquierdo que <main> -->
-      <div class="flex gap-2 items-center px-4 sm:pl-3 lg:pl-3 lg:pr-6">
+      <div class="flex gap-2 items-center pl-4 pr-0 sm:pl-3 lg:pr-6">
 
         <!-- Buscador -->
         <div class="flex-1">
@@ -139,7 +139,7 @@ const panelUsuarioMovil = ref(false)
     </aside>
 
     <!-- ── MAIN ─────────────────────────────────────────────────── -->
-    <main class="overflow-hidden bg-surface-0 dark:bg-surface-900 rounded-2xl ml-3 mr-3">
+    <main class="overflow-hidden bg-surface-0 dark:bg-surface-900 rounded-2xl ml-3">
       <router-view />
     </main>
 
