@@ -1,3 +1,4 @@
+import axios from 'axios'
 import { defineStore } from 'pinia'
 import api from '@/api/api'
 
@@ -29,14 +30,15 @@ export const useItemsStore = defineStore('items', {
       const set = new Set(state.seleccion.ids)
       return state.items.filter((i) => set.has(i.id))
     },
-    // Derivados del array de notificaciones (usados en el template)
     descargando: (state) =>
       state.notificaciones.some((n) => n.id === 'descargar' && n.tipo === 'cargando'),
   },
 
   actions: {
 
+    // -------------------------------------------------------
     // MODALS
+    // -------------------------------------------------------
 
     abrirModal(name, payload = null) {
       this.ui.modal.open = true
@@ -50,7 +52,10 @@ export const useItemsStore = defineStore('items', {
       this.ui.modal.payload = null
     },
 
+    // -------------------------------------------------------
     // NOTIFICACIONES
+    // -------------------------------------------------------
+
     agregarNotificacion({ id, tipo, mensaje, icono, severidad = 'neutro' }) {
       this.eliminarNotificacion(id)
       this.notificaciones.push({ id, tipo, mensaje, icono, severidad, timerId: null })
@@ -116,7 +121,37 @@ export const useItemsStore = defineStore('items', {
       }
     },
 
-    async subirArchivo(formData) {
+    /**
+     * Sube un único archivo usando el flujo presigned URL:
+     * 1. Pide a Django una URL de subida + key
+     * 2. Hace PUT directo a Garage (sin pasar por Django)
+     * 3. Confirma a Django para que registre el Item en BD
+     */
+    async _subirArchivoPresignado(file, padreId) {
+      const mimeType = file.type || 'application/octet-stream'
+
+      // Paso 1: obtener URL presignada
+      const { data: { url_subida, key } } = await api.post('items/solicitar_subida/', {
+        nombre: file.name,
+        mime_type: mimeType,
+      })
+
+      // Paso 2: PUT directo al bucket (sin token JWT, la URL ya lleva la firma S3)
+      await axios.put(url_subida, file, {
+        headers: { 'Content-Type': mimeType },
+      })
+
+      // Paso 3: registrar en BD
+      await api.post('items/confirmar_subida/', {
+        nombre: file.name,
+        key,
+        padre: padreId,
+        tamano_bytes: file.size,
+        mime_type: mimeType,
+      })
+    },
+
+    async subirArchivo(file, padreId = null) {
       this.agregarNotificacion({
         id: 'subir',
         tipo: 'cargando',
@@ -125,14 +160,154 @@ export const useItemsStore = defineStore('items', {
         severidad: 'neutro',
       })
       try {
-        await api.post('items/', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        })
+        await this._subirArchivoPresignado(file, padreId)
         await this.cargarItems(this.currentParams)
       } catch (error) {
-        console.error('Error subiendo archivo:', error)
+        console.error('Error subiendo archivo:', error?.response?.data ?? error)
       } finally {
         this.eliminarNotificacion('subir')
+      }
+    },
+
+    // -------------------------------------------------------
+    // SUBIDA DE CARPETA
+    // -------------------------------------------------------
+
+    _parsearEstructuraCarpeta(files) {
+      // Ficheros del sistema que nunca deben subirse
+      const IGNORADOS = new Set(['.DS_Store', 'Thumbs.db', 'desktop.ini', '.localized'])
+
+      const carpetas = new Set()
+      const archivos = []
+
+      for (const file of files) {
+        if (IGNORADOS.has(file.name)) continue
+
+        // webkitRelativePath siempre empieza con el nombre de la carpeta raíz
+        const partes = file.webkitRelativePath.split('/')
+
+        // Registrar todas las carpetas intermedias (excluye el nombre del archivo)
+        for (let i = 1; i < partes.length; i++) {
+          carpetas.add(partes.slice(0, i).join('/'))
+        }
+
+        archivos.push({
+          file,
+          rutaRelativa: file.webkitRelativePath,
+        })
+      }
+
+      // Ordenar por profundidad para que el backend siempre reciba el padre antes que el hijo
+      const carpetasOrdenadas = Array.from(carpetas).sort(
+        (a, b) => a.split('/').length - b.split('/').length
+      )
+
+      return { carpetasOrdenadas, archivos }
+    },
+
+    async subirCarpeta(files, padreId = null) {
+      if (!files.length) return
+
+      const NOTIF_ID = 'subir-carpeta'
+      const LOTE = 3
+
+      this.agregarNotificacion({
+        id: NOTIF_ID,
+        tipo: 'cargando',
+        mensaje: 'Preparando estructura de carpetas…',
+        icono: 'pi-folder',
+        severidad: 'neutro',
+      })
+
+      try {
+        const { carpetasOrdenadas, archivos } = this._parsearEstructuraCarpeta(files)
+
+        // 1. Crear árbol de carpetas 
+        this.actualizarNotificacion(NOTIF_ID, {
+          mensaje: `Creando ${carpetasOrdenadas.length} carpeta${carpetasOrdenadas.length !== 1 ? 's' : ''}…`,
+        })
+
+        const { data } = await api.post('items/crear_arbol_carpetas/', {
+          rutas: carpetasOrdenadas,
+          padre: padreId,
+        })
+
+        // mapa: { "MiCarpeta": 12, "MiCarpeta/sub": 34, ... }
+        const mapa = data.mapa
+
+        // 2. Subir archivos en lotes 
+        let subidos = 0
+        let fallidos = 0
+        const total = archivos.length
+
+        this.actualizarNotificacion(NOTIF_ID, {
+          mensaje: `Subiendo archivos… 0 / ${total}`,
+        })
+
+        for (let i = 0; i < archivos.length; i += LOTE) {
+          const lote = archivos.slice(i, i + LOTE)
+
+          const resultados = await Promise.allSettled(
+            lote.map(async ({ file, rutaRelativa }) => {
+              const partes = rutaRelativa.split('/')
+              const rutaPadre = partes.slice(0, -1).join('/')
+              const padreArchivo = mapa[rutaPadre] ?? padreId
+              await this._subirArchivoPresignado(file, padreArchivo)
+            })
+          )
+
+          for (const resultado of resultados) {
+            if (resultado.status === 'fulfilled') {
+              subidos++
+            } else {
+              fallidos++
+              console.error('Error subiendo archivo:', resultado.reason?.response?.data ?? resultado.reason)
+            }
+          }
+
+          this.actualizarNotificacion(NOTIF_ID, {
+            mensaje: `Subiendo archivos… ${subidos + fallidos} / ${total}`,
+          })
+        }
+
+        if (fallidos === 0) {
+          this.actualizarNotificacion(
+            NOTIF_ID,
+            {
+              tipo: 'exito',
+              mensaje: `Carpeta subida correctamente (${subidos} archivo${subidos !== 1 ? 's' : ''})`,
+              icono: 'pi-check',
+              severidad: 'exito',
+            },
+            3,
+          )
+        } else {
+          this.actualizarNotificacion(
+            NOTIF_ID,
+            {
+              tipo: 'error',
+              mensaje: `${subidos} subidos, ${fallidos} fallaron`,
+              icono: 'pi-exclamation-triangle',
+              severidad: 'advertencia',
+            },
+            5,
+          )
+        }
+
+      } catch (error) {
+        console.error('Error subiendo carpeta:', error?.response?.data ?? error)
+        this.actualizarNotificacion(
+          NOTIF_ID,
+          {
+            tipo: 'error',
+            mensaje: 'Error al crear la estructura de carpetas',
+            icono: 'pi-times',
+            severidad: 'peligro',
+          },
+          5,
+        )
+      } finally {
+        await this.cargarItems(this.currentParams)
       }
     },
 
@@ -273,7 +448,7 @@ export const useItemsStore = defineStore('items', {
       const seleccion = this.itemsSeleccionados
       if (!seleccion.length) return
 
-      // Un solo archivo  presigned URL directa (instantáneo, sin notificación)
+      // Un solo archivo - presigned URL directa
       if (seleccion.length === 1 && seleccion[0].tipo === 'archivo') {
         try {
           const resp = await api.get(`items/${seleccion[0].id}/descargar_archivo/`)
@@ -288,7 +463,7 @@ export const useItemsStore = defineStore('items', {
         return
       }
 
-      // Carpeta o selección múltiple  ZIP generado en Django
+      // Carpeta o selección múltiple - ZIP generado en Django
       this.agregarNotificacion({
         id: 'descargar',
         tipo: 'cargando',

@@ -1,9 +1,13 @@
+import os
+import uuid
+
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from django.db.models import Exists, OuterRef
 from django.http import FileResponse
+from django.db import transaction
 
 from core.settings import development
 from .models import Item
@@ -228,3 +232,118 @@ class ItemViewSet(viewsets.ModelViewSet):
         )
         response['Content-Type'] = 'application/zip'
         return response
+
+
+    # =========================================================
+    # SUBIDA PRESIGNADA (De Vue a Garage directo)
+    # =========================================================
+
+    @action(detail=False, methods=['post'])
+    def solicitar_subida(self, request):
+        """
+        Paso 1: devuelve una presigned PUT URL para que Vue suba el fichero directamente a Garage sin pasar por Django.
+        Body: { nombre, mime_type? }
+        Response: { url_subida, key }
+        """
+        nombre = request.data.get('nombre', '').strip()
+        mime_type = request.data.get('mime_type', 'application/octet-stream')
+
+        if not nombre:
+            return Response({'detail': 'El nombre es obligatorio.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        _, extension = os.path.splitext(nombre)
+        key = f"users/{request.user.id}/{uuid.uuid4().hex}{extension}"
+
+        url_subida = ItemService.generar_url_presignada_subida(key)
+        return Response({'url_subida': url_subida, 'key': key})
+
+    @action(detail=False, methods=['post'])
+    def confirmar_subida(self, request):
+        """
+        Paso 2: registra el Item en la BD tras la subida directa a Garage.
+        Body: { nombre, key, padre?, tamano_bytes, mime_type }
+        """
+        nombre = request.data.get('nombre', '').strip()
+        key = request.data.get('key', '').strip()
+        padre_id = request.data.get('padre', None)
+        tamano_bytes = request.data.get('tamano_bytes', 0)
+        mime_type = request.data.get('mime_type', 'application/octet-stream')
+
+        if not nombre or not key:
+            return Response({'detail': 'nombre y key son obligatorios.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        padre = None
+        if padre_id:
+            try:
+                padre = Item.objects.get(id=padre_id, usuario=request.user, tipo='carpeta', eliminado=False)
+            except Item.DoesNotExist:
+                return Response({'detail': 'Carpeta padre no encontrada.'}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            item = ItemService.registrar_item_subido(
+                usuario=request.user,
+                nombre=nombre,
+                padre=padre,
+                key=key,
+                tamano_bytes=tamano_bytes,
+                mime_type=mime_type,
+            )
+        except Exception as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = self.get_serializer(item)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['post'])
+    def crear_arbol_carpetas(self, request):
+        """
+        Recibe una lista de rutas relativas de carpetas (ordenadas de raíz a hoja) y las crea devolviendo el mapa { ruta: id }.
+        Body: { rutas: ["carpeta", "carpeta/sub", ...], padre: null | id }
+        """
+        rutas = request.data.get('rutas', [])
+        padre_id = request.data.get('padre', None)
+        
+        if not rutas:
+            return Response({'mapa': {}})
+        
+        mapa = {}
+        
+        padre_raiz = None
+        if padre_id:
+            try:
+                padre_raiz = Item.objects.get(id=padre_id, usuario=request.user, tipo='carpeta')
+            except Item.DoesNotExist:
+                return Response({'detail': 'Carpeta padre no encontrada.'}, status=404)
+        
+        try:
+            with transaction.atomic():
+                for ruta in rutas:
+                    partes = ruta.split('/')
+                    nombre = partes[-1]
+                    
+                    # El padre de esta carpeta es la ruta padre dentro del mapa
+                    if len(partes) == 1:
+                        padre = padre_raiz
+                    else:
+                        ruta_padre = '/'.join(partes[:-1])
+                        padre_id_local = mapa.get(ruta_padre)
+                        if padre_id_local is None:
+                            return Response(
+                                {'detail': f'Ruta padre no encontrada: {ruta_padre}'},
+                                status=400
+                            )
+                        padre = Item.objects.get(id=padre_id_local)
+                    
+                    item = Item(
+                        usuario=request.user,
+                        nombre=nombre,
+                        tipo=Item.Tipo.CARPETA,
+                        padre=padre,
+                    )
+                    ItemService.guardar_item(item)
+                    mapa[ruta] = item.id
+                    
+        except Exception as e:
+            return Response({'detail': str(e)}, status=400)
+        
+        return Response({'mapa': mapa})

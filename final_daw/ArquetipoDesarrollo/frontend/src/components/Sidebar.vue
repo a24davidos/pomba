@@ -22,6 +22,7 @@ const store = useItemsStore()
 const menuPapelera = ref(null)
 const nuevoMenu = ref(null)
 const fileInput = ref(null)
+const folderInput = ref(null)
 
 // Este es el menú de acción para las pantallas táctiles
 const fabAbierto = ref(false)
@@ -31,6 +32,11 @@ const nuevoMenuItems = [
     label: 'Subir archivo',
     icon: 'pi pi-upload',
     command: () => { fileInput.value?.click(); fabAbierto.value = false },
+  },
+  {
+    label: 'Subir carpeta',
+    icon: 'pi pi-folder-open',
+    command: () => { folderInput.value?.click(); fabAbierto.value = false },
   },
   {
     label: 'Nueva carpeta',
@@ -74,9 +80,7 @@ function toggleNuevoMenu(event) {
   nuevoMenu.value.toggle(event)
 }
 
-// FAB móvil: toggle hoja de opciones o llama al menú desktop según breakpoint
 function handleFAB(event) {
-  // En desktop reutilizamos el Menu popup
   if (window.innerWidth >= 640) {
     toggleNuevoMenu(event)
   } else {
@@ -86,16 +90,21 @@ function handleFAB(event) {
 
 function cerrarFAB() { fabAbierto.value = false }
 
+// ── Subida de archivo individual ─────────────────────────────────
 async function subirArchivo(event) {
   const archivo = event.target.files[0]
   if (!archivo) return
-  const formData = new FormData()
-  formData.append('nombre', archivo.name)
-  formData.append('tipo', 'archivo')
-  formData.append('file', archivo)
-  const folderId = route.params.folderId || null
-  if (folderId) formData.append('padre', folderId)
-  await store.subirArchivo(formData)
+  const folderId = route.params.folderId ? Number(route.params.folderId) : null
+  await store.subirArchivo(archivo, folderId)
+  event.target.value = ''
+}
+
+// ── Subida de carpeta completa ────────────────────────────────────
+async function subirCarpeta(event) {
+  const files = Array.from(event.target.files)
+  if (!files.length) return
+  const folderId = route.params.folderId ? Number(route.params.folderId) : null
+  await store.subirCarpeta(files, folderId)
   event.target.value = ''
 }
 
@@ -104,19 +113,17 @@ const inicial = computed(() =>
   props.perfil?.nombre ? props.perfil.nombre.charAt(0).toUpperCase() : null
 )
 
-// ── Panel usuario móvil (se eleva al padre vía emit) ─────────────
-const panelUsuarioAbierto = ref(false)
-
 function togglePanelUsuario() {
-  emit('abrir-ajustes')   // reutilizamos el panel del AppLayout
-  // Si prefieres un panel más simple en lugar del SettingsModal completo,
-  // emite un evento distinto: emit('abrir-panel-usuario')
+  emit('abrir-ajustes')
 }
 </script>
 
 <template>
-  <!-- INPUT FILE OCULTO (compartido desktop + móvil) -->
+  <!-- INPUT FILE OCULTO — archivo individual -->
   <input ref="fileInput" type="file" class="hidden" @change="subirArchivo" />
+
+  <!-- INPUT FILE OCULTO — carpeta completa -->
+  <input ref="folderInput" type="file" class="hidden" webkitdirectory @change="subirCarpeta" />
 
   <!-- ── SIDEBAR DESKTOP ────────────────────────────────────────── -->
   <aside class="hidden sm:flex w-full h-full flex-col sm:items-center sm:p-1 lg:items-stretch lg:p-3">
@@ -172,7 +179,6 @@ function togglePanelUsuario() {
              flex items-stretch"
       style="padding-bottom: env(safe-area-inset-bottom);"
     >
-      <!-- 4 destinos de navegación -->
       <button
         v-for="item in navItems"
         :key="item.key"
@@ -190,7 +196,7 @@ function togglePanelUsuario() {
         </span>
       </button>
 
-      <!-- Avatar/usuario — lleva al panel de cuenta -->
+      <!-- Avatar/usuario -->
       <button
         @click="togglePanelUsuario"
         class="flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-surface-500 dark:text-surface-400 transition-colors"
@@ -207,12 +213,8 @@ function togglePanelUsuario() {
   </Teleport>
 
   <!-- ── FAB MÓVIL (botón +) ───────────────────────────────────── -->
-  <!--
-    Flotante sobre el contenido, justo encima de la bottom nav.
-    En desktop no se muestra (se usa el botón "Nuevo" del sidebar).
-  -->
   <Teleport to="body">
-    <!-- Overlay para cerrar el mini-menú del FAB -->
+    <!-- Overlay para cerrar el mini-menú -->
     <Transition name="fab-overlay">
       <div
         v-if="fabAbierto"
@@ -246,7 +248,7 @@ function togglePanelUsuario() {
       </div>
     </Transition>
 
-    <!-- Botón FAB propiamente dicho -->
+    <!-- Botón FAB -->
     <button
       class="sm:hidden fixed z-47 w-14 h-14 rounded-full bg-primary shadow-lg
              flex items-center justify-center

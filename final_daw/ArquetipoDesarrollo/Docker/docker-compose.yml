@@ -6,6 +6,7 @@ services:
     container_name: nginx_proxy
     ports:
       - "80:80"
+      - "3900:3900"
     volumes:
       - ../nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
       - ../backend/staticfiles:/app/staticfiles # Para que Nginx sirva los CSS del Admin
@@ -91,9 +92,9 @@ services:
       - garage_data:/var/lib/garage/data
       - ./garage.toml:/etc/garage.toml:ro
     ports:
-      - "3900:3900"   # S3 API
-      - "3901:3901"   # RPC 
-      - "3903:3903"   # Admin API 
+      - "3901:3901"   # RPC
+      - "3903:3903"   # Admin API
+      # Puerto 3900 (S3) lo gestiona Nginx para añadir CORS
     networks:
       - appnet
 

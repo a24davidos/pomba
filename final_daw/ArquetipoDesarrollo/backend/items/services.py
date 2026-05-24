@@ -1,4 +1,5 @@
 import io
+import os
 import zipfile
 
 import boto3
@@ -241,6 +242,24 @@ class ItemService:
         return ItemService.guardar_item(item)
     
     @staticmethod
+    def _nombre_disponible(usuario, nombre, padre):
+        existe = Item.objects.filter(
+            usuario=usuario, padre=padre, nombre=nombre, eliminado=False
+        ).exists()
+        if not existe:
+            return nombre
+
+        base, ext = os.path.splitext(nombre)
+        contador = 1
+        while True:
+            candidato = f"{base} ({contador}){ext}"
+            if not Item.objects.filter(
+                usuario=usuario, padre=padre, nombre=candidato, eliminado=False
+            ).exists():
+                return candidato
+            contador += 1
+
+    @staticmethod
     def guardar_item(item):
         try:
             item.full_clean()
@@ -349,6 +368,51 @@ class ItemService:
             }
 
         return resultado
+
+    @staticmethod
+    def generar_url_presignada_subida(key):
+        """
+        Genera una presigned URL para que el navegador haga PUT directamente a Garage.
+        Usa el endpoint PÚBLICO para que la firma SigV4 coincida con el host
+        que verá el navegador.
+        """
+        public_endpoint = getattr(settings, 'GARAGE_PUBLIC_URL', settings.AWS_S3_ENDPOINT_URL)
+
+        client = boto3.client(
+            's3',
+            endpoint_url=public_endpoint,
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name=settings.AWS_S3_REGION_NAME,
+            config=Config(
+                signature_version='s3v4',
+                s3={'addressing_style': 'path'},
+            ),
+        )
+
+        return client.generate_presigned_url(
+            'put_object',
+            Params={
+                'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
+                'Key': key,
+            },
+            ExpiresIn=3600,
+            HttpMethod='PUT',
+        )
+
+    @staticmethod
+    def registrar_item_subido(usuario, nombre, padre, key, tamano_bytes, mime_type):
+        nombre = ItemService._nombre_disponible(usuario, nombre, padre)
+        item = Item(
+            usuario=usuario,
+            nombre=nombre,
+            tipo=Item.Tipo.ARCHIVO,
+            padre=padre,
+            tamano_bytes=tamano_bytes or 0,
+            mime_type=mime_type or 'application/octet-stream',
+        )
+        item.file = key
+        return ItemService.guardar_item(item)
 
     @staticmethod
     def construir_zip(archivos_con_ruta, bucket_name):

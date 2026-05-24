@@ -264,10 +264,18 @@ watch(
           :class="clasesSnackbar(notif)"
         >
           <i
-            class="pi text-base"
+            class="pi text-base shrink-0"
             :class="notif.tipo === 'cargando' ? 'pi-spin pi-spinner' : notif.icono"
           />
           <span>{{ notif.mensaje }}</span>
+          <button
+            v-if="notif.tipo !== 'cargando'"
+            @click="store.eliminarNotificacion(notif.id)"
+            class="ml-1 shrink-0 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
+            aria-label="Cerrar"
+          >
+            <i class="pi pi-times text-xs" />
+          </button>
         </div>
       </TransitionGroup>
     </div>
