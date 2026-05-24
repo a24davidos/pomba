@@ -5,6 +5,7 @@ from .services import ItemService
 
 class ItemSerializer(serializers.ModelSerializer):
     tiene_hijos = serializers.BooleanField(read_only=True)
+    file = serializers.FileField(allow_empty_file=True, required=False, allow_null=True)
 
     class Meta:
         model = Item
