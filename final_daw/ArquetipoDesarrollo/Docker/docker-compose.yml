@@ -100,7 +100,7 @@ services:
 
   # Elasticsearch
   elasticsearch:
-      image: docker.elastic.co/elasticsearch/elasticsearch:8.11.4
+      image: docker.elastic.co/elasticsearch/elasticsearch:9.0.0
       container_name: elasticsearch
       environment:
         - discovery.type=single-node
@@ -124,7 +124,7 @@ services:
         
   # Kibana
   kibana:
-    image: docker.elastic.co/kibana/kibana:8.11.4
+    image: docker.elastic.co/kibana/kibana:9.0.0
     container_name: kibana
     env_file: .env
     environment:
