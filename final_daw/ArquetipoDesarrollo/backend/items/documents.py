@@ -68,7 +68,7 @@ class ItemDocument(Document):
         return instance.metadatos.get('album') or ''
 
     def prepare_meta_anno(self, instance):
-        return instance.metadatos.get('anno')
+        return instance.metadatos.get('año')
 
     def prepare_meta_genero(self, instance):
         return instance.metadatos.get('genero') or ''
