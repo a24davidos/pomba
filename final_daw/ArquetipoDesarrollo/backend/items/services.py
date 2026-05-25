@@ -13,6 +13,7 @@ from django.db import transaction
 from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework.exceptions import ValidationError as DRFValidationError
+from django.db.models import Exists, OuterRef
 
 logger = logging.getLogger(__name__)
 
@@ -172,6 +173,55 @@ class ItemService:
     # =========================================================
     # SECCIÓN 2: Consultas y navegacion
     # =========================================================
+
+    @staticmethod
+    def buscar_items(usuario, q):
+        """
+        Busca en Elasticsearch y devuelve Items de PostgreSQL ordenados por relevancia.
+        Devuelve lista vacía si no hay resultados.
+        """
+        from elasticsearch import Elasticsearch
+
+        es = Elasticsearch(**settings.ELASTICSEARCH_DSL['default'])
+
+        cuerpo = {
+            'query': {
+                'bool': {
+                    'filter': [
+                        {'term': {'usuario_id': usuario.id}},
+                        {'term': {'eliminado': False}},
+                    ],
+                    'must': [
+                        {
+                            'multi_match': {
+                                'query': q,
+                                'fields': [
+                                    'nombre^3', 'contenido', 'meta_titulo^2',
+                                    'meta_artista', 'meta_album', 'meta_genero',
+                                    'meta_camara_marca', 'meta_camara_modelo',
+                                ],
+                                'fuzziness': 'AUTO',
+                            }
+                        }
+                    ],
+                }
+            }
+        }
+
+        respuesta = es.search(index='items', body=cuerpo, size=50)
+        ids = [int(hit['_id']) for hit in respuesta['hits']['hits']]
+
+        if not ids:
+            return []
+
+        hijos = Item.objects.filter(padre=OuterRef('pk'), eliminado=False)
+        items_map = {
+            item.id: item
+            for item in Item.objects.filter(
+                id__in=ids, usuario=usuario, eliminado=False
+            ).annotate(tiene_hijos=Exists(hijos))
+        }
+        return [items_map[id_] for id_ in ids if id_ in items_map]
 
     @staticmethod
     def obtener_breadcrumb(usuario, carpeta_id):
