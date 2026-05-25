@@ -27,7 +27,7 @@ class ItemDocument(Document):
     meta_artista = fields.TextField()
     meta_album = fields.TextField()
     meta_anno = fields.IntegerField()
-    meta_genero = fields.KeywordField()
+    meta_genero = fields.TextField()
 
     # Metadatos de imagen
     meta_camara_marca = fields.KeywordField()

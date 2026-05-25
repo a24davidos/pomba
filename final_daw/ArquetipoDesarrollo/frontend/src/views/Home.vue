@@ -10,12 +10,12 @@ import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Divider from 'primevue/divider'
 
+
 const store = useItemsStore()
 const route = useRoute()
 const router = useRouter()
 
 const inputNuevaCarpeta = ref('')
-const inputRenombrar = ref('')
 
 const CONFIGURACION_VISTAS = {
   drive: {
@@ -76,7 +76,6 @@ function cargarDesdeRuta() {
 function cerrarModal() {
   store.cerrarModal()
   inputNuevaCarpeta.value = ''
-  inputRenombrar.value = ''
 }
 
 async function crearCarpeta() {
@@ -91,65 +90,28 @@ async function eliminar() {
   const ids = store.itemsSeleccionados.map((i) => i.id)
   if (!ids.length) return
   await store.eliminarItems(ids)
-  store.limpiarSeleccion()
-  await cargarDesdeRuta()
 }
 
 async function eliminarDefinitivamente() {
   const ids = store.itemsSeleccionados.map((i) => i.id)
   if (!ids.length) return
   await store.eliminarDefinitivamente(ids)
-  store.limpiarSeleccion()
-  await cargarDesdeRuta()
 }
 
 async function restaurar() {
   const ids = store.itemsSeleccionados.map((i) => i.id)
   if (!ids.length) return
   await store.restaurarItems(ids)
-  store.limpiarSeleccion()
-  await cargarDesdeRuta()
 }
 
 async function marcarFavoritos() {
   const ids = store.itemsSeleccionados.map((i) => i.id)
   if (!ids.length) return
   await store.marcarFavoritos(ids)
-  store.limpiarSeleccion()
-  await cargarDesdeRuta()
-}
-
-function abrirModalRenombrar(item) {
-  // Se puede llamar desde la action bar o los ...
-  const objetivo = item ?? store.itemsSeleccionados[0]
-  if (!objetivo) return
-  inputRenombrar.value = objetivo.nombre
-  store.abrirModal('renombrar', objetivo)
-}
-
-async function renombrar() {
-  const id = store.ui.modal.payload.id
-  await store.renombrarItem(id, inputRenombrar.value)
-  store.limpiarSeleccion()
-  cerrarModal()
-  await cargarDesdeRuta()
 }
 
 async function descargar() {
   await store.descargarItems()
-}
-
-// COLORES PUESTOS UN POCO DE PLACEHOLDER REVISAR CUANDO LE DES ESTILOS GLOBALES QUE VAYA BIEN
-const CLASES_SNACKBAR = {
-  neutro:      'bg-surface-800 dark:bg-surface-100 text-white dark:text-surface-900',
-  exito:       'bg-green-700 dark:bg-green-100 text-white dark:text-green-900',
-  advertencia: 'bg-amber-600 dark:bg-amber-100 text-white dark:text-amber-900',
-  peligro:     'bg-red-700 dark:bg-red-100 text-white dark:text-red-900',
-}
-
-function clasesSnackbar(notif) {
-  if (notif.tipo === 'error') return CLASES_SNACKBAR.peligro
-  return CLASES_SNACKBAR[notif.severidad] ?? CLASES_SNACKBAR.neutro
 }
 
 watch(
@@ -233,7 +195,7 @@ watch(
             <Button
               v-if="store.itemsSeleccionados.length === 1"
               icon="pi pi-pencil" label="Renombrar" text size="small" rounded
-              @click="abrirModalRenombrar()"
+              @click="store.abrirModalRenombrar()"
             />
             <Divider layout="vertical" class="h-4! mx-1!" />
             <Button icon="pi pi-trash" label="Eliminar" text size="small" rounded severity="danger" @click="eliminar" />
@@ -250,34 +212,7 @@ watch(
                 [&::-webkit-scrollbar-thumb]:rounded-full
                 [&::-webkit-scrollbar-thumb]:bg-surface-300
                 dark:[&::-webkit-scrollbar-thumb]:bg-surface-600">
-      <FileTable @rename="abrirModalRenombrar" />
-    </div>
-
-    <!-- SNACKBARS -->
-    <div class="fixed bottom-20 left-3 z-50 flex flex-col-reverse gap-2 sm:bottom-6 sm:left-6">
-      <!-- ↑ bottom-20 en móvil para no quedar tapado por la bottom nav -->
-      <TransitionGroup name="snack">
-        <div
-          v-for="notif in store.notificaciones"
-          :key="notif.id"
-          class="flex items-center gap-3 text-sm font-medium px-4 py-3 rounded-xl shadow-lg"
-          :class="clasesSnackbar(notif)"
-        >
-          <i
-            class="pi text-base shrink-0"
-            :class="notif.tipo === 'cargando' ? 'pi-spin pi-spinner' : notif.icono"
-          />
-          <span>{{ notif.mensaje }}</span>
-          <button
-            v-if="notif.tipo !== 'cargando'"
-            @click="store.eliminarNotificacion(notif.id)"
-            class="ml-1 shrink-0 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
-            aria-label="Cerrar"
-          >
-            <i class="pi pi-times text-xs" />
-          </button>
-        </div>
-      </TransitionGroup>
+      <FileTable @rename="store.abrirModalRenombrar" />
     </div>
 
     <!-- MODAL NUEVA CARPETA -->
@@ -305,45 +240,6 @@ watch(
       </template>
     </Dialog>
 
-    <!-- MODAL RENOMBRAR -->
-    <Dialog
-      v-if="store.ui.modal.name === 'renombrar'"
-      v-model:visible="store.ui.modal.open"
-      header="Renombrar"
-      :style="{ width: '25rem' }"
-      modal :draggable="false" :closable="false"
-    >
-      <div class="flex flex-col gap-2 mb-4">
-        <InputText
-          id="inputRename"
-          v-model="inputRenombrar"
-          class="flex-auto"
-          autocomplete="off"
-          placeholder="Nuevo nombre"
-          @keyup.enter="renombrar"
-          autofocus
-        />
-      </div>
-      <template #footer>
-        <Button label="Cancelar" text severity="secondary" @click="cerrarModal" />
-        <Button label="Confirmar" @click="renombrar" :disabled="!inputRenombrar.trim()" />
-      </template>
-    </Dialog>
-    
   </div>
 </template>
 
-<style scoped>
-.snack-enter-active,
-.snack-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-.snack-enter-from,
-.snack-leave-to {
-  opacity: 0;
-  transform: translateY(0.5rem);
-}
-.snack-move {
-  transition: transform 0.2s ease;
-}
-</style>
