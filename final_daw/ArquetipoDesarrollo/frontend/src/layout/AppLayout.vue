@@ -3,9 +3,15 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { authService } from '@/api/auth'
 import { servicioUsuario } from '@/api/users'
+import { useItemsStore } from '@/stores/items'
 import SettingsModal from '@/components/SettingsModal.vue'
 import Sidebar from '@/components/Sidebar.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
+import Dialog from 'primevue/dialog'
+import Button from 'primevue/button'
+import InputText from 'primevue/inputtext'
+
+const store = useItemsStore()
 
 const router = useRouter()
 const route = useRoute()
@@ -80,6 +86,35 @@ function alActualizarPerfil(actualizado) {
 
 // ── Panel de usuario móvil ────────────────────────────────────────
 const panelUsuarioMovil = ref(false)
+
+// ── Modal renombrar (global, compartido por Home y SearchResults) ─
+const inputRenombrar = ref('')
+
+watch(() => store.ui.modal, (modal) => {
+  if (modal.open && modal.name === 'renombrar') {
+    inputRenombrar.value = modal.payload?.nombre || ''
+  }
+}, { deep: true })
+
+async function renombrar() {
+  const id = store.ui.modal.payload.id
+  await store.renombrarItem(id, inputRenombrar.value)
+  store.cerrarModal()
+  inputRenombrar.value = ''
+}
+
+// ── Snackbars ─────────────────────────────────────────────────────
+const CLASES_SNACKBAR = {
+  neutro:      'bg-surface-800 dark:bg-surface-100 text-white dark:text-surface-900',
+  exito:       'bg-green-700 dark:bg-green-100 text-white dark:text-green-900',
+  advertencia: 'bg-amber-600 dark:bg-amber-100 text-white dark:text-amber-900',
+  peligro:     'bg-red-700 dark:bg-red-100 text-white dark:text-red-900',
+}
+
+function clasesSnackbar(notif) {
+  if (notif.tipo === 'error') return CLASES_SNACKBAR.peligro
+  return CLASES_SNACKBAR[notif.severidad] ?? CLASES_SNACKBAR.neutro
+}
 </script>
 
 <template>
@@ -224,9 +259,65 @@ const panelUsuarioMovil = ref(false)
     :profile="perfil"
     @profile-updated="alActualizarPerfil"
   />
+
+  <!-- SNACKBARS — globales, visibles en cualquier vista -->
+  <div class="fixed bottom-20 left-3 z-50 flex flex-col-reverse gap-2 sm:bottom-6 sm:left-6">
+    <TransitionGroup name="snack">
+      <div
+        v-for="notif in store.notificaciones"
+        :key="notif.id"
+        class="flex items-center gap-3 text-sm font-medium px-4 py-3 rounded-xl shadow-lg"
+        :class="clasesSnackbar(notif)"
+      >
+        <i
+          class="pi text-base shrink-0"
+          :class="notif.tipo === 'cargando' ? 'pi-spin pi-spinner' : notif.icono"
+        />
+        <span>{{ notif.mensaje }}</span>
+        <button
+          v-if="notif.tipo !== 'cargando'"
+          @click="store.eliminarNotificacion(notif.id)"
+          class="ml-1 shrink-0 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
+          aria-label="Cerrar"
+        >
+          <i class="pi pi-times text-xs" />
+        </button>
+      </div>
+    </TransitionGroup>
+  </div>
+
+  <!-- MODAL RENOMBRAR — global, abierto desde cualquier vista -->
+  <Dialog
+    v-if="store.ui.modal.name === 'renombrar'"
+    v-model:visible="store.ui.modal.open"
+    header="Renombrar"
+    :style="{ width: '25rem' }"
+    modal :draggable="false" :closable="false"
+  >
+    <div class="flex flex-col gap-2 mb-4">
+      <InputText
+        v-model="inputRenombrar"
+        class="flex-auto"
+        autocomplete="off"
+        placeholder="Nuevo nombre"
+        @keyup.enter="renombrar"
+        autofocus
+      />
+    </div>
+    <template #footer>
+      <Button label="Cancelar" text severity="secondary" @click="store.cerrarModal" />
+      <Button label="Confirmar" @click="renombrar" :disabled="!inputRenombrar.trim()" />
+    </template>
+  </Dialog>
 </template>
 
 <style scoped>
+.snack-enter-active,
+.snack-leave-active { transition: opacity 0.2s ease, transform 0.2s ease; }
+.snack-enter-from,
+.snack-leave-to { opacity: 0; transform: translateY(0.5rem); }
+.snack-move { transition: transform 0.2s ease; }
+
 .panel-movil-enter-active,
 .panel-movil-leave-active { transition: opacity 0.25s ease; }
 .panel-movil-enter-active .relative,

@@ -10,6 +10,7 @@ export const useItemsStore = defineStore('items', {
     notificaciones: [],
     currentParams: {},
     loadToken: 0,
+    queryBusqueda: '',
 
     seleccion: {
       ids: [],
@@ -44,6 +45,12 @@ export const useItemsStore = defineStore('items', {
       this.ui.modal.open = true
       this.ui.modal.name = name
       this.ui.modal.payload = payload
+    },
+
+    abrirModalRenombrar(item) {
+      const objetivo = item ?? this.itemsSeleccionados[0]
+      if (!objetivo) return
+      this.abrirModal('renombrar', objetivo)
     },
 
     cerrarModal() {
@@ -106,6 +113,22 @@ export const useItemsStore = defineStore('items', {
         console.error('Error cargando items:', error)
       } finally {
         if (token === this.loadToken) this.loading = false
+      }
+    },
+
+    async buscarItems(q) {
+      this.loading = true
+      this.queryBusqueda = q
+      this.limpiarSeleccion()
+      try {
+        const response = await api.get('items/buscar/', { params: { q } })
+        this.items = response.data.items
+        this.breadcrumb = []
+      } catch (error) {
+        this.items = []
+        console.error('Error en búsqueda:', error)
+      } finally {
+        this.loading = false
       }
     },
 
@@ -314,6 +337,7 @@ export const useItemsStore = defineStore('items', {
     async renombrarItem(id, nombre) {
       try {
         await api.post(`items/${id}/renombrar/`, { nombre })
+        this.actualizarItemsLocal([id], { nombre })
         this.agregarNotificacion({
           id: 'renombrar',
           tipo: 'exito',
@@ -336,7 +360,12 @@ export const useItemsStore = defineStore('items', {
     async marcarFavoritos(ids = []) {
       try {
         const response = await api.post('items/favorito/', { ids })
-        this.actualizarItemsLocal(ids, { favorito: response.data.favorito })
+        const nuevoFavorito = response.data.favorito
+        if (!nuevoFavorito && this.currentParams.favorito === 'true') {
+          this.items = this.items.filter((item) => !ids.includes(item.id))
+        } else {
+          this.actualizarItemsLocal(ids, { favorito: nuevoFavorito })
+        }
         this.limpiarSeleccion()
       } catch (error) {
         console.error('Error marcando favoritos:', error)
@@ -350,6 +379,8 @@ export const useItemsStore = defineStore('items', {
     async eliminarItems(ids = []) {
       try {
         await api.post('items/trash/', { ids })
+        this.items = this.items.filter((item) => !ids.includes(item.id))
+        this.limpiarSeleccion()
         this.agregarNotificacion({
           id: 'papelera',
           tipo: 'exito',
@@ -372,6 +403,8 @@ export const useItemsStore = defineStore('items', {
       })
       try {
         await api.delete('items/eliminar_definitivo/', { data: { ids } })
+        this.items = this.items.filter((item) => !ids.includes(item.id))
+        this.limpiarSeleccion()
         this.actualizarNotificacion(
           'eliminar',
           { tipo: 'exito', mensaje: 'Eliminado definitivamente', icono: 'pi-check-circle' },
@@ -386,6 +419,8 @@ export const useItemsStore = defineStore('items', {
     async restaurarItems(ids = []) {
       try {
         await api.post('items/restaurar/', { ids })
+        this.items = this.items.filter((item) => !ids.includes(item.id))
+        this.limpiarSeleccion()
         this.agregarNotificacion({
           id: 'restaurar',
           tipo: 'exito',

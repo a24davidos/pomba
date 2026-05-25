@@ -174,41 +174,106 @@ class ItemService:
     # SECCIÓN 2: Consultas y navegacion
     # =========================================================
 
+    # Prefijos soportados campo:valor
+    _PREFIJOS_CAMPO = {
+        'artista': ('match', 'meta_artista'),
+        'artist':  ('match', 'meta_artista'),
+        'album':   ('match', 'meta_album'),
+        'titulo':  ('match', 'meta_titulo'),
+        'title':   ('match', 'meta_titulo'),
+        'genero':  ('match', 'meta_genero'),
+        'genre':   ('match', 'meta_genero'),
+        'camara':  ('match', 'meta_camara_modelo'),
+        'nombre':  ('match', 'nombre'),
+        'año':     ('year',  None),
+        'year':    ('year',  None),
+        'tipo':    ('tipo',  None),
+    }
+
+    _TIPOS_MIME = {
+        'audio':  'audio/',
+        'imagen': 'image/',
+        'image':  'image/',
+        'texto':  'text/',
+        'text':   'text/',
+    }
+
+    @staticmethod
+    def _parsear_query(q):
+        must_extra = []
+        filter_extra = []
+        texto_libre = []
+
+        for token in q.split():
+            if ':' not in token:
+                texto_libre.append(token)
+                continue
+
+            prefijo, _, valor = token.partition(':')
+            mapping = ItemService._PREFIJOS_CAMPO.get(prefijo.lower())
+
+            if not mapping or not valor:
+                texto_libre.append(token)
+                continue
+
+            kind, campo = mapping
+
+            if kind == 'match':
+                must_extra.append(
+                    {'match': {campo: {'query': valor, 'fuzziness': 'AUTO'}}}
+                )
+            elif kind == 'year':
+                try:
+                    filter_extra.append({'term': {'meta_anno': int(valor)}})
+                except ValueError:
+                    texto_libre.append(token)
+            elif kind == 'tipo':
+                valor_lower = valor.lower()
+                if valor_lower == 'carpeta':
+                    filter_extra.append({'term': {'tipo': 'carpeta'}})
+                else:
+                    mime_prefix = ItemService._TIPOS_MIME.get(valor_lower)
+                    if mime_prefix:
+                        filter_extra.append({'prefix': {'mime_type': mime_prefix}})
+                    else:
+                        texto_libre.append(token)
+
+        return must_extra, filter_extra, ' '.join(texto_libre)
+
     @staticmethod
     def buscar_items(usuario, q):
-        """
-        Busca en Elasticsearch y devuelve Items de PostgreSQL ordenados por relevancia.
-        Devuelve lista vacía si no hay resultados.
-        """
         from elasticsearch import Elasticsearch
 
         es = Elasticsearch(**settings.ELASTICSEARCH_DSL['default'])
 
-        cuerpo = {
-            'query': {
-                'bool': {
-                    'filter': [
-                        {'term': {'usuario_id': usuario.id}},
-                        {'term': {'eliminado': False}},
-                    ],
-                    'must': [
-                        {
-                            'multi_match': {
-                                'query': q,
-                                'fields': [
-                                    'nombre^3', 'contenido', 'meta_titulo^2',
-                                    'meta_artista', 'meta_album', 'meta_genero',
-                                    'meta_camara_marca', 'meta_camara_modelo',
-                                ],
-                                'fuzziness': 'AUTO',
-                            }
-                        }
-                    ],
-                }
-            }
-        }
+        must_extra, filter_extra, texto_libre = ItemService._parsear_query(q)
 
-        respuesta = es.search(index='items', body=cuerpo, size=50)
+        must = []
+        if texto_libre:
+            must.append({
+                'multi_match': {
+                    'query': texto_libre,
+                    'fields': [
+                        'nombre^3', 'contenido', 'meta_titulo^2',
+                        'meta_artista', 'meta_album', 'meta_genero',
+                        'meta_camara_marca', 'meta_camara_modelo',
+                    ],
+                    'fuzziness': 'AUTO',
+                }
+            })
+        must.extend(must_extra)
+
+        bool_query = {
+            'filter': [
+                {'term': {'usuario_id': usuario.id}},
+                {'term': {'eliminado': False}},
+                *filter_extra,
+            ],
+        }
+        if must:
+            bool_query['must'] = must
+
+        respuesta = es.search(index='items', size=50, query={'bool': bool_query})
         ids = [int(hit['_id']) for hit in respuesta['hits']['hits']]
 
         if not ids:
@@ -253,8 +318,7 @@ class ItemService:
             carpeta = mapa_carpetas.get(id_actual)
             
             if not carpeta:
-                # Si no encontramos la carpeta en el mapa, 
-                # puede ser que el ID no exista o no sea del usuario
+                # Si no encontramos la carpeta en el mapa puede ser que el ID no exista o no sea del usuario
                 break
             
             nodos_padre.append({
