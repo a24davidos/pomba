@@ -22,14 +22,16 @@ class ItemDocument(Document):
     # Contenido texto extraído (TXT, MD, CSV)
     contenido = fields.TextField(analyzer='spanish')
 
-    # Metadatos de audio 
+    # Metadatos de audio
+    meta_titulo = fields.TextField()
     meta_artista = fields.TextField()
     meta_album = fields.TextField()
     meta_anno = fields.IntegerField()
     meta_genero = fields.KeywordField()
 
     # Metadatos de imagen
-    meta_camara = fields.KeywordField()
+    meta_camara_marca = fields.KeywordField()
+    meta_camara_modelo = fields.KeywordField()
 
     # Fechas y tamaño para filtros avanzados
     fecha_creacion = fields.DateField()
@@ -61,6 +63,9 @@ class ItemDocument(Document):
     def prepare_contenido(self, instance):
         return instance.metadatos.get('contenido') or ''
 
+    def prepare_meta_titulo(self, instance):
+        return instance.metadatos.get('titulo') or ''
+
     def prepare_meta_artista(self, instance):
         return instance.metadatos.get('artista') or ''
 
@@ -73,5 +78,8 @@ class ItemDocument(Document):
     def prepare_meta_genero(self, instance):
         return instance.metadatos.get('genero') or ''
 
-    def prepare_meta_camara(self, instance):
+    def prepare_meta_camara_marca(self, instance):
+        return instance.metadatos.get('camara_marca') or ''
+
+    def prepare_meta_camara_modelo(self, instance):
         return instance.metadatos.get('camara_modelo') or ''
