@@ -48,8 +48,7 @@ class ItemDocument(Document):
         model = Item
         fields = []
 
-    # Estos métodos son llamados tanto al indexar manualmente (ItemService)
-    # como al reconstruir el índice con: manage.py search_index --rebuild
+    # Estos métodos son llamados tanto al indexar manualmente (ItemService) como al reconstruir el índice con: manage.py search_index --rebuild (Para que no me de problemas después)
 
     def prepare_nombre_raw(self, instance):
         return instance.nombre

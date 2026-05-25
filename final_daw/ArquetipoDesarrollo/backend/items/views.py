@@ -271,6 +271,32 @@ class ItemViewSet(viewsets.ModelViewSet):
 
 
     # =========================================================
+    # BÚSQUEDA
+    # =========================================================
+
+    @action(detail=False, methods=['get'])
+    def buscar(self, request):
+        """
+        GET /api/items/buscar/?q=<texto>
+        Devuelve items ordenados por relevancia de Elasticsearch.
+        """
+        q = request.query_params.get('q', '').strip()
+        if not q:
+            return Response(
+                {'detail': 'El parámetro q es obligatorio.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            resultados = ItemService.buscar_items(usuario=request.user, q=q)
+        except Exception as e:
+            return Response(
+                {'detail': 'Error al conectar con el motor de búsqueda.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        serializer = self.get_serializer(resultados, many=True)
+        return Response({'items': serializer.data, 'query': q})
+
+    # =========================================================
     # SUBIDA PRESIGNADA (De Vue a Garage directo)
     # =========================================================
 

@@ -1,6 +1,6 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, computed, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { authService } from '@/api/auth'
 import { servicioUsuario } from '@/api/users'
 import SettingsModal from '@/components/SettingsModal.vue'
@@ -8,6 +8,28 @@ import Sidebar from '@/components/Sidebar.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 
 const router = useRouter()
+const route = useRoute()
+
+// ── Búsqueda ──────────────────────────────────────────────────────
+const textoBusqueda = ref('')
+let timerBusqueda = null
+
+// Sincroniza el input cuando el usuario naveg
+watch(() => route.query.q, (q) => {
+  textoBusqueda.value = q || ''
+}, { immediate: true })
+
+watch(textoBusqueda, (texto) => {
+  clearTimeout(timerBusqueda)
+  const trimado = texto.trim()
+  if (!trimado) {
+    if (route.name === 'search') router.push('/home')
+    return
+  }
+  timerBusqueda = setTimeout(() => {
+    router.push({ name: 'search', query: { q: trimado } })
+  }, 400)
+})
 
 // ── Perfil ────────────────────────────────────────────────────────
 const perfil = ref({ nombre: '', apellidos: '', email: '', foto_perfil_url: null })
@@ -85,6 +107,7 @@ const panelUsuarioMovil = ref(false)
                 <i class="pi pi-search text-surface-500 group-focus-within:text-surface-900 dark:group-focus-within:text-surface-0 transition-colors duration-200" />
               </InputIcon>
               <InputText
+                v-model="textoBusqueda"
                 placeholder="Buscar"
                 class="w-full py-3 px-12 border-none rounded-3xl transition-all duration-200
                        bg-surface-150 dark:bg-surface-800
