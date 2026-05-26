@@ -106,11 +106,13 @@ services:
         - discovery.type=single-node
         - xpack.security.enabled=false
         # Subimos la RAM: la v9 con 512MB va muy ahogada
-        - "ES_JAVA_OPTS=-Xms1g -Xmx1g" 
+        - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
       ulimits:
         memlock:
           soft: -1
           hard: -1
+      volumes:
+        - es_data:/usr/share/elasticsearch/data
       # Le damos un poco más de tiempo para arrancar antes de que Docker se desespere
       healthcheck:
         test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -vq '\"status\":\"red\"'"]
