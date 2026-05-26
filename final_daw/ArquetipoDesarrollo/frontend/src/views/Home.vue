@@ -104,12 +104,6 @@ async function restaurar() {
   await store.restaurarItems(ids)
 }
 
-async function marcarFavoritos() {
-  const ids = store.itemsSeleccionados.map((i) => i.id)
-  if (!ids.length) return
-  await store.marcarFavoritos(ids)
-}
-
 async function descargar() {
   await store.descargarItems()
 }
@@ -191,7 +185,7 @@ watch(
               :loading="store.descargando"
               @click="descargar()"
             />
-            <Button icon="pi pi-star" label="Favorito" text size="small" rounded @click="marcarFavoritos" />
+            <Button icon="pi pi-arrow-right" label="Mover a..." text size="small" rounded @click="store.abrirModalMover()" />
             <Button
               v-if="store.itemsSeleccionados.length === 1"
               icon="pi pi-pencil" label="Renombrar" text size="small" rounded
@@ -212,7 +206,7 @@ watch(
                 [&::-webkit-scrollbar-thumb]:rounded-full
                 [&::-webkit-scrollbar-thumb]:bg-surface-300
                 dark:[&::-webkit-scrollbar-thumb]:bg-surface-600">
-      <FileTable @rename="store.abrirModalRenombrar" />
+      <FileTable @rename="store.abrirModalRenombrar" @move="store.abrirModalMover" />
     </div>
 
     <!-- MODAL NUEVA CARPETA -->

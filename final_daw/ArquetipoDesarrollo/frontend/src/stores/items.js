@@ -53,6 +53,12 @@ export const useItemsStore = defineStore('items', {
       this.abrirModal('renombrar', objetivo)
     },
 
+    abrirModalMover(item) {
+      const items = item ? [item] : this.itemsSeleccionados
+      if (!items.length) return
+      this.abrirModal('mover', { ids: items.map((i) => i.id) })
+    },
+
     cerrarModal() {
       this.ui.modal.open = false
       this.ui.modal.name = null
@@ -355,6 +361,29 @@ export const useItemsStore = defineStore('items', {
       this.items = this.items.map((item) =>
         set.has(item.id) ? { ...item, ...cambios } : item
       )
+    },
+
+    async moverItems(ids, destinoId) {
+      try {
+        await api.post('items/mover/', { ids, destino: destinoId })
+        this.items = this.items.filter((item) => !ids.includes(item.id))
+        this.limpiarSeleccion()
+        this.agregarNotificacion({
+          id: 'mover',
+          tipo: 'exito',
+          mensaje: ids.length === 1 ? 'Elemento movido' : `${ids.length} elementos movidos`,
+          icono: 'pi-arrow-right',
+          severidad: 'exito',
+        })
+      } catch (error) {
+        this.agregarNotificacion({
+          id: 'mover',
+          tipo: 'error',
+          mensaje: 'No se pudo mover el elemento',
+          icono: 'pi-times',
+        })
+        console.error('Error moviendo items:', error)
+      }
     },
 
     async marcarFavoritos(ids = []) {

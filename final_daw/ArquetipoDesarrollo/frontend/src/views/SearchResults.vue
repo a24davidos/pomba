@@ -68,10 +68,7 @@ watch(
               :loading="store.descargando"
               @click="store.descargarItems()"
             />
-            <Button
-              icon="pi pi-star" label="Favorito" text size="small" rounded
-              @click="store.marcarFavoritos(store.itemsSeleccionados.map(i => i.id))"
-            />
+            <Button icon="pi pi-arrow-right" label="Mover a..." text size="small" rounded @click="store.abrirModalMover()" />
             <Button
               v-if="store.itemsSeleccionados.length === 1"
               icon="pi pi-pencil" label="Renombrar" text size="small" rounded
@@ -111,7 +108,7 @@ watch(
              [&::-webkit-scrollbar-thumb]:bg-surface-300
              dark:[&::-webkit-scrollbar-thumb]:bg-surface-600"
     >
-      <FileTable @rename="store.abrirModalRenombrar" />
+      <FileTable @rename="store.abrirModalRenombrar" @move="store.abrirModalMover" />
     </div>
 
   </div>
