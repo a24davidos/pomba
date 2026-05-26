@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onUnmounted } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useItemsStore } from '@/stores/items'
 import { formatDate } from '../utils/date'
@@ -9,10 +9,11 @@ const route = useRoute()
 const router = useRouter()
 
 // Solo se emiten acciones que necesitan estado local del padre (modal con input)
-const emit = defineEmits(['rename', 'copy', 'move'])
+const emit = defineEmits(['rename', 'move'])
 
 const menuAbierto = ref(null)
 const esTactil = window.matchMedia('(pointer: coarse)').matches
+const enPapelera = computed(() => (route.params.view || 'drive') === 'trash')
 
 function abrirItem(item) {
   if (item.tipo !== 'carpeta') return
@@ -78,7 +79,10 @@ async function accionMenu(event, accion, item) {
     await store.marcarFavoritos([item.id])
   } else if (accion === 'delete') {
     await store.eliminarItems([item.id])
-    await store.recargar()
+  } else if (accion === 'restore') {
+    await store.restaurarItems([item.id])
+  } else if (accion === 'deleteForever') {
+    await store.eliminarDefinitivamente([item.id])
   } else {
     emit(accion, item)
   }
@@ -197,51 +201,65 @@ function formatBytes(bytes) {
                      border border-surface-200 dark:border-surface-700
                      rounded-xl shadow-lg py-1 overflow-hidden"
             >
-              <button
-                @click="accionMenu($event, 'download', item)"
-                class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
-              >
-                <i class="pi pi-download text-surface-400" /> Descargar
-              </button>
-              <button
-                @click="accionMenu($event, 'rename', item)"
-                class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
-              >
-                <i class="pi pi-pencil text-surface-400" /> Cambiar nombre
-              </button>
-              <button
-                @click="accionMenu($event, 'copy', item)"
-                class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
-              >
-                <i class="pi pi-copy text-surface-400" /> Copiar
-              </button>
-              <button
-                @click="accionMenu($event, 'move', item)"
-                class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
-              >
-                <i class="pi pi-arrow-right text-surface-400" /> Mover a...
-              </button>
-              <button
-                v-if="!item.favorito"
-                @click="accionMenu($event, 'favorite', item)"
-                class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
-              >
-                <i class="pi pi-star text-surface-400" /> Marcar favorito
-              </button>
-              <button
-                v-else
-                @click="accionMenu($event, 'unfavorite', item)"
-                class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
-              >
-                <i class="pi pi-star-fill text-yellow-400" /> Quitar favorito
-              </button>
-              <div class="my-1 border-t border-surface-200 dark:border-surface-800" />
-              <button
-                @click="accionMenu($event, 'delete', item)"
-                class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
-              >
-                <i class="pi pi-trash" /> Eliminar
-              </button>
+              <!-- Opciones en papelera -->
+              <template v-if="enPapelera">
+                <button
+                  @click="accionMenu($event, 'restore', item)"
+                  class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
+                >
+                  <i class="pi pi-replay text-surface-400" /> Restaurar
+                </button>
+                <div class="my-1 border-t border-surface-200 dark:border-surface-800" />
+                <button
+                  @click="accionMenu($event, 'deleteForever', item)"
+                  class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                >
+                  <i class="pi pi-trash" /> Eliminar definitivo
+                </button>
+              </template>
+
+              <!-- Opciones normales -->
+              <template v-else>
+                <button
+                  @click="accionMenu($event, 'download', item)"
+                  class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
+                >
+                  <i class="pi pi-download text-surface-400" /> Descargar
+                </button>
+                <button
+                  @click="accionMenu($event, 'rename', item)"
+                  class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
+                >
+                  <i class="pi pi-pencil text-surface-400" /> Cambiar nombre
+                </button>
+                <button
+                  @click="accionMenu($event, 'move', item)"
+                  class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
+                >
+                  <i class="pi pi-arrow-right text-surface-400" /> Mover a...
+                </button>
+                <button
+                  v-if="!item.favorito"
+                  @click="accionMenu($event, 'favorite', item)"
+                  class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
+                >
+                  <i class="pi pi-star text-surface-400" /> Marcar favorito
+                </button>
+                <button
+                  v-else
+                  @click="accionMenu($event, 'unfavorite', item)"
+                  class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
+                >
+                  <i class="pi pi-star-fill text-yellow-400" /> Quitar favorito
+                </button>
+                <div class="my-1 border-t border-surface-200 dark:border-surface-800" />
+                <button
+                  @click="accionMenu($event, 'delete', item)"
+                  class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                >
+                  <i class="pi pi-trash" /> Eliminar
+                </button>
+              </template>
             </div>
           </Transition>
         </div>

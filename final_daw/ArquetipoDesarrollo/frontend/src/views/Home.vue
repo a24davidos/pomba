@@ -174,7 +174,7 @@ watch(
           <template v-if="enPapelera">
             <Button icon="pi pi-replay" label="Restaurar" text size="small" rounded @click="restaurar" />
             <Divider layout="vertical" class="h-4! mx-1!" />
-            <Button icon="pi pi-trash" label="Eliminar para siempre" text size="small" rounded severity="danger" @click="eliminarDefinitivamente" />
+            <Button icon="pi pi-trash" label="Eliminar definitivo" text size="small" rounded severity="danger" @click="eliminarDefinitivamente" />
           </template>
 
           <template v-else>
