@@ -175,6 +175,38 @@ class ItemViewSet(viewsets.ModelViewSet):
             return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=['post'])
+    def mover(self, request):
+        ids = request.data.get('ids', [])
+        destino_id = request.data.get('destino', None)
+
+        if not ids:
+            return Response(
+                {'detail': 'No se han enviado elementos.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        destino = None
+        if destino_id:
+            try:
+                destino = Item.objects.get(
+                    id=destino_id, usuario=request.user, tipo='carpeta', eliminado=False
+                )
+            except Item.DoesNotExist:
+                return Response(
+                    {'detail': 'Carpeta destino no encontrada.'},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+        items_obj = list(Item.objects.filter(id__in=ids, usuario=request.user, eliminado=False))
+        try:
+            for item in items_obj:
+                ItemService.mover_item(item, destino)
+        except Exception as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({'detail': f'Se han movido {len(items_obj)} elementos.'})
+
+    @action(detail=False, methods=['post'])
     def restaurar_papelera(self, request):
         ids = list(
             Item.objects.filter(

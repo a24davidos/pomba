@@ -3,6 +3,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { authService } from '@/api/auth'
 import { servicioUsuario } from '@/api/users'
+import api from '@/api/api'
 import { useItemsStore } from '@/stores/items'
 import SettingsModal from '@/components/SettingsModal.vue'
 import Sidebar from '@/components/Sidebar.vue'
@@ -90,11 +91,67 @@ const panelUsuarioMovil = ref(false)
 // ── Modal renombrar (global, compartido por Home y SearchResults) ─
 const inputRenombrar = ref('')
 
-watch(() => store.ui.modal, (modal) => {
+// ── Modal mover!! ──────────────────────────────────────────
+// Le llamo Picker porque como el file explorer tb te permite seleccionar para que no haya lios
+const carpetaPickerId = ref(null)
+const carpetasEnPicker = ref([])
+const breadcrumbPicker = ref([{ label: 'Mi unidad', id: null }])
+const cargandoPicker = ref(false)
+const idsMoviendo = ref([])
+let tokenPicker = 0
+
+watch(() => store.ui.modal, async (modal) => {
   if (modal.open && modal.name === 'renombrar') {
     inputRenombrar.value = modal.payload?.nombre || ''
+  } else if (modal.open && modal.name === 'mover') {
+    carpetaPickerId.value = null
+    breadcrumbPicker.value = [{ label: 'Mi unidad', id: null }]
+    if (modal.payload && modal.payload.ids) {
+      idsMoviendo.value = modal.payload.ids
+    } else {
+      idsMoviendo.value = []
+    }
+    await cargarCarpetasEnPicker(null)
   }
 }, { deep: true })
+
+async function cargarCarpetasEnPicker(carpetaId) {
+  const token = ++tokenPicker
+  cargandoPicker.value = true
+  try {
+    const params = { papelera: 'false' }
+    if (carpetaId) {
+      params.carpeta = carpetaId
+    }
+    const resp = await api.get('items/', { params })
+    if (token !== tokenPicker) return
+    carpetasEnPicker.value = resp.data.items.filter(
+      (i) => i.tipo === 'carpeta' && !idsMoviendo.value.includes(i.id)
+    )
+  } catch {
+    carpetasEnPicker.value = []
+  } finally {
+    if (token === tokenPicker) cargandoPicker.value = false
+  }
+}
+
+async function navegarAPicker(carpeta) {
+  carpetaPickerId.value = carpeta.id
+  breadcrumbPicker.value.push({ label: carpeta.nombre, id: carpeta.id })
+  await cargarCarpetasEnPicker(carpeta.id)
+}
+
+async function irABreadcrumbPicker(idx) {
+  const nodo = breadcrumbPicker.value[idx]
+  breadcrumbPicker.value = breadcrumbPicker.value.slice(0, idx + 1)
+  carpetaPickerId.value = nodo.id
+  await cargarCarpetasEnPicker(nodo.id)
+}
+
+async function confirmarMover() {
+  await store.moverItems(idsMoviendo.value, carpetaPickerId.value)
+  store.cerrarModal()
+}
 
 async function renombrar() {
   const id = store.ui.modal.payload.id
@@ -121,7 +178,7 @@ function clasesSnackbar(notif) {
   <div class="grid grid-cols-1 sm:grid-cols-[60px_1fr] lg:grid-cols-[260px_1fr] grid-rows-[64px_1fr] h-screen w-full bg-surface-100 dark:bg-surface-950 gap-y-2 py-2 pr-3">
 
     <!-- ── TOPBAR ───────────────────────────────────────────────── -->
-    <!-- Sub-grid que espeja las mismas columnas del layout principal -->
+    <!-- Sub-grid que utiliza las mismas columnas del layout principal -->
     <header class="col-span-full grid grid-cols-subgrid items-center z-10">
 
       <!-- Logo — ocupa exactamente la columna del sidebar -->
@@ -307,6 +364,62 @@ function clasesSnackbar(notif) {
     <template #footer>
       <Button label="Cancelar" text severity="secondary" @click="store.cerrarModal" />
       <Button label="Confirmar" @click="renombrar" :disabled="!inputRenombrar.trim()" />
+    </template>
+  </Dialog>
+
+  <!-- MODAL MOVER-->
+  <Dialog
+    v-if="store.ui.modal.name === 'mover'"
+    v-model:visible="store.ui.modal.open"
+    header="Mover a..."
+    :style="{ width: '28rem' }"
+    modal :draggable="false" :closable="false"
+  >
+    <!-- Breadcrumb del picker -->
+    <div class="flex items-center gap-1 text-sm mb-3 flex-wrap min-h-6">
+      <template v-for="(nodo, idx) in breadcrumbPicker" :key="idx">
+        <span v-if="idx > 0" class="text-surface-300 dark:text-surface-600 select-none">›</span>
+        <button
+          v-if="idx < breadcrumbPicker.length - 1"
+          @click="irABreadcrumbPicker(idx)"
+          class="font-medium text-primary hover:underline cursor-pointer bg-transparent border-none p-0"
+        >{{ nodo.label }}</button>
+        <span v-else class="text-surface-600 dark:text-surface-400 font-medium">{{ nodo.label }}</span>
+      </template>
+    </div>
+
+    <!-- Lista de carpetas -->
+    <div class="min-h-40 max-h-65 overflow-y-auto rounded-lg border border-surface-200 dark:border-surface-700">
+      <div v-if="cargandoPicker" class="flex items-center justify-center py-10 text-surface-400">
+        <i class="pi pi-spin pi-spinner text-xl" />
+      </div>
+      <div
+        v-else-if="!carpetasEnPicker.length"
+        class="flex flex-col items-center justify-center py-10 gap-2 text-surface-400"
+      >
+        <i class="pi pi-folder-open text-2xl" />
+        <span class="text-xs">Sin subcarpetas</span>
+      </div>
+      <div v-else>
+        <button
+          v-for="carpeta in carpetasEnPicker"
+          :key="carpeta.id"
+          @click="navegarAPicker(carpeta)"
+          class="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-left
+                 text-surface-700 dark:text-surface-300
+                 hover:bg-surface-50 dark:hover:bg-surface-800
+                 transition-colors border-b border-surface-100 dark:border-surface-800 last:border-0"
+        >
+          <i class="pi pi-folder text-yellow-500 shrink-0" />
+          <span class="truncate flex-1">{{ carpeta.nombre }}</span>
+          <i class="pi pi-chevron-right text-surface-300 dark:text-surface-600 text-xs shrink-0" />
+        </button>
+      </div>
+    </div>
+
+    <template #footer>
+      <Button label="Cancelar" text severity="secondary" @click="store.cerrarModal" />
+      <Button label="Mover aquí" icon="pi pi-check" @click="confirmarMover" />
     </template>
   </Dialog>
 </template>
