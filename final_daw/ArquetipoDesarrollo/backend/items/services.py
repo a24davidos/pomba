@@ -254,7 +254,7 @@ class ItemService:
                 'multi_match': {
                     'query': texto_libre,
                     'fields': [
-                        'nombre^3', 'contenido', 'meta_titulo^2',
+                        'nombre^3', 'contenido^0.5', 'meta_titulo^2',
                         'meta_artista', 'meta_album', 'meta_genero',
                         'meta_camara_marca', 'meta_camara_modelo',
                     ],
@@ -273,7 +273,7 @@ class ItemService:
         if must:
             bool_query['must'] = must
 
-        respuesta = es.search(index='items', size=50, query={'bool': bool_query})
+        respuesta = es.search(index='items', size=50, min_score=1.0, query={'bool': bool_query})
         ids = [int(hit['_id']) for hit in respuesta['hits']['hits']]
 
         if not ids:
