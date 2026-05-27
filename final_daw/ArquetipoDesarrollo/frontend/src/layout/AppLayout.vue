@@ -155,9 +155,11 @@ async function confirmarMover() {
 
 async function renombrar() {
   const id = store.ui.modal.payload.id
-  await store.renombrarItem(id, inputRenombrar.value)
-  store.cerrarModal()
-  inputRenombrar.value = ''
+  const exito = await store.renombrarItem(id, inputRenombrar.value)
+  if (exito) {
+    store.cerrarModal()
+    inputRenombrar.value = ''
+  }
 }
 
 // ── Snackbars ─────────────────────────────────────────────────────

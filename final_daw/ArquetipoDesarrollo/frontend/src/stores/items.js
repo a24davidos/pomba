@@ -351,8 +351,16 @@ export const useItemsStore = defineStore('items', {
           icono: 'pi-pencil',
           severidad: 'exito',
         })
+        return true
       } catch (error) {
-        console.error('Error renombrando item:', error)
+        const mensaje = error?.response?.data?.detail || 'No se pudo renombrar el elemento'
+        this.agregarNotificacion({
+          id: 'renombrar',
+          tipo: 'error',
+          mensaje,
+          icono: 'pi-times',
+        })
+        return false
       }
     },
 
