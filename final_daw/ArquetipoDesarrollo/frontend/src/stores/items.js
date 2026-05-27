@@ -583,11 +583,11 @@ export const useItemsStore = defineStore('items', {
       this.seleccion.lastIndex = index
     },
 
-    seleccionarRango(index) {
+    seleccionarRango(index, itemsVisibles) {
       if (this.seleccion.lastIndex === null) return
       const desde = Math.min(this.seleccion.lastIndex, index)
       const hasta = Math.max(this.seleccion.lastIndex, index)
-      const rango = this.items.slice(desde, hasta + 1).map((i) => i.id)
+      const rango = itemsVisibles.slice(desde, hasta + 1).map((i) => i.id)
       const merged = new Set([...this.seleccion.ids, ...rango])
       this.seleccion.ids = [...merged]
     },

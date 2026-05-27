@@ -62,7 +62,7 @@ function handleClick(event, item, index) {
   }
 
   if (event.shiftKey && store.seleccion.lastIndex !== null) {
-    store.seleccionarRango(index)
+    store.seleccionarRango(index, itemsOrdenados.value)
     return
   }
   if (event.ctrlKey || event.metaKey) {
@@ -138,9 +138,22 @@ function handleContextMenu(event, item, index) {
 }
 
 async function accionContextMenu(accion) {
-  const item = contextMenu.value.item
   contextMenu.value.visible = false
-  await ejecutarAccion(accion, item)
+  const ids = store.seleccion.ids
+
+  if (accion === 'download') {
+    await store.descargarItems()
+  } else if (accion === 'favorite' || accion === 'unfavorite') {
+    await store.marcarFavoritos(ids)
+  } else if (accion === 'delete') {
+    await store.eliminarItems(ids)
+  } else if (accion === 'restore') {
+    await store.restaurarItems(ids)
+  } else if (accion === 'deleteForever') {
+    await store.eliminarDefinitivamente(ids)
+  } else {
+    emit(accion)
+  }
 }
 
 // ── Cierre de menús ───────────────────────────────────────────────────
@@ -277,7 +290,7 @@ function formatBytes(bytes) {
                 @click.stop="toggleMenu($event, item.id)"
                 :aria-label="`Opciones de ${item.nombre}`"
                 :class="[
-                  'w-7 h-7 flex items-center justify-center rounded-md transition-colors',
+                  'w-7 h-7 shrink-0 flex items-center justify-center rounded-full transition-colors',
                   menuAbierto === item.id
                     ? 'bg-surface-200 dark:bg-surface-700'
                     : 'sm:opacity-0 sm:group-hover:opacity-100 hover:bg-surface-200 dark:hover:bg-surface-700',
@@ -399,6 +412,7 @@ function formatBytes(bytes) {
             <i class="pi pi-download text-surface-400" /> Descargar
           </button>
           <button
+            v-if="store.seleccion.ids.length === 1"
             @click="accionContextMenu('rename')"
             class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
           >
@@ -411,14 +425,14 @@ function formatBytes(bytes) {
             <i class="pi pi-arrow-right text-surface-400" /> Mover a...
           </button>
           <button
-            v-if="!contextMenu.item?.favorito"
+            v-if="store.seleccion.ids.length === 1 && !store.itemsSeleccionados[0]?.favorito"
             @click="accionContextMenu('favorite')"
             class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
           >
             <i class="pi pi-star text-surface-400" /> Marcar favorito
           </button>
           <button
-            v-else
+            v-else-if="store.seleccion.ids.length === 1 && store.itemsSeleccionados[0]?.favorito"
             @click="accionContextMenu('unfavorite')"
             class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
           >
