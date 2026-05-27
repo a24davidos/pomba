@@ -8,7 +8,6 @@ const store = useItemsStore()
 const route = useRoute()
 const router = useRouter()
 
-// Solo se emiten acciones que necesitan estado local del padre (modal con input)
 const emit = defineEmits(['rename', 'move'])
 
 const menuAbierto = ref(null)
@@ -24,6 +23,8 @@ function abrirItem(item) {
 }
 
 function handleClick(event, item, index) {
+  if (contextMenu.value.visible) contextMenu.value.visible = false
+
   if (menuAbierto.value !== null) {
     menuAbierto.value = null
     return
@@ -62,16 +63,8 @@ function handleBackgroundClick(event) {
   }
 }
 
-// ── Menú ···
-function toggleMenu(event, itemId) {
-  event.stopPropagation()
-  menuAbierto.value = menuAbierto.value === itemId ? null : itemId
-}
-
-async function accionMenu(event, accion, item) {
-  event.stopPropagation()
-  menuAbierto.value = null
-
+// ── Lógica compartida de acciones ────────────────────────────────────
+async function ejecutarAccion(accion, item) {
   if (accion === 'download') {
     store.seleccionar(item, null)
     await store.descargarItems()
@@ -88,11 +81,62 @@ async function accionMenu(event, accion, item) {
   }
 }
 
+// ── Menú ··· ─────────────────────────────────────────────────────────
+function toggleMenu(event, itemId) {
+  event.stopPropagation()
+  menuAbierto.value = menuAbierto.value === itemId ? null : itemId
+}
+
+async function accionMenu(event, accion, item) {
+  event.stopPropagation()
+  menuAbierto.value = null
+  await ejecutarAccion(accion, item)
+}
+
+// ── Context menu (click derecho) ──────────────────────────────────────
+const contextMenu = ref({ visible: false, x: 0, y: 0, item: null })
+
+function handleContextMenu(event, item, index) {
+  event.preventDefault()
+  menuAbierto.value = null
+
+  if (!store.seleccion.ids.includes(item.id)) {
+    store.seleccionar(item, index)
+  }
+
+  const MENU_W = 176
+  const MENU_H = 230
+  const x = event.clientX + MENU_W > window.innerWidth ? event.clientX - MENU_W : event.clientX
+  const y = event.clientY + MENU_H > window.innerHeight ? event.clientY - MENU_H : event.clientY
+
+  contextMenu.value = { visible: true, x, y, item }
+}
+
+async function accionContextMenu(accion) {
+  const item = contextMenu.value.item
+  contextMenu.value.visible = false
+  await ejecutarAccion(accion, item)
+}
+
+// ── Cierre de menús ───────────────────────────────────────────────────
 function handleDocumentClick() {
   if (menuAbierto.value !== null) menuAbierto.value = null
+  if (contextMenu.value.visible) contextMenu.value.visible = false
 }
+
+function handleKeydown(event) {
+  if (event.key === 'Escape') {
+    menuAbierto.value = null
+    contextMenu.value.visible = false
+  }
+}
+
 document.addEventListener('click', handleDocumentClick)
-onUnmounted(() => document.removeEventListener('click', handleDocumentClick))
+document.addEventListener('keydown', handleKeydown)
+onUnmounted(() => {
+  document.removeEventListener('click', handleDocumentClick)
+  document.removeEventListener('keydown', handleKeydown)
+})
 
 function estaSeleccionado(item) {
   return store.seleccion.ids.includes(item.id)
@@ -147,6 +191,7 @@ function formatBytes(bytes) {
         :key="item.id"
         @click.stop="handleClick($event, item, index)"
         @dblclick.stop="handleDoubleClick(item)"
+        @contextmenu="handleContextMenu($event, item, index)"
         :class="[
           'group grid grid-cols-[1fr_80px_32px] sm:grid-cols-[1fr_100px_130px_32px] gap-3 px-4 py-3 items-center cursor-pointer transition-colors duration-100 border-b border-surface-200 dark:border-surface-800',
           estaSeleccionado(item)
@@ -191,7 +236,7 @@ function formatBytes(bytes) {
             <i class="pi pi-ellipsis-h text-surface-400 dark:text-surface-500" style="font-size:13px" />
           </button>
 
-          <!-- Dropdown menú -->
+          <!-- Dropdown menú ··· -->
           <Transition name="menu-drop">
             <div
               v-if="menuAbierto === item.id"
@@ -201,7 +246,6 @@ function formatBytes(bytes) {
                      border border-surface-200 dark:border-surface-700
                      rounded-xl shadow-lg py-1 overflow-hidden"
             >
-              <!-- Opciones en papelera -->
               <template v-if="enPapelera">
                 <button
                   @click="accionMenu($event, 'restore', item)"
@@ -218,7 +262,6 @@ function formatBytes(bytes) {
                 </button>
               </template>
 
-              <!-- Opciones normales -->
               <template v-else>
                 <button
                   @click="accionMenu($event, 'download', item)"
@@ -267,6 +310,79 @@ function formatBytes(bytes) {
     </div>
 
   </div>
+
+  <!-- ── Context menu (click derecho) -->
+  <Teleport to="body">
+    <Transition name="menu-drop">
+      <div
+        v-if="contextMenu.visible"
+        @click.stop
+        class="fixed z-[200] w-44
+               bg-white dark:bg-surface-900
+               border border-surface-200 dark:border-surface-700
+               rounded-xl shadow-lg py-1 overflow-hidden"
+        :style="{ top: contextMenu.y + 'px', left: contextMenu.x + 'px' }"
+      >
+        <template v-if="enPapelera">
+          <button
+            @click="accionContextMenu('restore')"
+            class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
+          >
+            <i class="pi pi-replay text-surface-400" /> Restaurar
+          </button>
+          <div class="my-1 border-t border-surface-200 dark:border-surface-800" />
+          <button
+            @click="accionContextMenu('deleteForever')"
+            class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+          >
+            <i class="pi pi-trash" /> Eliminar definitivo
+          </button>
+        </template>
+
+        <template v-else>
+          <button
+            @click="accionContextMenu('download')"
+            class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
+          >
+            <i class="pi pi-download text-surface-400" /> Descargar
+          </button>
+          <button
+            @click="accionContextMenu('rename')"
+            class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
+          >
+            <i class="pi pi-pencil text-surface-400" /> Cambiar nombre
+          </button>
+          <button
+            @click="accionContextMenu('move')"
+            class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
+          >
+            <i class="pi pi-arrow-right text-surface-400" /> Mover a...
+          </button>
+          <button
+            v-if="!contextMenu.item?.favorito"
+            @click="accionContextMenu('favorite')"
+            class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
+          >
+            <i class="pi pi-star text-surface-400" /> Marcar favorito
+          </button>
+          <button
+            v-else
+            @click="accionContextMenu('unfavorite')"
+            class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
+          >
+            <i class="pi pi-star-fill text-yellow-400" /> Quitar favorito
+          </button>
+          <div class="my-1 border-t border-surface-200 dark:border-surface-800" />
+          <button
+            @click="accionContextMenu('delete')"
+            class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+          >
+            <i class="pi pi-trash" /> Eliminar
+          </button>
+        </template>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <style scoped>
