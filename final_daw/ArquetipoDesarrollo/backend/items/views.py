@@ -23,11 +23,11 @@ class ItemViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         qs = Item.objects.filter(usuario=user)
-        hijos = Item.objects.filter(padre=OuterRef("pk"), eliminado=False)
 
         # Las acciones sobre items (renombrar, descargar_archivo...) solo necesitan filtrar por usuario y que no estén eliminados, sin la lógica de navegación
         if self.action != 'list':
-            return qs.filter(eliminado=False).annotate(tiene_hijos=Exists(hijos))
+            hijos_activos = Item.objects.filter(padre=OuterRef("pk"), eliminado=False)
+            return qs.filter(eliminado=False).annotate(tiene_hijos=Exists(hijos_activos))
 
         # 1. Parámetros de listado
         carpeta_id = self.request.query_params.get("carpeta")
@@ -46,10 +46,14 @@ class ItemViewSet(viewsets.ModelViewSet):
         else:
             if es_favorito:
                 qs = qs.filter(favorito=True)
-            elif not es_papelera:
+            elif es_papelera:
+                # En la raíz de la papelera solo mostramos el nivel superior de cada árbol eliminado
+                qs = qs.exclude(padre__eliminado=True)
+            else:
                 qs = qs.filter(padre__isnull=True)
 
         # 4. Optimización y orden
+        hijos = Item.objects.filter(padre=OuterRef("pk"), eliminado=es_papelera)
         return qs.annotate(tiene_hijos=Exists(hijos)).order_by("-tipo", "nombre")
     
     # MÉTODOS ESTÁNDAR
