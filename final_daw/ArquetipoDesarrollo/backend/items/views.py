@@ -23,18 +23,23 @@ class ItemViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         qs = Item.objects.filter(usuario=user)
+        hijos = Item.objects.filter(padre=OuterRef("pk"), eliminado=False)
 
-        # 1. Parámetros
+        # Las acciones sobre items (renombrar, descargar_archivo...) solo necesitan filtrar por usuario y que no estén eliminados, sin la lógica de navegación
+        if self.action != 'list':
+            return qs.filter(eliminado=False).annotate(tiene_hijos=Exists(hijos))
+
+        # 1. Parámetros de listado
         carpeta_id = self.request.query_params.get("carpeta")
         es_papelera = self.request.query_params.get("papelera") == "true"
         es_favorito = self.request.query_params.get("favorito") == "true"
-        
+
         # 2. Estado de eliminación (Papelera vs Normal)
         if es_papelera:
             qs = qs.filter(eliminado=True)
         else:
             qs = qs.filter(eliminado=False)
-        
+
         # 3. Lógica de Navegación vs Filtrado
         if carpeta_id:
             qs = qs.filter(padre_id=carpeta_id)
@@ -45,7 +50,6 @@ class ItemViewSet(viewsets.ModelViewSet):
                 qs = qs.filter(padre__isnull=True)
 
         # 4. Optimización y orden
-        hijos = Item.objects.filter(padre=OuterRef("pk"), eliminado=False)
         return qs.annotate(tiene_hijos=Exists(hijos)).order_by("-tipo", "nombre")
     
     # MÉTODOS ESTÁNDAR
@@ -73,22 +77,19 @@ class ItemViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def renombrar(self, request, pk=None):
         item = self.get_object()
-        nuevo_nombre = request.data.get('nombre')
+        nuevo_nombre = request.data.get('nombre', '').strip()
         if not nuevo_nombre:
             return Response(
                 {'detail': 'El nombre es obligatorio.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         item.nombre = nuevo_nombre
-        item.save()
+        try:
+            ItemService.guardar_item(item)
+        except Exception as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        if item.tipo == Item.Tipo.ARCHIVO:
-            try:
-                from .documents import ItemDocument
-                doc = ItemDocument.get(id=item.pk)
-                doc.update(nombre=nuevo_nombre, nombre_raw=nuevo_nombre)
-            except Exception:
-                pass
+        ItemService.indexar_item(item)
 
         return Response({'mensaje': 'Renombrado correctamente', 'nombre': item.nombre})
 
