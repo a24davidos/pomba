@@ -36,7 +36,7 @@ const CONFIGURACION_VISTAS = {
   recent: {
     titulo: 'Recientes',
     icono: 'pi pi-clock',
-    paramsBase: {},
+    paramsBase: { recientes: 'true' },
   },
 }
 

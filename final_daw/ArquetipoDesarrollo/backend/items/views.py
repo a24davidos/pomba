@@ -33,6 +33,7 @@ class ItemViewSet(viewsets.ModelViewSet):
         carpeta_id = self.request.query_params.get("carpeta")
         es_papelera = self.request.query_params.get("papelera") == "true"
         es_favorito = self.request.query_params.get("favorito") == "true"
+        es_reciente = self.request.query_params.get("recientes") == "true"
 
         # 2. Estado de eliminación (Papelera vs Normal)
         if es_papelera:
@@ -40,7 +41,12 @@ class ItemViewSet(viewsets.ModelViewSet):
         else:
             qs = qs.filter(eliminado=False)
 
-        # 3. Lógica de Navegación vs Filtrado
+        # 3. Recientes — Los 30 ultimos archivos por fecha de modificacion mas reciente
+        if es_reciente:
+            hijos = Item.objects.filter(padre=OuterRef("pk"), eliminado=False)
+            return qs.filter(tipo=Item.Tipo.ARCHIVO).annotate(tiene_hijos=Exists(hijos)).order_by("-fecha_modificacion")[:30]
+
+        # 4. Lógica de Navegación vs Filtrado
         if carpeta_id:
             qs = qs.filter(padre_id=carpeta_id)
         else:
