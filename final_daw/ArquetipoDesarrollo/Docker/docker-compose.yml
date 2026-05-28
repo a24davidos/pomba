@@ -59,11 +59,8 @@ services:
   db:
     image: postgres:16
     container_name: postgres_db
-    # Usamos el archivo de variables que definiste
     env_file: .env.development  
     environment:
-      # Aunque env_file carga las variables, a veces es mejor 
-      # asegurar las que usa la imagen oficial de Postgres
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -113,7 +110,6 @@ services:
           hard: -1
       volumes:
         - es_data:/usr/share/elasticsearch/data
-      # Le damos un poco más de tiempo para arrancar antes de que Docker se desespere
       healthcheck:
         test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -vq '\"status\":\"red\"'"]
         interval: 20s
