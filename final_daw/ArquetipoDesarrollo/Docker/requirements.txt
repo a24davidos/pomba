@@ -15,8 +15,8 @@ boto3==1.34.0
 django-storages==1.14.2
 
 # --- Búsqueda / Elasticsearch ---
-elasticsearch==9.3.3
-django-elasticsearch-dsl==8.0
+elasticsearch==9.0.3
+django-elasticsearch-dsl==9.0
 
 # --- Servidor producción ---
 gunicorn==23.0.0

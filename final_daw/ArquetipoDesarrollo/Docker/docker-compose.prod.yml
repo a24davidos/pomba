@@ -51,16 +51,12 @@ services:
     container_name: postgres_db
     restart: unless-stopped
     env_file: .env.prod
-    environment:
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - appnet
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -71,8 +67,6 @@ services:
     container_name: garage
     restart: unless-stopped
     env_file: .env.prod
-    environment:
-      - GARAGE_RPC_SECRET=${GARAGE_RPC_SECRET}
     volumes:
       - garage_meta:/var/lib/garage/meta
       - garage_data:/var/lib/garage/data
@@ -80,11 +74,11 @@ services:
     ports:
       - "3901:3901"   # RPC (acceso interno al clúster)
       - "3903:3903"   # Admin API
-      # Puerto 3900 lo gestionamos con Nginx (CORS + SSL)
+      # Puerto 3900 lo gestionamos con Nginx
     networks:
       - appnet
 
-  # --- ELASTICSEARCH (heap reducido para 4 GB RAM) ---
+  # --- ELASTICSEARCH (heap reducido para 4 GB RAM igual toca modificar) ---
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:9.0.0
     container_name: elasticsearch
