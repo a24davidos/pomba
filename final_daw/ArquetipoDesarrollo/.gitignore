@@ -14,7 +14,7 @@ htmlcov/
 .pytest_cache/
 staticfiles/
 media/
-garage.toml
+Docker/garage.toml
 libraries/
 
 # --- BASE DE DATOS & DOCKER ---
