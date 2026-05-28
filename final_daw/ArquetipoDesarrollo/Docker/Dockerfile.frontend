@@ -1,17 +1,16 @@
-#Selecciono a imaxe que me interesa
+# Imagen base de Node
 FROM node:22-slim
 
-#Instalo as dependencias
-RUN apt-get update &&   apt-get install -y \
+# Instalamos Herramientas para desarrollo
+RUN apt-get update && apt-get install -y \
     git \
     unzip \
     zip \
     && rm -rf /var/lib/apt/lists/*
 
-#Non teño que instalar ningun xestor para js
 WORKDIR /app
 
-#Copio o entrypoint
+# El entrypoint instala dependencias y arrancamos Vue en modo dev
 COPY entrypoint-frontend.sh /usr/local/bin/entrypoint-frontend.sh
 RUN chmod +x /usr/local/bin/entrypoint-frontend.sh
 
