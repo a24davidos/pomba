@@ -5,7 +5,7 @@ consistency_mode = "consistent"
 
 rpc_bind_addr = "0.0.0.0:3901"
 rpc_public_addr = "garage:3901"
-rpc_secret = "66079f0326ae751c8fc39ea9cd765d547ad4d35e6d457ff18a253d9f29347372"
+rpc_secret = "CsExjV8wQ6Af3KiQ3pjhZeR7iGRxM2tnN_22A6j_pBVRZrhiNuBzA6OzDB1KzO3llpA"
 
 [s3_api]
 s3_region = "garage"
