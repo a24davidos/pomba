@@ -1,3 +1,0 @@
-# Cosas a tener en cuenta!
-
-1. Cuando elimine un item, tengo que crear una función que haga el soft delete, y que actualice la fecha de eliminacion y el estado. Además esto es recursivo, todos los hijos se tendrán que actualizar. Tendré que mirar como ahcerlo, para hacerlo de manera optima y no sobresaturar la BD, con una query por cada elemento. Lo mejor creo que será cargarlo en memoria y desd eahi gestionarlo????
