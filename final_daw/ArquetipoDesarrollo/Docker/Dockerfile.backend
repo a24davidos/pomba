@@ -1,14 +1,16 @@
+# Imagen base de Python
 FROM python:3.12-slim
 
+# Evita que Python genere .pyc y que bufferice los logs
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-
+# Copiamos los requisitos
 COPY requirements.txt .
 
-
+# Instalamos librerías del sistema necesarias para psycopg, pillow, etc.
 RUN apt-get update && apt-get install -y \
     libpng-dev \
     libjpeg-dev \
@@ -20,7 +22,6 @@ RUN apt-get update && apt-get install -y \
 
 COPY entrypoint-backend.sh /usr/local/bin/entrypoint-backend.sh
 RUN chmod +x /usr/local/bin/entrypoint-backend.sh
-
 
 EXPOSE 8000
 
