@@ -20,6 +20,7 @@ django-elasticsearch-dsl==8.0
 
 # --- Servidor producción ---
 gunicorn==23.0.0
+drf-standardized-errors==0.14.1
 
 # --- Utilidades ---
 sqlparse==0.5.5
