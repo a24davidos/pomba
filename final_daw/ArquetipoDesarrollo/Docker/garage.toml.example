@@ -1,0 +1,22 @@
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+replication_factor = 1
+consistency_mode = "consistent"
+
+rpc_bind_addr = "0.0.0.0:3901"
+# En producción cambiar "garage" por el nombre del servicio en docker-compose o la IP
+rpc_public_addr = "garage:3901"
+# Mismo valor que GARAGE_RPC_SECRET en .env.prod
+rpc_secret = "pon-aqui-el-mismo-valor-que-GARAGE_RPC_SECRET"
+
+[s3_api]
+s3_region = "garage"
+api_bind_addr = "0.0.0.0:3900"
+root_domain = ".s3.garage.localhost"
+
+[s3_web]
+bind_addr = "0.0.0.0:3902"
+root_domain = ".web.garage.localhost"
+
+[admin]
+api_bind_addr = "0.0.0.0:3903"
