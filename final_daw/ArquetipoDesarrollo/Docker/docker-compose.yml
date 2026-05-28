@@ -6,6 +6,7 @@ services:
     container_name: nginx_proxy
     ports:
       - "80:80"
+      - "3900:3900"
     volumes:
       - ../nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
       - ../backend/staticfiles:/app/staticfiles # Para que Nginx sirva los CSS del Admin
@@ -21,14 +22,7 @@ services:
       context: .
       dockerfile: Dockerfile.backend
     container_name: django_backend
-    env_file: .env
-    environment:
-      - PROJECT_NAME=core
-      - DB_NAME=${POSTGRES_DB}
-      - DB_USER=${POSTGRES_USER}
-      - DB_PASSWORD=${POSTGRES_PASSWORD}
-      - DB_HOST=db
-      - DB_PORT=5432
+    env_file: .env.development
     volumes:
       - ../backend:/app
     depends_on:
@@ -37,7 +31,7 @@ services:
       elasticsearch:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://127.0.0.1:8000/admin/login/ || exit 1"]
+      test: ["CMD-SHELL", "python manage.py check || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 3
@@ -51,7 +45,7 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
     container_name: vue_frontend
-    env_file: .env
+    env_file: .env.development
     volumes:
       - ../frontend/:/app
     ports:
@@ -63,10 +57,10 @@ services:
 
   # PostgreSQL
   db:
-    image: postgres:15
+    image: postgres:16
     container_name: postgres_db
     # Usamos el archivo de variables que definiste
-    env_file: .env  
+    env_file: .env.development  
     environment:
       # Aunque env_file carga las variables, a veces es mejor 
       # asegurar las que usa la imagen oficial de Postgres
@@ -87,10 +81,10 @@ services:
 
   # Garage (S3 Storage)
   garage:
-    image: dxflrs/garage:v0.8.2
+    image: dxflrs/garage:v2.0.0
     container_name: garage
     restart: unless-stopped
-    env_file: .env
+    env_file: .env.development
     environment:
       - GARAGE_RPC_SECRET=${GARAGE_RPC_SECRET}
     volumes:
@@ -98,25 +92,27 @@ services:
       - garage_data:/var/lib/garage/data
       - ./garage.toml:/etc/garage.toml:ro
     ports:
-      - "3900:3900"   # S3 API
-      - "3901:3901"   # RPC 
-      - "3903:3903"   # Admin API 
+      - "3901:3901"   # RPC
+      - "3903:3903"   # Admin API
+      # Puerto 3900 (S3) lo gestiona Nginx para añadir CORS
     networks:
       - appnet
 
   # Elasticsearch
   elasticsearch:
-      image: docker.elastic.co/elasticsearch/elasticsearch:9.3.3
+      image: docker.elastic.co/elasticsearch/elasticsearch:9.0.0
       container_name: elasticsearch
       environment:
         - discovery.type=single-node
         - xpack.security.enabled=false
         # Subimos la RAM: la v9 con 512MB va muy ahogada
-        - "ES_JAVA_OPTS=-Xms1g -Xmx1g" 
+        - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
       ulimits:
         memlock:
           soft: -1
           hard: -1
+      volumes:
+        - es_data:/usr/share/elasticsearch/data
       # Le damos un poco más de tiempo para arrancar antes de que Docker se desespere
       healthcheck:
         test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -vq '\"status\":\"red\"'"]
@@ -130,9 +126,9 @@ services:
         
   # Kibana
   kibana:
-    image: docker.elastic.co/kibana/kibana:9.3.3
+    image: docker.elastic.co/kibana/kibana:9.0.0
     container_name: kibana
-    env_file: .env
+    env_file: .env.development
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     ports:

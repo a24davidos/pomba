@@ -1,4 +1,7 @@
 <template>
+  <div class="fixed top-4 right-4">
+    <ThemeToggle />
+  </div>
   <div class="bg-surface-50 dark:bg-surface-950 px-6 py-20 md:px-20 lg:px-80">
     <div class="bg-surface-0 dark:bg-surface-900 p-8 md:p-12 shadow-sm rounded-2xl w-full max-w-md mx-auto flex flex-col gap-8">
       

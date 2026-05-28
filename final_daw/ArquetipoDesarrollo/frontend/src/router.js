@@ -3,18 +3,37 @@ import { authService } from '@/api/auth'
 import Login from './views/Login.vue'
 import Home from './views/Home.vue'
 import Register from './views/Register.vue'
+import AppLayout from './layout/AppLayout.vue'
+import SearchResults from './views/SearchResults.vue'
 
 
 const routes = [
+  // --- Autenticación ---
   { path: '/', component: Login },
+  { path: '/register', component: Register },
+
+  // --- App General ---
   {
-    path: '/home',
-    component: Home,
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/register', component: Register
-  }
+      path: '/home',
+      component: AppLayout,
+      meta: { requiresAuth: true },
+      children: [
+        {
+          path: '',
+          redirect: { name: 'home', params: { view: 'drive' } }
+        },
+        {
+          path: ':view/:folderId?',
+          name: 'home',
+          component: Home
+        },
+        {
+          path: 'search',
+          name: 'search',
+          component: SearchResults,
+        },
+      ]
+    },
 ]
 
 const router = createRouter({
