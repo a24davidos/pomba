@@ -2,7 +2,7 @@
 
 up:
 	@echo "🚀 Levantando servizos de Docker..."
-	docker compose --env-file "Docker/.env" -f "Docker/docker-compose.yml" up -d --wait
+	docker compose --env-file "Docker/.env.development" -f "Docker/docker-compose.yml" up -d --wait
 	@echo "🐍 Preparando contorna local de Python..."
 	@chmod +x local_setup.sh
 	@./local_setup.sh

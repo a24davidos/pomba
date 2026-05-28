@@ -10,7 +10,7 @@ django-storages==1.14.6
 djangorestframework==3.17.1
 djangorestframework_simplejwt==5.5.1
 drf-standardized-errors==0.15.0
-elastic-transport==9.2.1
+elastic-transport==8.15.1
 elasticsearch==9.0.3
 idna==3.11
 jmespath==1.1.0
