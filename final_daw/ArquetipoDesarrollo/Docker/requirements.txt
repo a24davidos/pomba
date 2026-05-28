@@ -18,6 +18,9 @@ django-storages==1.14.2
 elasticsearch==9.3.3
 django-elasticsearch-dsl==8.0
 
+# --- Servidor producción ---
+gunicorn==23.0.0
+
 # --- Utilidades ---
 sqlparse==0.5.5
 typing_extensions==4.15.0

@@ -22,7 +22,7 @@ services:
       context: .
       dockerfile: Dockerfile.backend
     container_name: django_backend
-    env_file: .env
+    env_file: .env.development
     volumes:
       - ../backend:/app
     depends_on:
@@ -45,7 +45,7 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
     container_name: vue_frontend
-    env_file: .env
+    env_file: .env.development
     volumes:
       - ../frontend/:/app
     ports:
@@ -60,7 +60,7 @@ services:
     image: postgres:16
     container_name: postgres_db
     # Usamos el archivo de variables que definiste
-    env_file: .env  
+    env_file: .env.development  
     environment:
       # Aunque env_file carga las variables, a veces es mejor 
       # asegurar las que usa la imagen oficial de Postgres
@@ -84,7 +84,7 @@ services:
     image: dxflrs/garage:v2.0.0
     container_name: garage
     restart: unless-stopped
-    env_file: .env
+    env_file: .env.development
     environment:
       - GARAGE_RPC_SECRET=${GARAGE_RPC_SECRET}
     volumes:
@@ -128,7 +128,7 @@ services:
   kibana:
     image: docker.elastic.co/kibana/kibana:9.0.0
     container_name: kibana
-    env_file: .env
+    env_file: .env.development
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     ports:

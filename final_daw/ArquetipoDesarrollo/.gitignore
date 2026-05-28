@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 .env
+Docker/.env.development
+Docker/.env.prod
 .venv
 env/
 venv/
@@ -19,6 +21,7 @@ libraries/
 postgres_data/
 .docker/
 docker-compose.override.yml
+Docker/.env.prod
 
 # --- FRONTEND (VUE 3) ---
 node_modules/
