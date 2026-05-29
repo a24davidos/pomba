@@ -171,13 +171,13 @@ watch(
             >{{ item.label }}</button>
             <span
               v-else
-              class="max-w-56 truncate px-2 py-1 text-xl font-bold text-surface-900 dark:text-surface-0 shrink-0"
+              class="max-w-56 truncate px-2 py-1 text-lg font-bold text-surface-900 dark:text-surface-0 shrink-0"
             >{{ item.label }}</span>
           </template>
         </template>
       </template>
 
-      <!-- COLAPSADO: ··· > -->
+      <!-- COLAPSADO: ··· > padre > actual -->
       <template v-else>
         <button
           @click="togglePopoverBreadcrumb($event)"
@@ -186,35 +186,6 @@ watch(
                  text-surface-400 dark:text-surface-500
                  hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
         >···</button>
-
-        <Popover ref="popoverBreadcrumb">
-          <div class="flex flex-col gap-0.5 min-w-44 py-1">
-            <p class="px-3 pt-1 pb-2 text-xs font-semibold uppercase tracking-wider
-                      text-surface-400 dark:text-surface-500">Ruta completa</p>
-            <!-- Raíz siempre primera en el popover -->
-            <button
-              @click="navegarDesdePopover(breadcrumbInicio)"
-              class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left w-full
-                     text-surface-700 dark:text-surface-200
-                     hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
-            >
-              <i :class="[breadcrumbInicio.icon, 'text-xs text-surface-400 dark:text-surface-500 shrink-0']" />
-              <span class="truncate">{{ breadcrumbInicio.label }}</span>
-            </button>
-            <!-- Niveles intermedios ocultos -->
-            <button
-              v-for="item in rutaBreadcrumb.slice(0, -2)"
-              :key="item.id"
-              @click="navegarDesdePopover(item)"
-              class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left w-full
-                     text-surface-700 dark:text-surface-200
-                     hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
-            >
-              <i class="pi pi-folder text-xs text-surface-400 dark:text-surface-500 shrink-0" />
-              <span class="truncate">{{ item.label }}</span>
-            </button>
-          </div>
-        </Popover>
 
         <i class="pi pi-angle-right text-sm text-surface-300 dark:text-surface-600 shrink-0 mx-0.5" />
         <!-- Padre (penúltimo) — acceso rápido a "subir un nivel" -->
@@ -227,12 +198,40 @@ watch(
 
         <i class="pi pi-angle-right text-sm text-surface-300 dark:text-surface-600 shrink-0 mx-0.5" />
         <!-- Actual — título de página, no clicable -->
-        <span class="max-w-56 truncate px-2 py-1 text-xl font-bold text-surface-900 dark:text-surface-0 shrink-0">
+        <span class="max-w-56 truncate px-2 py-1 text-lg font-bold text-surface-900 dark:text-surface-0 shrink-0">
           {{ rutaBreadcrumb.at(-1).label }}
         </span>
       </template>
 
     </nav>
+
+    <!-- Popover -->
+    <Popover ref="popoverBreadcrumb">
+      <div class="flex flex-col gap-0.5 min-w-44 py-1">
+        <p class="px-3 pt-1 pb-2 text-xs font-semibold uppercase tracking-wider
+                  text-surface-400 dark:text-surface-500">Ruta completa</p>
+        <button
+          @click="navegarDesdePopover(breadcrumbInicio)"
+          class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left w-full
+                 text-surface-700 dark:text-surface-200
+                 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
+        >
+          <i :class="[breadcrumbInicio.icon, 'text-xs text-surface-400 dark:text-surface-500 shrink-0']" />
+          <span class="truncate">{{ breadcrumbInicio.label }}</span>
+        </button>
+        <button
+          v-for="item in rutaBreadcrumb.slice(0, -2)"
+          :key="item.id"
+          @click="navegarDesdePopover(item)"
+          class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left w-full
+                 text-surface-700 dark:text-surface-200
+                 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
+        >
+          <i class="pi pi-folder text-xs text-surface-400 dark:text-surface-500 shrink-0" />
+          <span class="truncate">{{ item.label }}</span>
+        </button>
+      </div>
+    </Popover>
 
     <!--
       ACTION BAR — solo desktop (sm:flex).
