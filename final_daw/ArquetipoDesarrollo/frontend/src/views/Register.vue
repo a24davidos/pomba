@@ -54,16 +54,7 @@
         <!-- CONTRASEÑA -->
         <div class="flex flex-col gap-2">
           <label class="font-medium">Contraseña</label>
-          <Password name="password" placeholder="Mínimo 8 caracteres" :toggleMask="true" :feedback="true" input-class="w-full!" fluid>
-            <template #header>
-              <div class="font-semibold text-sm mb-4">Elige una contraseña</div>
-            </template>
-            <template #footer>
-              <ul class="pl-2 ml-2 my-0 leading-6 text-sm">
-                <li>Mínimo 8 caracteres</li>
-              </ul>
-            </template>
-          </Password>
+          <Password name="password" placeholder="Mínimo 8 caracteres" :toggleMask="true" :feedback="false" input-class="w-full!" fluid />
           <Message v-if="$form.password?.invalid" severity="error" variant="simple" size="small">
             {{ $form.password.error.message }}
           </Message>
@@ -78,14 +69,19 @@
           </Message>
         </div>
 
+        <!-- MENSAJE DE ÉXITO -->
+        <div v-if="registroExitoso" class="flex items-center gap-2 text-green-600 bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800/30">
+          <i class="pi pi-check-circle text-lg"></i>
+          <span class="text-sm md:text-base font-medium">¡Cuenta creada correctamente! Entrando...</span>
+        </div>
+
         <!-- MENSAJE DE ERROR -->
         <div v-if="apiError" class="flex items-center gap-2 text-red-500 bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800/30">
           <i class="pi pi-exclamation-triangle text-lg"></i>
           <span class="text-sm md:text-base font-medium">{{ apiErrorMessage }}</span>
         </div>
 
-
-        <Button type="submit" label="Registrarse" icon="pi pi-user-plus" class="w-full py-2 rounded-lg" :loading="loading" />
+        <Button type="submit" label="Registrarse" icon="pi pi-user-plus" class="w-full py-2 rounded-lg" :loading="loading" :disabled="registroExitoso" />
       </Form>
 
     </div>
@@ -104,6 +100,7 @@ import { getErrorMessage } from "@/utils/errors";
 import router from '@/router'
 
 const loading = ref(false);
+const registroExitoso = ref(false);
 const apiError = ref(false);
 const apiErrorMessage = ref("");
 
@@ -168,8 +165,11 @@ const onFormSubmit = async (event) => {
       values.nombre,
       values.apellidos || ""
     );
-    console.log("Cuenta creada correctamente!");
-    router.push('/home');
+    registroExitoso.value = true;
+    setTimeout(async () => {
+      await authService.login(values.email.trim(), values.password);
+      router.push('/home');
+    }, 1500);
 
   } catch (error) {
     apiError.value = true;
