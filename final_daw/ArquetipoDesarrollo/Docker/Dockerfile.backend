@@ -1,15 +1,16 @@
+# Imagen base de Python
 FROM python:3.12-slim
 
+# Evita que Python genere .pyc y que bufferice los logs
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-
-# COPIA CORREGIDA: Apuntamos a la carpeta Docker donde está el archivo
+# Copiamos los requisitos
 COPY requirements.txt .
 
-# 1. Librerías del sistema
+# Instalamos librerías del sistema necesarias para psycopg, pillow, etc.
 RUN apt-get update && apt-get install -y \
     libpng-dev \
     libjpeg-dev \
@@ -19,12 +20,8 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 
-# 4. Copiamos el entrypoint que también está en la carpeta Docker
 COPY entrypoint-backend.sh /usr/local/bin/entrypoint-backend.sh
 RUN chmod +x /usr/local/bin/entrypoint-backend.sh
-
-# 5. Copiamos el código de la app
-# Si tu contexto es ".." y el código está en "backend/", sería:
 
 EXPOSE 8000
 

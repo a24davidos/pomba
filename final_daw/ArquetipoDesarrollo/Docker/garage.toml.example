@@ -4,8 +4,10 @@ replication_factor = 1
 consistency_mode = "consistent"
 
 rpc_bind_addr = "0.0.0.0:3901"
+# En producción cambiar "garage" por el nombre del servicio en docker-compose o la IP
 rpc_public_addr = "garage:3901"
-rpc_secret = "66079f0326ae751c8fc39ea9cd765d547ad4d35e6d457ff18a253d9f29347372"
+# Mismo valor que GARAGE_RPC_SECRET en .env.prod
+rpc_secret = "pon-aqui-el-mismo-valor-que-GARAGE_RPC_SECRET"
 
 [s3_api]
 s3_region = "garage"
