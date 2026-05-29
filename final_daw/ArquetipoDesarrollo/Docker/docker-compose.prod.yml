@@ -1,0 +1,111 @@
+services:
+
+  # --- PROXY INVERSO ---
+  nginx:
+    image: nginx:stable-alpine
+    container_name: nginx_proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "3900:3900"
+    volumes:
+      - ../nginx/default.prod.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../backend/staticfiles:/app/staticfiles:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - appnet
+
+  # --- BACKEND DJANGO ---
+  backend:
+    build:
+      context: ..
+      dockerfile: Docker/Dockerfile.backend.prod
+    container_name: django_backend
+    restart: unless-stopped
+    env_file: .env.prod
+    depends_on:
+      db:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - appnet
+
+  # --- FRONTEND VUE ---
+  frontend:
+    build:
+      context: ..
+      dockerfile: Docker/Dockerfile.frontend.prod
+    container_name: vue_frontend
+    restart: unless-stopped
+    networks:
+      - appnet
+
+  # --- POSTGRESQL ---
+  db:
+    image: postgres:16
+    container_name: postgres_db
+    restart: unless-stopped
+    env_file: .env.prod
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - appnet
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # --- GARAGE S3 ---
+  garage:
+    image: dxflrs/garage:v2.0.0
+    container_name: garage
+    restart: unless-stopped
+    env_file: .env.prod
+    volumes:
+      - garage_meta:/var/lib/garage/meta
+      - garage_data:/var/lib/garage/data
+      - ./garage.toml:/etc/garage.toml:ro
+    ports:
+      - "3901:3901"   # RPC (acceso interno al clúster)
+      - "3903:3903"   # Admin API
+      # Puerto 3900 lo gestionamos con Nginx
+    networks:
+      - appnet
+
+  # --- ELASTICSEARCH (heap reducido para 4 GB RAM igual toca modificar) ---
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.0.0
+    container_name: elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -vq '\"status\":\"red\"'"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+    networks:
+      - appnet
+
+networks:
+  appnet:
+
+volumes:
+  postgres_data:
+  es_data:
+  garage_meta:
+  garage_data:

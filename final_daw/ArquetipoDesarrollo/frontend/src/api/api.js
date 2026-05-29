@@ -1,8 +1,10 @@
 import axios from 'axios';
 import router from '@/router'
 
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost/api/';
+
 const api = axios.create({
-  baseURL: 'http://localhost/api/',
+  baseURL: BASE_URL,
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -48,7 +50,7 @@ api.interceptors.response.use(
 
         // Usamos una instancia limpia de axios
         // para evitar bucles infinitos si esta petición también falla
-        const { data } = await axios.post('http://localhost/api/auth/refresh_token/', {
+        const { data } = await axios.post(`${BASE_URL}auth/refresh_token/`, {
           refresh: refreshToken
         });
 

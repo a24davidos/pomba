@@ -11,12 +11,16 @@ psycopg-binary==3.3.3
 psycopg-pool==3.3.0
 
 # --- Almacenamiento S3 / Garage ---
-boto3==1.34.0
+boto3==1.42.88
 django-storages==1.14.2
 
 # --- Búsqueda / Elasticsearch ---
-elasticsearch==9.3.3
-django-elasticsearch-dsl==8.0
+elasticsearch==9.0.3
+django-elasticsearch-dsl==9.0
+
+# --- Servidor producción ---
+gunicorn==23.0.0
+drf-standardized-errors==0.14.1
 
 # --- Utilidades ---
 sqlparse==0.5.5

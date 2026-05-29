@@ -72,8 +72,6 @@ class ItemService:
             config=Config(
                 signature_version="s3v4",
                 s3={"addressing_style": "path"},
-                response_checksum_validation="when_required",
-                request_checksum_calculation="when_required",
             ),
         )
 
@@ -542,10 +540,19 @@ class ItemService:
         item.file = key
         return ItemService.guardar_item(item)
 
+    # Límite de descarga por tipo MIME antes de intentar extraer metadatos
+    _LIMITE_DESCARGA_BYTES = {
+        'audio': 50  * 1024 * 1024,  # 50 MB — cubre MP3/FLAC; WAV sin tags no aporta nada
+        'image': 40  * 1024 * 1024,  # 40 MB — cubre JPEG/PNG/WebP 
+        'text':   5  * 1024 * 1024,  # 5 MB  — coherente con LIMITE_CONTENIDO_BYTES del extractor
+    }
+
     @staticmethod
     def indexar_item(item):
         """
-        Descarga el archivo de Garage, extrae metadatos/contenido, los guarda en BD y actualiza el índice de Elasticsearch. No interrumpimos el flujo principal.
+        Extrae metadatos del archivo y actualiza el índice de Elasticsearch.
+        Si el archivo supera el límite para su tipo, se indexa solo con los
+        metadatos básicos (nombre, tamaño…) sin descargar el contenido.
         """
         if item.tipo != Item.Tipo.ARCHIVO or not item.file:
             return
@@ -553,18 +560,22 @@ class ItemService:
             from .extractors import extraer
             from .documents import ItemDocument
 
-            s3 = ItemService.get_s3_client()
-            obj = s3.get_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=str(item.file))
-            datos = obj['Body'].read()
+            mime_prefix = (item.mime_type or '').split('/')[0].lower()
+            limite = ItemService._LIMITE_DESCARGA_BYTES.get(mime_prefix)
+            tamano = item.tamano_bytes or 0
 
-            resultado = extraer(datos, item.mime_type or '', item.tamano_bytes or 0)
+            if limite is not None and tamano <= limite:
+                s3 = ItemService.get_s3_client()
+                obj = s3.get_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=str(item.file))
+                datos = obj['Body'].read()
 
-            metadatos = resultado['metadatos']
-            if resultado['contenido']:
-                metadatos['contenido'] = resultado['contenido']
+                resultado = extraer(datos, item.mime_type or '', tamano)
+                metadatos = resultado['metadatos']
+                if resultado['contenido']:
+                    metadatos['contenido'] = resultado['contenido']
 
-            item.metadatos = metadatos
-            Item.objects.filter(pk=item.pk).update(metadatos=metadatos)
+                item.metadatos = metadatos
+                Item.objects.filter(pk=item.pk).update(metadatos=metadatos)
 
             ItemDocument().update(item)
         except Exception as e:

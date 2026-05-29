@@ -1,4 +1,5 @@
 import os
+import threading
 import uuid
 
 from rest_framework import viewsets, status
@@ -396,7 +397,7 @@ class ItemViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        ItemService.indexar_item(item)
+        threading.Thread(target=ItemService.indexar_item, args=(item,), daemon=True).start()
 
         serializer = self.get_serializer(item)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
