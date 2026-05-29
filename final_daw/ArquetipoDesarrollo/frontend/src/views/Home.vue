@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useItemsStore } from '@/stores/items'
 
 import FileTable from '../components/FileTable.vue'
-import Breadcrumb from 'primevue/breadcrumb'
+import Popover from 'primevue/popover'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
@@ -16,6 +16,16 @@ const route = useRoute()
 const router = useRouter()
 
 const inputNuevaCarpeta = ref('')
+const popoverBreadcrumb = ref()
+
+function togglePopoverBreadcrumb(event) {
+  popoverBreadcrumb.value?.toggle(event)
+}
+
+function navegarDesdePopover(item) {
+  item.command()
+  popoverBreadcrumb.value?.hide()
+}
 
 const CONFIGURACION_VISTAS = {
   drive: {
@@ -112,6 +122,7 @@ watch(
   () => [route.params.view, route.params.folderId],
   async () => {
     store.limpiarSeleccion()
+    popoverBreadcrumb.value?.hide()
     await cargarDesdeRuta()
   },
   { immediate: true }
@@ -125,16 +136,103 @@ watch(
     <div class="px-4 pt-4 space-y-4 shrink-0">
 
     <!-- BREADCRUMB -->
-    <Breadcrumb
-      :home="breadcrumbInicio"
-      :model="rutaBreadcrumb"
-      :pt="{
-        root: { class: 'p-0 bg-transparent border-none' },
-        homeItem: { class: 'text-lg font-semibold text-surface-900 dark:text-surface-0' },
-        item: { class: 'text-xl font-semibold text-surface-900 dark:text-surface-0' },
-        separator: { class: 'text-surface-400 dark:text-surface-500 mx-1' },
-      }"
-    />
+    <nav class="flex items-center flex-nowrap gap-0.5">
+
+      <!-- SIN COLAPSO: raíz + hasta 2 sub-niveles (todo visible) -->
+      <template v-if="rutaBreadcrumb.length <= 2">
+        <!-- En raíz: Mi unidad es el título de página -->
+        <span
+          v-if="rutaBreadcrumb.length === 0"
+          class="flex items-center gap-2 px-2 py-1 text-lg font-bold
+                 text-surface-900 dark:text-surface-0"
+        >
+          <i :class="[breadcrumbInicio.icon, 'text-lg']" />
+          {{ breadcrumbInicio.label }}
+        </span>
+        <!-- Con subcarpetas: raíz clicable + ítems -->
+        <template v-else>
+          <button
+            @click="breadcrumbInicio.command()"
+            class="flex items-center gap-1.5 px-2 py-1 rounded-md text-base font-medium shrink-0
+                   text-surface-500 dark:text-surface-400
+                   hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
+          >
+            <i :class="[breadcrumbInicio.icon, 'text-xs']" />
+            <span>{{ breadcrumbInicio.label }}</span>
+          </button>
+          <template v-for="(item, idx) in rutaBreadcrumb" :key="item.id">
+            <i class="pi pi-angle-right text-sm text-surface-300 dark:text-surface-600 shrink-0 mx-0.5" />
+            <button
+              v-if="idx < rutaBreadcrumb.length - 1"
+              @click="item.command()"
+              class="max-w-36 truncate px-2 py-1 rounded-md text-base font-medium shrink-0
+                     text-surface-500 dark:text-surface-400
+                     hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
+            >{{ item.label }}</button>
+            <span
+              v-else
+              class="max-w-56 truncate px-2 py-1 text-xl font-bold text-surface-900 dark:text-surface-0 shrink-0"
+            >{{ item.label }}</span>
+          </template>
+        </template>
+      </template>
+
+      <!-- COLAPSADO: ··· > -->
+      <template v-else>
+        <button
+          @click="togglePopoverBreadcrumb($event)"
+          title="Mostrar ruta completa"
+          class="px-2 py-0.5 rounded text-base font-bold tracking-widest shrink-0
+                 text-surface-400 dark:text-surface-500
+                 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
+        >···</button>
+
+        <Popover ref="popoverBreadcrumb">
+          <div class="flex flex-col gap-0.5 min-w-44 py-1">
+            <p class="px-3 pt-1 pb-2 text-xs font-semibold uppercase tracking-wider
+                      text-surface-400 dark:text-surface-500">Ruta completa</p>
+            <!-- Raíz siempre primera en el popover -->
+            <button
+              @click="navegarDesdePopover(breadcrumbInicio)"
+              class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left w-full
+                     text-surface-700 dark:text-surface-200
+                     hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
+            >
+              <i :class="[breadcrumbInicio.icon, 'text-xs text-surface-400 dark:text-surface-500 shrink-0']" />
+              <span class="truncate">{{ breadcrumbInicio.label }}</span>
+            </button>
+            <!-- Niveles intermedios ocultos -->
+            <button
+              v-for="item in rutaBreadcrumb.slice(0, -2)"
+              :key="item.id"
+              @click="navegarDesdePopover(item)"
+              class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left w-full
+                     text-surface-700 dark:text-surface-200
+                     hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
+            >
+              <i class="pi pi-folder text-xs text-surface-400 dark:text-surface-500 shrink-0" />
+              <span class="truncate">{{ item.label }}</span>
+            </button>
+          </div>
+        </Popover>
+
+        <i class="pi pi-angle-right text-sm text-surface-300 dark:text-surface-600 shrink-0 mx-0.5" />
+        <!-- Padre (penúltimo) — acceso rápido a "subir un nivel" -->
+        <button
+          @click="rutaBreadcrumb.at(-2).command()"
+          class="max-w-36 truncate px-2 py-1 rounded-md text-base font-medium shrink-0
+                 text-surface-500 dark:text-surface-400
+                 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
+        >{{ rutaBreadcrumb.at(-2).label }}</button>
+
+        <i class="pi pi-angle-right text-sm text-surface-300 dark:text-surface-600 shrink-0 mx-0.5" />
+        <!-- Actual — título de página, no clicable -->
+        <span class="max-w-56 truncate px-2 py-1 text-xl font-bold text-surface-900 dark:text-surface-0 shrink-0">
+          {{ rutaBreadcrumb.at(-1).label }}
+        </span>
+      </template>
+
+    </nav>
 
     <!--
       ACTION BAR — solo desktop (sm:flex).
