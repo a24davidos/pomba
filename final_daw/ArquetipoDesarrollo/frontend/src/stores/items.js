@@ -60,6 +60,20 @@ export const useItemsStore = defineStore('items', {
       this.abrirModal('mover', { ids: items.map((i) => i.id) })
     },
 
+    async abrirModalPrevisualizar(item) {
+      try {
+        const resp = await api.get(`items/${item.id}/previsualizar/`)
+        this.abrirModal('previsualizar', { item, url: resp.data.url })
+      } catch (e) {
+        this.agregarNotificacion({
+          id: 'preview-error',
+          tipo: 'error',
+          mensaje: getErrorMessage(e) || 'No se pudo previsualizar el archivo.',
+          icono: 'pi-eye-slash',
+        })
+      }
+    },
+
     cerrarModal() {
       this.ui.modal.open = false
       this.ui.modal.name = null
