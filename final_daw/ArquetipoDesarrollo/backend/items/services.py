@@ -456,6 +456,37 @@ class ItemService:
         )
 
     @staticmethod
+    def generar_url_preview(item):
+        """Genera una presigned URL para previsualización (image, audio, PDF)."""
+        public_endpoint = getattr(settings, "GARAGE_PUBLIC_URL", settings.AWS_S3_ENDPOINT_URL)
+
+        client = boto3.client(
+            "s3",
+            endpoint_url=public_endpoint,
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name=settings.AWS_S3_REGION_NAME,
+            config=Config(
+                signature_version="s3v4",
+                s3={"addressing_style": "path"},
+            ),
+        )
+
+        params = {
+            "Bucket": settings.AWS_STORAGE_BUCKET_NAME,
+            "Key": str(item.file),
+            "ResponseContentDisposition": f'inline; filename="{item.nombre}"',
+        }
+        if item.mime_type:
+            params["ResponseContentType"] = item.mime_type
+
+        return client.generate_presigned_url(
+            "get_object",
+            Params=params,
+            ExpiresIn=300,
+        )
+
+    @staticmethod
     def recolectar_archivos_para_zip(root_ids, usuario):
         """
         Recorre el árbol de ítemsy devuelve una lista de manteniendo la estructura de carpetas.

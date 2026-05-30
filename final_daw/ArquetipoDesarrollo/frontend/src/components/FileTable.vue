@@ -49,6 +49,13 @@ function abrirItem(item) {
   })
 }
 
+function esPrevisualizableItem(item) {
+  // Compruebo si es un tipo de archivo previsualizable
+  if (item.tipo !== 'archivo') return false
+  const mime = item.mime_type || ''
+  return mime.startsWith('image/') || mime.startsWith('audio/') || mime === 'application/pdf'
+}
+
 function handleClick(event, item, index) {
   if (contextMenu.value.visible) contextMenu.value.visible = false
 
@@ -80,7 +87,11 @@ function handleClick(event, item, index) {
 
 function handleDoubleClick(item) {
   store.limpiarSeleccion()
-  abrirItem(item)
+  if (item.tipo === 'carpeta') {
+    abrirItem(item)
+  } else if (esPrevisualizableItem(item) && !enPapelera.value) {
+    store.abrirModalPrevisualizar(item)
+  }
 }
 
 function handleBackgroundClick(event) {
@@ -92,7 +103,9 @@ function handleBackgroundClick(event) {
 
 // ── Lógica compartida de acciones ────────────────────────────────────
 async function ejecutarAccion(accion, item) {
-  if (accion === 'download') {
+  if (accion === 'preview') {
+    await store.abrirModalPrevisualizar(item)
+  } else if (accion === 'download') {
     store.seleccionar(item, null)
     await store.descargarItems()
   } else if (accion === 'favorite' || accion === 'unfavorite') {
@@ -149,7 +162,10 @@ async function accionContextMenu(accion) {
   contextMenu.value.visible = false
   const ids = store.seleccion.ids
 
-  if (accion === 'download') {
+  if (accion === 'preview') {
+    const item = store.itemsSeleccionados[0]
+    if (item) await store.abrirModalPrevisualizar(item)
+  } else if (accion === 'download') {
     await store.descargarItems()
   } else if (accion === 'favorite' || accion === 'unfavorite') {
     await store.marcarFavoritos(ids)
@@ -371,6 +387,13 @@ function obtenerIconoArchivo(mimeType) {
 
                   <template v-else>
                     <button
+                      v-if="esPrevisualizableItem(item)"
+                      @click="accionMenu($event, 'preview', item)"
+                      class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
+                    >
+                      <i class="pi pi-eye text-surface-400" /> Previsualizar
+                    </button>
+                    <button
                       @click="accionMenu($event, 'download', item)"
                       class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
                     >
@@ -449,6 +472,13 @@ function obtenerIconoArchivo(mimeType) {
         </template>
 
         <template v-else>
+          <button
+            v-if="store.seleccion.ids.length === 1 && esPrevisualizableItem(contextMenu.item)"
+            @click="accionContextMenu('preview')"
+            class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
+          >
+            <i class="pi pi-eye text-surface-400" /> Previsualizar
+          </button>
           <button
             @click="accionContextMenu('download')"
             class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"

@@ -274,6 +274,24 @@ class ItemViewSet(viewsets.ModelViewSet):
             )
         return Response({'url': ItemService.generar_url_descarga(item)})
 
+    @action(detail=True, methods=['get'])
+    def previsualizar(self, request, pk=None):
+        """Devuelve una presigned URL de previsualización para imagen, audio o PDF."""
+        item = self.get_object()
+        if item.tipo != 'archivo' or not item.file:
+            return Response(
+                {'detail': 'El elemento no es un archivo.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        mime = item.mime_type or ''
+        TIPOS_PREVISUALIZABLE = ('image/', 'audio/', 'application/pdf')
+        if not any(mime.startswith(t) for t in TIPOS_PREVISUALIZABLE):
+            return Response(
+                {'detail': 'Tipo de archivo no previsualizable.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response({'url': ItemService.generar_url_preview(item)})
+
     @action(detail=False, methods=['post'])
     def descargar(self, request):
         """
