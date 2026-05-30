@@ -186,6 +186,30 @@ function formatBytes(bytes) {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
+
+const emptyState = computed(() => {
+  const estados = {
+    drive:  { icon: 'pi-cloud-upload', titulo: 'Tu unidad está vacía',    desc: 'Sube tu primer archivo o crea una carpeta con el botón Nuevo' },
+    fav:    { icon: 'pi-star',         titulo: 'Sin favoritos todavía',    desc: 'Marca elementos con ★ para encontrarlos aquí rápidamente' },
+    recent: { icon: 'pi-clock',        titulo: 'Sin actividad reciente',   desc: 'Los archivos que subas o abras aparecerán aquí' },
+    trash:  { icon: 'pi-trash',        titulo: 'La papelera está vacía',   desc: '' },
+  }
+  return estados[route.params.view] ?? estados.drive
+})
+
+function obtenerIconoArchivo(mimeType) {
+  const mime = (mimeType || '').toLowerCase()
+  if (mime.startsWith('image/')) return 'pi-image text-purple-400'
+  if (mime.startsWith('video/')) return 'pi-video text-blue-500'
+  if (mime.startsWith('audio/')) return 'pi-headphones text-pink-400'
+  if (mime === 'application/pdf') return 'pi-file-pdf text-red-500'
+  if (mime === 'application/msword' || mime.includes('wordprocessingml')) return 'pi-file-word text-blue-600'
+  if (mime === 'application/vnd.ms-excel' || mime.includes('spreadsheetml') || mime === 'text/csv' || mime === 'application/csv' || mime === 'text/x-csv') return 'pi-file-excel text-green-600'
+  if (mime.includes('zip') || mime.includes('tar') || mime.includes('rar') || mime.includes('7z') || mime.includes('gzip') || mime.includes('compress')) return 'pi-box text-amber-500'
+  if (mime === 'application/json' || mime.startsWith('text/html') || mime.startsWith('text/css') || mime.includes('javascript') || mime.includes('xml')) return 'pi-code text-emerald-500'
+  if (mime.startsWith('text/')) return 'pi-file-edit text-surface-500'
+  return 'pi-file text-surface-400'
+}
 </script>
 
 <template>
@@ -202,11 +226,17 @@ function formatBytes(bytes) {
     <!-- ── Vacío ───────────────────────────────────────────────── -->
     <div
       v-else-if="!store.items.length"
-      class="flex flex-col items-center justify-center py-16 gap-2
-             text-surface-400 dark:text-surface-500"
+      class="flex flex-col items-center justify-center py-24 gap-4"
     >
-      <i class="pi pi-folder-open text-4xl" />
-      <span class="text-sm">Esta carpeta está vacía</span>
+      <div class="w-16 h-16 rounded-2xl bg-surface-100 dark:bg-surface-800 flex items-center justify-center">
+        <i :class="['pi', emptyState.icon, 'text-2xl text-surface-400 dark:text-surface-500']" />
+      </div>
+      <div class="text-center">
+        <p class="text-sm font-semibold text-surface-700 dark:text-surface-300">{{ emptyState.titulo }}</p>
+        <p v-if="emptyState.desc" class="text-xs text-surface-400 dark:text-surface-500 mt-1 max-w-60 leading-relaxed">
+          {{ emptyState.desc }}
+        </p>
+      </div>
     </div>
 
     <!-- ── Tabla ───────────────────────────────────────────────── -->
@@ -260,8 +290,8 @@ function formatBytes(bytes) {
             <div class="flex items-center gap-2 min-w-0">
               <i
                 :class="[
-                  item.tipo === 'carpeta' ? 'pi pi-folder text-yellow-500' : 'pi pi-file text-surface-400',
-                  'text-base shrink-0',
+                  'pi text-base shrink-0',
+                  item.tipo === 'carpeta' ? 'pi-folder text-yellow-500' : obtenerIconoArchivo(item.mime_type),
                 ]"
               />
               <span class="truncate text-sm">{{ item.nombre }}</span>
@@ -382,7 +412,7 @@ function formatBytes(bytes) {
       <div
         v-if="contextMenu.visible"
         @click.stop
-        class="fixed z-[200] w-44
+        class="fixed z-200 w-44
                bg-white dark:bg-surface-900
                border border-surface-200 dark:border-surface-700
                rounded-xl shadow-lg py-1 overflow-hidden"

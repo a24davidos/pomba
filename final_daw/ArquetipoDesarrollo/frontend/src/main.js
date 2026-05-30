@@ -14,45 +14,60 @@ const app = createApp(App)
 
 
 // Paleta Clara
-const stoneSurface = {
-    0: '#ffffff',
-    50: '#fafaf9',
-    100: '#f5f5f4',
-    200: '#e7e5e4',
-    300: '#d6d3d1',
-    400: '#a8a29e',
-    500: '#78716c',
-    600: '#57534e',
-    700: '#44403c',
-    800: '#292524',
-    900: '#1c1917',
-    950: '#0c0a09'
-};
-// Paleta Oscura
-const vivaSurface = {
-    0: '#ffffff',
-    50: '#f3f3f3',
-    100: '#e7e7e8',
-    200: '#cfd0d0',
-    300: '#b7b8b9',
-    400: '#9fa1a1',
-    500: '#87898a',
-    600: '#6e7173',
-    700: '#565a5b',
-    800: '#3e4244',
-    900: '#262b2c',
-    950: '#0e1315'
+const slateSurface = {
+    0:   '#ffffff',
+    50:  '#f8fafc',
+    100: '#f1f5f9',
+    150: '#e8edf4',
+    200: '#e2e8f0',
+    300: '#cbd5e1',
+    400: '#94a3b8',
+    500: '#64748b',
+    600: '#475569',
+    700: '#334155',
+    800: '#1e293b',
+    900: '#0f172a',
+    950: '#020617',
 };
 
+// Paleta Oscura
+const slateDarkSurface = {
+    0:   '#ffffff',
+    50:  '#f8fafc',
+    100: '#f1f5f9',
+    150: '#e8edf4',
+    200: '#e2e8f0',
+    300: '#cbd5e1',
+    400: '#94a3b8',
+    500: '#64748b',
+    600: '#475569',
+    700: '#334155',
+    800: '#2e3d58',
+    900: '#29364f',
+    950: '#222d42',
+};
 
 const MyCustomPreset = definePreset(Aura, {
     semantic: {
+        primary: {
+            50:  '{indigo.50}',
+            100: '{indigo.100}',
+            200: '{indigo.200}',
+            300: '{indigo.300}',
+            400: '{indigo.400}',
+            500: '{indigo.500}',
+            600: '{indigo.600}',
+            700: '{indigo.700}',
+            800: '{indigo.800}',
+            900: '{indigo.900}',
+            950: '{indigo.950}',
+        },
         colorScheme: {
             light: {
-                surface: stoneSurface
+                surface: slateSurface
             },
             dark: {
-                surface: vivaSurface
+                surface: slateDarkSurface
             }
         }
     }
