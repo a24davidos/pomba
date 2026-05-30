@@ -32,7 +32,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Usuario
-        fields = ("id", "email", "nombre", "apellidos", "foto_perfil_url")
+        fields = ("id", "email", "nombre", "apellidos", "foto_perfil_url", "tema")
 
     def get_foto_perfil_url(self, obj):
         if not obj.foto_perfil:
@@ -45,15 +45,16 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 
 class UpdateProfileSerializer(serializers.ModelSerializer):
-    """Permite actualizar nombre, apellidos y/o email del usuario."""
+    """Permite actualizar nombre, apellidos, email y/o tema del usuario."""
 
     class Meta:
         model = Usuario
-        fields = ("nombre", "apellidos", "email")
+        fields = ("nombre", "apellidos", "email", "tema")
         extra_kwargs = {
             "nombre":    {"required": False},
             "apellidos": {"required": False},
             "email":     {"required": False},
+            "tema":      {"required": False},
         }
 
     def validate_email(self, valor):

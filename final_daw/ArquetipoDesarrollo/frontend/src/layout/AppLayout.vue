@@ -11,8 +11,10 @@ import ThemeToggle from '@/components/ThemeToggle.vue'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
+import { useConfirmacion } from '@/composables/useConfirmacion'
 
 const store = useItemsStore()
+const { estado: confirmacion, aceptar: aceptarConfirmacion, cancelar: cancelarConfirmacion } = useConfirmacion()
 
 const router = useRouter()
 const route = useRoute()
@@ -45,6 +47,11 @@ const cargarPerfil = async () => {
   try {
     const datos = await servicioUsuario.obtenerPerfil()
     perfil.value = { ...datos }
+    if (datos.tema) {
+      const dark = datos.tema === 'oscuro'
+      document.documentElement.classList.toggle('dark', dark)
+      localStorage.setItem('theme', datos.tema)
+    }
   } catch {}
 }
 
@@ -427,6 +434,25 @@ function clasesSnackbar(notif) {
     <template #footer>
       <Button label="Cancelar" text severity="secondary" @click="store.cerrarModal" />
       <Button label="Mover aquí" icon="pi pi-check" @click="confirmarMover" />
+    </template>
+  </Dialog>
+
+  <Dialog
+    v-model:visible="confirmacion.abierto"
+    :header="confirmacion.header"
+    modal
+    :closable="false"
+    :style="{ width: '26rem' }"
+    :breakpoints="{ '640px': '90vw' }"
+  >
+    <p class="text-surface-600 dark:text-surface-300 text-sm">{{ confirmacion.mensaje }}</p>
+    <template #footer>
+      <Button :label="confirmacion.labelCancelar" text severity="secondary" @click="cancelarConfirmacion" />
+      <Button
+        :label="confirmacion.labelAceptar"
+        :severity="confirmacion.peligro ? 'danger' : undefined"
+        @click="aceptarConfirmacion"
+      />
     </template>
   </Dialog>
 </template>

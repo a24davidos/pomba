@@ -26,10 +26,16 @@ class UserManager(BaseUserManager):
     
 # Create your models here.
 class User(AbstractBaseUser, PermissionsMixin):
+
+    class Tema(models.TextChoices):
+        CLARO = 'claro'
+        OSCURO = 'oscuro'
+
     email = models.EmailField(unique=True, max_length=150)
     nombre = models.CharField(max_length=100, blank=True, null=True)
     apellidos = models.CharField(max_length=100, blank=True, null=True)
     foto_perfil = models.ImageField(upload_to=subir_imagen, blank=True, null=True)
+    tema = models.CharField(max_length=10, choices=Tema.choices, default=Tema.CLARO)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=now)

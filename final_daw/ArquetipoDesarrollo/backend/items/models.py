@@ -65,21 +65,6 @@ class Item(models.Model):
         return f"{self.nombre}"
 
     class Meta:
-        constraints = [
-            # Regla para cuando hay un padre (subcarpetas)
-            models.UniqueConstraint(
-                fields=["usuario", "padre", "nombre", "eliminado"],
-                name="unique_nombre_en_carpeta",
-                condition=models.Q(padre__isnull=False),
-            ),
-            #  Regla para cuando NO hay padre (raíz)
-            models.UniqueConstraint(
-                fields=["usuario", "nombre", "eliminado"],
-                name="unique_nombre_en_raiz",
-                condition=models.Q(padre__isnull=True),
-            ),
-        ]
-
         indexes = [
             #Para entrar en carpetas (Lo que más usará el usuario)
             models.Index(fields=["usuario", "padre", "eliminado"], name="idx_items_navegacion"),
