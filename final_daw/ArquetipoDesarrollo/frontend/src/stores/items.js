@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { defineStore } from 'pinia'
 import api from '@/api/api'
+import { getErrorMessage } from '@/utils/errors'
 
 export const useItemsStore = defineStore('items', {
   state: () => ({
@@ -116,7 +117,14 @@ export const useItemsStore = defineStore('items', {
         this.items = response.data.items
         this.breadcrumb = response.data.breadcrumb || []
       } catch (error) {
-        console.error('Error cargando items:', error)
+        if (token === this.loadToken) {
+          this.agregarNotificacion({
+            id: 'cargar-error',
+            tipo: 'error',
+            mensaje: 'No se pudieron cargar los archivos',
+            icono: 'pi-folder-open',
+          })
+        }
       } finally {
         if (token === this.loadToken) this.loading = false
       }
@@ -132,7 +140,12 @@ export const useItemsStore = defineStore('items', {
         this.breadcrumb = []
       } catch (error) {
         this.items = []
-        console.error('Error en búsqueda:', error)
+        this.agregarNotificacion({
+          id: 'buscar-error',
+          tipo: 'error',
+          mensaje: 'Error al realizar la búsqueda',
+          icono: 'pi-search',
+        })
       } finally {
         this.loading = false
       }
@@ -145,8 +158,15 @@ export const useItemsStore = defineStore('items', {
     async crearCarpeta(data) {
       try {
         await api.post('items/', data)
+        return true
       } catch (error) {
-        console.error('Error creando carpeta:', error)
+        this.agregarNotificacion({
+          id: 'crear-carpeta',
+          tipo: 'error',
+          mensaje: 'No se pudo crear la carpeta',
+          icono: 'pi-folder',
+        })
+        return false
       }
     },
 
@@ -192,7 +212,12 @@ export const useItemsStore = defineStore('items', {
         await this._subirArchivoPresignado(file, padreId)
         await this.cargarItems(this.currentParams)
       } catch (error) {
-        console.error('Error subiendo archivo:', error?.response?.data ?? error)
+        this.agregarNotificacion({
+          id: 'subir-error',
+          tipo: 'error',
+          mensaje: 'No se pudo subir el archivo',
+          icono: 'pi-upload',
+        })
       } finally {
         this.eliminarNotificacion('subir')
       }
@@ -306,7 +331,7 @@ export const useItemsStore = defineStore('items', {
               tipo: 'exito',
               mensaje: `Carpeta subida correctamente (${subidos} archivo${subidos !== 1 ? 's' : ''})`,
               icono: 'pi-check',
-              severidad: 'exito',
+              severidad: 'neutro',
             },
             3,
           )
@@ -349,7 +374,7 @@ export const useItemsStore = defineStore('items', {
           tipo: 'exito',
           mensaje: 'Elemento renombrado',
           icono: 'pi-pencil',
-          severidad: 'exito',
+          severidad: 'neutro',
         })
         return true
       } catch (error) {
@@ -381,7 +406,7 @@ export const useItemsStore = defineStore('items', {
           tipo: 'exito',
           mensaje: ids.length === 1 ? 'Elemento movido' : `${ids.length} elementos movidos`,
           icono: 'pi-arrow-right',
-          severidad: 'exito',
+          severidad: 'neutro',
         })
       } catch (error) {
         this.agregarNotificacion({
@@ -405,7 +430,12 @@ export const useItemsStore = defineStore('items', {
         }
         this.limpiarSeleccion()
       } catch (error) {
-        console.error('Error marcando favoritos:', error)
+        this.agregarNotificacion({
+          id: 'favorito-error',
+          tipo: 'error',
+          mensaje: 'No se pudo actualizar el favorito',
+          icono: 'pi-star',
+        })
       }
     },
 
@@ -423,10 +453,15 @@ export const useItemsStore = defineStore('items', {
           tipo: 'exito',
           mensaje: 'Movido a la papelera',
           icono: 'pi-trash',
-          severidad: 'advertencia',
+          severidad: 'neutro',
         })
       } catch (error) {
-        console.error('Error enviando a papelera:', error)
+        this.agregarNotificacion({
+          id: 'papelera-error',
+          tipo: 'error',
+          mensaje: 'No se pudo mover a la papelera',
+          icono: 'pi-trash',
+        })
       }
     },
 
@@ -436,7 +471,7 @@ export const useItemsStore = defineStore('items', {
         tipo: 'cargando',
         mensaje: 'Eliminando archivos de S3…',
         icono: 'pi-times-circle',
-        severidad: 'peligro',
+        severidad: 'neutro',
       })
       try {
         await api.delete('items/eliminar_definitivo/', { data: { ids } })
@@ -463,10 +498,15 @@ export const useItemsStore = defineStore('items', {
           tipo: 'exito',
           mensaje: 'Elemento restaurado',
           icono: 'pi-replay',
-          severidad: 'exito',
+          severidad: 'neutro',
         })
       } catch (error) {
-        console.error('Error restaurando items:', error)
+        this.agregarNotificacion({
+          id: 'restaurar-error',
+          tipo: 'error',
+          mensaje: 'No se pudo restaurar el elemento',
+          icono: 'pi-replay',
+        })
       }
     },
 
@@ -479,10 +519,15 @@ export const useItemsStore = defineStore('items', {
           tipo: 'exito',
           mensaje: 'Papelera restaurada',
           icono: 'pi-replay',
-          severidad: 'exito',
+          severidad: 'neutro',
         })
       } catch (error) {
-        console.error('Error restaurando papelera:', error)
+        this.agregarNotificacion({
+          id: 'restaurar-error',
+          tipo: 'error',
+          mensaje: 'No se pudo restaurar la papelera',
+          icono: 'pi-replay',
+        })
       }
     },
 
@@ -492,7 +537,7 @@ export const useItemsStore = defineStore('items', {
         tipo: 'cargando',
         mensaje: 'Vaciando papelera…',
         icono: 'pi-trash',
-        severidad: 'peligro',
+        severidad: 'neutro',
       })
       try {
         await api.post('items/vaciar_papelera/')
@@ -530,7 +575,12 @@ export const useItemsStore = defineStore('items', {
           a.click()
           document.body.removeChild(a)
         } catch (error) {
-          console.error('Error descargando archivo:', error)
+          this.agregarNotificacion({
+            id: 'descargar-error',
+            tipo: 'error',
+            mensaje: 'No se pudo descargar el archivo',
+            icono: 'pi-download',
+          })
         }
         return
       }
@@ -558,7 +608,15 @@ export const useItemsStore = defineStore('items', {
         document.body.removeChild(a)
         URL.revokeObjectURL(blobUrl)
       } catch (error) {
-        console.error('Error descargando ZIP:', error)
+        const mensaje = error?.response?.status === 404
+          ? 'La carpeta no contiene ningún archivo'
+          : 'No se pudo generar la descarga'
+        this.agregarNotificacion({
+          id: 'descargar-error',
+          tipo: 'error',
+          mensaje,
+          icono: 'pi-download',
+        })
       } finally {
         this.eliminarNotificacion('descargar')
       }

@@ -2,9 +2,11 @@
 import { ref, computed, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useItemsStore } from '@/stores/items'
+import { useConfirmacion } from '@/composables/useConfirmacion'
 import { formatDate } from '../utils/date'
 
 const store = useItemsStore()
+const { confirmar } = useConfirmacion()
 //Por defecto
 const sortCampo = ref('fecha_modificacion')
 const sortDir = ref('desc')
@@ -100,7 +102,13 @@ async function ejecutarAccion(accion, item) {
   } else if (accion === 'restore') {
     await store.restaurarItems([item.id])
   } else if (accion === 'deleteForever') {
-    await store.eliminarDefinitivamente([item.id])
+    const ok = await confirmar({
+      header: '¿Eliminar definitivamente?',
+      mensaje: 'Esta acción no se puede deshacer.',
+      labelAceptar: 'Eliminar',
+      peligro: true,
+    })
+    if (ok) await store.eliminarDefinitivamente([item.id])
   } else {
     emit(accion, item)
   }
@@ -150,7 +158,13 @@ async function accionContextMenu(accion) {
   } else if (accion === 'restore') {
     await store.restaurarItems(ids)
   } else if (accion === 'deleteForever') {
-    await store.eliminarDefinitivamente(ids)
+    const ok = await confirmar({
+      header: '¿Eliminar definitivamente?',
+      mensaje: 'Esta acción no se puede deshacer.',
+      labelAceptar: 'Eliminar',
+      peligro: true,
+    })
+    if (ok) await store.eliminarDefinitivamente(ids)
   } else {
     emit(accion)
   }
@@ -200,11 +214,11 @@ const emptyState = computed(() => {
 function obtenerIconoArchivo(mimeType) {
   const mime = (mimeType || '').toLowerCase()
   if (mime.startsWith('image/')) return 'pi-image text-purple-400'
-  if (mime.startsWith('video/')) return 'pi-video text-blue-500'
+  if (mime.startsWith('video/')) return 'pi-video text-sky-400'
   if (mime.startsWith('audio/')) return 'pi-headphones text-pink-400'
-  if (mime === 'application/pdf') return 'pi-file-pdf text-red-500'
-  if (mime === 'application/msword' || mime.includes('wordprocessingml')) return 'pi-file-word text-blue-600'
-  if (mime === 'application/vnd.ms-excel' || mime.includes('spreadsheetml') || mime === 'text/csv' || mime === 'application/csv' || mime === 'text/x-csv') return 'pi-file-excel text-green-600'
+  if (mime === 'application/pdf') return 'pi-file-pdf text-red-400'
+  if (mime === 'application/msword' || mime.includes('wordprocessingml')) return 'pi-file-word text-blue-500'
+  if (mime === 'application/vnd.ms-excel' || mime.includes('spreadsheetml') || mime === 'text/csv' || mime === 'application/csv' || mime === 'text/x-csv') return 'pi-file-excel text-green-500'
   if (mime.includes('zip') || mime.includes('tar') || mime.includes('rar') || mime.includes('7z') || mime.includes('gzip') || mime.includes('compress')) return 'pi-box text-amber-500'
   if (mime === 'application/json' || mime.startsWith('text/html') || mime.startsWith('text/css') || mime.includes('javascript') || mime.includes('xml')) return 'pi-code text-emerald-500'
   if (mime.startsWith('text/')) return 'pi-file-edit text-surface-500'

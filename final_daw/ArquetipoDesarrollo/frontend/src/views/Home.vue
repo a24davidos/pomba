@@ -2,6 +2,7 @@
 import { ref, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useItemsStore } from '@/stores/items'
+import { useConfirmacion } from '@/composables/useConfirmacion'
 
 import FileTable from '../components/FileTable.vue'
 import Popover from 'primevue/popover'
@@ -14,6 +15,7 @@ import Divider from 'primevue/divider'
 const store = useItemsStore()
 const route = useRoute()
 const router = useRouter()
+const { confirmar } = useConfirmacion()
 
 const inputNuevaCarpeta = ref('')
 const popoverBreadcrumb = ref()
@@ -90,9 +92,11 @@ function cerrarModal() {
 
 async function crearCarpeta() {
   const idPadre = route.params.folderId || null
-  await store.crearCarpeta({ nombre: inputNuevaCarpeta.value, tipo: 'carpeta', padre: idPadre })
-  cerrarModal()
-  await cargarDesdeRuta()
+  const exito = await store.crearCarpeta({ nombre: inputNuevaCarpeta.value, tipo: 'carpeta', padre: idPadre })
+  if (exito) {
+    cerrarModal()
+    await cargarDesdeRuta()
+  }
 }
 
 // ── Barra de acciones para elementos seleccionados ─────────────────
@@ -105,7 +109,13 @@ async function eliminar() {
 async function eliminarDefinitivamente() {
   const ids = store.itemsSeleccionados.map((i) => i.id)
   if (!ids.length) return
-  await store.eliminarDefinitivamente(ids)
+  const ok = await confirmar({
+    header: '¿Eliminar definitivamente?',
+    mensaje: 'Esta acción no se puede deshacer.',
+    labelAceptar: 'Eliminar',
+    peligro: true,
+  })
+  if (ok) await store.eliminarDefinitivamente(ids)
 }
 
 async function restaurar() {

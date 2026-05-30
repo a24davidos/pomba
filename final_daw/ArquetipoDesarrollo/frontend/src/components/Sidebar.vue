@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useItemsStore } from '@/stores/items'
+import { useConfirmacion } from '@/composables/useConfirmacion'
 
 import ContextMenu from 'primevue/contextmenu'
 import Menu from 'primevue/menu'
@@ -18,6 +19,7 @@ const emit = defineEmits(['abrir-ajustes', 'cerrar-sesion'])
 const route = useRoute()
 const router = useRouter()
 const store = useItemsStore()
+const { confirmar } = useConfirmacion()
 
 const menuPapelera = ref(null)
 const nuevoMenu = ref(null)
@@ -50,7 +52,15 @@ const trashMenuItems = [
   {
     label: 'Vaciar papelera',
     icon: 'pi pi-trash',
-    command: async () => await store.vaciarPapelera(),
+    command: async () => {
+      const ok = await confirmar({
+        header: '¿Vaciar la papelera?',
+        mensaje: 'Se eliminarán todos los archivos permanentemente.',
+        labelAceptar: 'Vaciar',
+        peligro: true,
+      })
+      if (ok) await store.vaciarPapelera()
+    },
   },
   {
     label: 'Restaurar todo',

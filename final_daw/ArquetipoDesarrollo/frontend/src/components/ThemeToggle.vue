@@ -1,24 +1,27 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import Button from "primevue/button";
+import { servicioUsuario } from "@/api/users";
+import { authService } from "@/api/auth";
 
 const isDark = ref(false);
 
 const applyTheme = (dark) => {
   document.documentElement.classList.toggle("dark", dark);
-  localStorage.setItem("theme", dark ? "dark" : "light");
+  localStorage.setItem("theme", dark ? "oscuro" : "claro");
 };
 
-const toggleDark = () => {
+const toggleDark = async () => {
   isDark.value = !isDark.value;
   applyTheme(isDark.value);
+  if (authService.isLoggedIn()) {
+    await servicioUsuario.guardarTema(isDark.value ? "oscuro" : "claro");
+  }
 };
 
 onMounted(() => {
   const saved = localStorage.getItem("theme");
-
-  // si hay guardado, lo usamos
-  if (saved === "dark") {
+  if (saved === "oscuro" || saved === "dark") {
     isDark.value = true;
     applyTheme(true);
   }
