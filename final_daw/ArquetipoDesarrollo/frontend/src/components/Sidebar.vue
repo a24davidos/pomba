@@ -29,6 +29,12 @@ const fabAbierto = ref(false)
 
 const nuevoMenuItems = [
   {
+    label: 'Nueva carpeta',
+    icon: 'pi pi-folder',
+    command: () => { store.abrirModal('crearCarpeta'); fabAbierto.value = false },
+  },
+  { separator: true },
+  {
     label: 'Subir archivo',
     icon: 'pi pi-upload',
     command: () => { fileInput.value?.click(); fabAbierto.value = false },
@@ -37,11 +43,6 @@ const nuevoMenuItems = [
     label: 'Subir carpeta',
     icon: 'pi pi-folder-open',
     command: () => { folderInput.value?.click(); fabAbierto.value = false },
-  },
-  {
-    label: 'Nueva carpeta',
-    icon: 'pi pi-folder',
-    command: () => { store.abrirModal('crearCarpeta'); fabAbierto.value = false },
   },
 ]
 
@@ -227,11 +228,11 @@ function togglePanelUsuario() {
     <Transition name="fab-menu">
       <div
         v-if="fabAbierto"
-        class="sm:hidden fixed z-46 flex flex-col-reverse gap-2"
+        class="sm:hidden fixed z-46 flex flex-col gap-2"
         style="bottom: calc(4.5rem + env(safe-area-inset-bottom) + 4.5rem); right: 1.25rem;"
       >
         <button
-          v-for="opcion in nuevoMenuItems"
+          v-for="opcion in nuevoMenuItems.filter(o => !o.separator)"
           :key="opcion.label"
           @click="opcion.command"
           class="flex items-center gap-3 bg-surface-0 dark:bg-surface-800
