@@ -103,7 +103,9 @@ function handleBackgroundClick(event) {
 
 // ── Lógica compartida de acciones ────────────────────────────────────
 async function ejecutarAccion(accion, item) {
-  if (accion === 'preview') {
+  if (accion === 'info') {
+    gestor.abrirPanelInfo(item)
+  } else if (accion === 'preview') {
     await gestor.abrirModalPrevisualizar(item)
   } else if (accion === 'download') {
     gestor.seleccionar(item, null)
@@ -139,7 +141,7 @@ async function accionMenu(event, accion, item) {
   await ejecutarAccion(accion, item)
 }
 
-// ── Context menu (click derecho) ──────────────────────────────────────
+// ── Context menu (click derecho) ────────────────────────────
 const contextMenu = ref({ visible: false, x: 0, y: 0, item: null })
 
 function handleContextMenu(event, item, index) {
@@ -162,7 +164,10 @@ async function accionContextMenu(accion) {
   contextMenu.value.visible = false
   const ids = gestor.seleccion.ids
 
-  if (accion === 'preview') {
+  if (accion === 'info') {
+    const item = gestor.itemsSeleccionados[0]
+    if (item) gestor.abrirPanelInfo(item)
+  } else if (accion === 'preview') {
     const item = gestor.itemsSeleccionados[0]
     if (item) await gestor.abrirModalPrevisualizar(item)
   } else if (accion === 'download') {
@@ -186,7 +191,7 @@ async function accionContextMenu(accion) {
   }
 }
 
-// ── Cierre de menús ───────────────────────────────────────────────────
+// ── Cierre de menús ──────────────────────────────────────────
 function handleDocumentClick() {
   if (menuAbierto.value !== null) menuAbierto.value = null
   if (contextMenu.value.visible) contextMenu.value.visible = false
@@ -253,7 +258,7 @@ function obtenerIconoArchivo(mimeType) {
       <i class="pi pi-spin pi-spinner text-2xl" />
     </div>
 
-    <!-- ── Vacío ───────────────────────────────────────────────── -->
+    <!-- ── Vacío ────────────────────── -->
     <div
       v-else-if="!gestor.items.length"
       class="flex flex-col items-center justify-center py-24 gap-4"
@@ -371,6 +376,13 @@ function obtenerIconoArchivo(mimeType) {
                 >
                   <template v-if="enPapelera">
                     <button
+                      @click="accionMenu($event, 'info', item)"
+                      class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
+                    >
+                      <i class="pi pi-info-circle text-surface-400" /> Ver detalles
+                    </button>
+                    <div class="my-1 border-t border-surface-200 dark:border-surface-800" />
+                    <button
                       @click="accionMenu($event, 'restore', item)"
                       class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
                     >
@@ -386,6 +398,13 @@ function obtenerIconoArchivo(mimeType) {
                   </template>
 
                   <template v-else>
+                    <button
+                      @click="accionMenu($event, 'info', item)"
+                      class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
+                    >
+                      <i class="pi pi-info-circle text-surface-400" /> Ver detalles
+                    </button>
+                    <div class="my-1 border-t border-surface-200 dark:border-surface-800" />
                     <button
                       v-if="esPrevisualizableItem(item)"
                       @click="accionMenu($event, 'preview', item)"
@@ -443,7 +462,7 @@ function obtenerIconoArchivo(mimeType) {
 
   </div>
 
-  <!-- ── Context menu (click derecho) -->
+  <!-- Context menu (click derecho) -->
   <Teleport to="body">
     <Transition name="menu-drop">
       <div
@@ -456,6 +475,13 @@ function obtenerIconoArchivo(mimeType) {
         :style="{ top: contextMenu.y + 'px', left: contextMenu.x + 'px' }"
       >
         <template v-if="enPapelera">
+          <button
+            @click="accionContextMenu('info')"
+            class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
+          >
+            <i class="pi pi-info-circle text-surface-400" /> Ver detalles
+          </button>
+          <div class="my-1 border-t border-surface-200 dark:border-surface-800" />
           <button
             @click="accionContextMenu('restore')"
             class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
@@ -472,6 +498,14 @@ function obtenerIconoArchivo(mimeType) {
         </template>
 
         <template v-else>
+          <button
+            v-if="gestor.seleccion.ids.length === 1"
+            @click="accionContextMenu('info')"
+            class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
+          >
+            <i class="pi pi-info-circle text-surface-400" /> Ver detalles
+          </button>
+          <div v-if="gestor.seleccion.ids.length === 1" class="my-1 border-t border-surface-200 dark:border-surface-800" />
           <button
             v-if="gestor.seleccion.ids.length === 1 && esPrevisualizableItem(contextMenu.item)"
             @click="accionContextMenu('preview')"

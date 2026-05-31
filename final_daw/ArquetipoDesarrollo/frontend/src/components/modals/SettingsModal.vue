@@ -2,7 +2,8 @@
   <Dialog
     v-model:visible="visible"
     modal
-    :style="{ width: '560px' }"
+    position="top"
+    :style="{ width: '560px', marginTop: '5vh' }"
     :breakpoints="{ '640px': '95vw' }"
     :draggable="false"
     class="settings-dialog"
@@ -27,19 +28,19 @@
     </div>
 
     <!-- PESTAÑA: FOTO DE PERFIL -->
-    <div v-if="tabActiva === 'foto'" class="flex flex-col items-center gap-5">
+    <div v-show="tabActiva === 'foto'" class="flex flex-col items-center gap-5 py-4">
       <div class="relative group cursor-pointer" @click="abrirSelector">
-        <div class="w-24 h-24 rounded-full overflow-hidden border-2 border-surface-200 dark:border-surface-700 bg-surface-100 dark:bg-surface-800 flex items-center justify-center">
+        <div class="w-32 h-32 rounded-full overflow-hidden border-2 border-surface-200 dark:border-surface-700 bg-surface-100 dark:bg-surface-800 flex items-center justify-center">
           <img
             v-if="urlPrevia || datosPerfil.foto_perfil_url"
             :src="urlPrevia || datosPerfil.foto_perfil_url"
             alt="Avatar"
             class="w-full h-full object-cover"
           />
-          <i v-else class="pi pi-user text-4xl text-surface-400" />
+          <i v-else class="pi pi-user text-6xl text-surface-400" />
         </div>
         <div class="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-          <i class="pi pi-camera text-white text-xl" />
+          <i class="pi pi-camera text-white text-2xl" />
         </div>
       </div>
 
@@ -82,7 +83,7 @@
     </div>
 
     <!-- PESTAÑA: DATOS PERSONALES -->
-    <div v-if="tabActiva === 'datos'" class="flex flex-col gap-4">
+    <div v-show="tabActiva === 'datos'" class="flex flex-col gap-4">
       <div class="flex flex-col gap-1">
         <label class="text-sm font-medium text-surface-700 dark:text-surface-300">Nombre</label>
         <InputText v-model="formularioDatos.nombre" placeholder="Tu nombre" />
@@ -114,7 +115,7 @@
     </div>
 
     <!-- PESTAÑA: CONTRASEÑA -->
-    <div v-if="tabActiva === 'contrasena'" class="flex flex-col gap-4">
+    <div v-show="tabActiva === 'contrasena'" class="flex flex-col gap-4">
       <div class="flex flex-col gap-1">
         <label class="text-sm font-medium text-surface-700 dark:text-surface-300">Contraseña actual</label>
         <Password v-model="formularioContrasena.actual" :feedback="false" toggleMask fluid />
@@ -146,7 +147,7 @@
     </div>
 
     <!-- PESTAÑA: ELIMINAR CUENTA -->
-    <div v-if="tabActiva === 'eliminar'" class="flex flex-col gap-5">
+    <div v-show="tabActiva === 'eliminar'" class="flex flex-col gap-5 py-4">
       <Message severity="warn" :closable="false" class="w-full">
         Esta acción es <strong>irreversible</strong>. Se eliminarán todos tus archivos, carpetas y datos de forma permanente.
       </Message>

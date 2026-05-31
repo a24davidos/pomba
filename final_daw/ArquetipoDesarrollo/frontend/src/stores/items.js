@@ -23,9 +23,16 @@ export const useGestorItems = defineStore('items', {
     },
 
     notificaciones: [],
+
+    panelInfo: {
+      visible: false,
+      itemId: null,
+    },
   }),
 
   getters: {
+    itemPanelInfo: (state) => state.items.find((i) => i.id === state.panelInfo.itemId) ?? null,
+
     itemsSeleccionados(state) {
       const set = new Set(state.seleccion.ids)
       return state.items.filter((i) => set.has(i.id))
@@ -36,7 +43,19 @@ export const useGestorItems = defineStore('items', {
 
   actions: {
 
-    // ── Modales ──────────────────────────────────────────────────────
+    //PANEL DE INFORMACIÓN -----------------------------------
+
+    abrirPanelInfo(item) {
+      this.panelInfo.visible = true
+      this.panelInfo.itemId = item.id
+    },
+
+    cerrarPanelInfo() {
+      this.panelInfo.visible = false
+      this.panelInfo.itemId = null
+    },
+
+    // MODALES ------------------------------------------------
 
     abrirModal(name, payload = null) {
       this.modal.open = true
@@ -76,7 +95,7 @@ export const useGestorItems = defineStore('items', {
       }
     },
 
-    // ── Notificaciones ───────────────────────────────────────────────
+    // NOTIFICACIONES ------------------------------------------------
 
     agregarNotificacion({ id, tipo, mensaje, icono, severidad = 'neutro' }) {
       this.eliminarNotificacion(id)
@@ -107,7 +126,7 @@ export const useGestorItems = defineStore('items', {
       }
     },
 
-    // ── Items (Lectura) ──────────────────────────────────────────────
+    // ITEMS (Lectura) ------------------------------------------------
 
     recargar() {
       return this.cargarItems(this.currentParams)
@@ -157,7 +176,7 @@ export const useGestorItems = defineStore('items', {
       }
     },
 
-    // ── Items (Escritura) ────────────────────────────────────────────
+    // ── Items (Escritura) ------------------------------------------------
 
     async crearCarpeta(data) {
       try {
@@ -513,7 +532,7 @@ export const useGestorItems = defineStore('items', {
       }
     },
 
-    // ── Descarga ─────────────────────────────────────────────────────
+    // -- DESCARGAR ------------------------------------------------
 
     async descargarItems() {
       const seleccion = this.itemsSeleccionados
@@ -572,11 +591,46 @@ export const useGestorItems = defineStore('items', {
       }
     },
 
-    // ── Selección ─────────────────────────────────────────────────────
+    //  VERSIONES (solo audio) ------------------------------------------------
+
+    async subirNuevaVersion(file, itemId) {
+      const NOTIF_ID = `version-${itemId}`
+      this.agregarNotificacion({
+        id: NOTIF_ID,
+        tipo: 'cargando',
+        mensaje: 'Subiendo nueva versión…',
+        icono: 'pi-upload',
+        severidad: 'neutro',
+      })
+      try {
+        const mimeType = file.type || 'application/octet-stream'
+        const { url_subida, key } = await apiItems.solicitarSubidaVersion(itemId)
+        await apiItems.subirDirecto(url_subida, file, mimeType)
+        const itemActualizado = await apiItems.confirmarSubidaVersion(itemId, key, file.size, mimeType)
+        this.actualizarItemsLocal([itemId], itemActualizado)
+        this.actualizarNotificacion(NOTIF_ID, {
+          tipo: 'exito',
+          mensaje: 'Nueva versión subida correctamente',
+          icono: 'pi-check',
+          severidad: 'neutro',
+        })
+        return true
+      } catch (e) {
+        this.actualizarNotificacion(NOTIF_ID, {
+          tipo: 'error',
+          mensaje: getErrorMessage(e) || 'No se pudo subir la nueva versión',
+          icono: 'pi-times',
+        }, 5)
+        return false
+      }
+    },
+
+    //  SELECCIONADOS  ------------------------------------------------
 
     seleccionar(item, index) {
       this.seleccion.ids = [item.id]
       this.seleccion.lastIndex = index
+      if (this.panelInfo.visible) this.panelInfo.itemId = item.id
     },
 
     toggleSeleccion(item, index) {
@@ -601,6 +655,7 @@ export const useGestorItems = defineStore('items', {
     limpiarSeleccion() {
       this.seleccion.ids = []
       this.seleccion.lastIndex = null
+      if (this.panelInfo.visible) this.cerrarPanelInfo()
     },
   },
 })

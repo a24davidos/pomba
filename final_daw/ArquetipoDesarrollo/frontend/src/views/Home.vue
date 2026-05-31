@@ -99,7 +99,7 @@ async function crearCarpeta() {
   }
 }
 
-// ── Barra de acciones para elementos seleccionados ─────────────────
+// Barra de acciones para elementos seleccionados ─────────────────
 async function eliminar() {
   const ids = gestor.itemsSeleccionados.map((i) => i.id)
   if (!ids.length) return
@@ -282,19 +282,9 @@ watch(
           </template>
 
           <template v-else>
-            <Button
-              icon="pi pi-download"
-              label="Descargar"
-              text size="small" rounded
-              :loading="gestor.descargando"
-              @click="descargar()"
-            />
-            <Button icon="pi pi-arrow-right" label="Mover a..." text size="small" rounded @click="gestor.abrirModalMover()" />
-            <Button
-              v-if="gestor.itemsSeleccionados.length === 1"
-              icon="pi pi-pencil" label="Renombrar" text size="small" rounded
-              @click="gestor.abrirModalRenombrar()"
-            />
+            <Button icon="pi pi-download" label="Descargar" text size="small" rounded :loading="gestor.descargando" @click="descargar()" />
+            <Button icon="pi pi-arrow-right" label="Mover" text size="small" rounded @click="gestor.abrirModalMover()" />
+            <Button v-if="gestor.itemsSeleccionados.length === 1" icon="pi pi-pencil" label="Renombrar" text size="small" rounded @click="gestor.abrirModalRenombrar()" />
             <Divider layout="vertical" class="h-4! mx-1!" />
             <Button icon="pi pi-trash" label="Eliminar" text size="small" rounded severity="danger" @click="eliminar" />
           </template>

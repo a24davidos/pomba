@@ -10,6 +10,7 @@ import ThemeToggle from '@/components/ThemeToggle.vue'
 import ModalRenombrar from '@/components/modals/ModalRenombrar.vue'
 import ModalMover from '@/components/modals/ModalMover.vue'
 import ModalPrevisualizar from '@/components/modals/ModalPrevisualizar.vue'
+import InfoPanel from '@/components/InfoPanel.vue'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
@@ -22,7 +23,7 @@ const { estado: confirmacion, aceptar: aceptarConfirmacion, cancelar: cancelarCo
 const router = useRouter()
 const route = useRoute()
 
-// ── Búsqueda ──────────────────────────────────────────────────────
+//  BUSQUEDA ------------------------------------------------
 const textoBusqueda = ref('')
 let timerBusqueda = null
 
@@ -42,7 +43,7 @@ watch(textoBusqueda, (texto) => {
   }, 400)
 })
 
-// ── Perfil ────────────────────────────────────────────────────────
+//  PERFIL ------------------------------------------------
 const perfil = ref({ nombre: '', apellidos: '', email: '', foto_perfil_url: null })
 
 const cargarPerfil = async () => {
@@ -63,7 +64,7 @@ const inicial = computed(() =>
   perfil.value.nombre ? perfil.value.nombre.charAt(0).toUpperCase() : null
 )
 
-// ── Menú de usuario (solo desktop) ───────────────────────────────
+// MENU DE USUARIO (ESCRITORIO) -----------------------
 const menuUsuario = ref()
 const mostrarAjustes = ref(false)
 
@@ -94,10 +95,10 @@ function alActualizarPerfil(actualizado) {
   perfil.value = { ...perfil.value, ...actualizado }
 }
 
-// ── Panel de usuario móvil ────────────────────────────────────────
+// MENU DE USUARIO (MOVIL) ------------------------------------------------
 const panelUsuarioMovil = ref(false)
 
-// ── Snackbars ─────────────────────────────────────────────────────
+// SNACKBAR ------------------------------------------------
 const CLASES_SNACKBAR = {
   neutro:      'bg-surface-800 dark:bg-surface-100 text-white dark:text-surface-900',
   exito:       'bg-green-700 dark:bg-green-100 text-white dark:text-green-900',
@@ -114,7 +115,7 @@ function clasesSnackbar(notif) {
 <template>
   <div class="grid grid-cols-1 sm:grid-cols-[60px_1fr] lg:grid-cols-[260px_1fr] grid-rows-[64px_1fr] h-screen w-full bg-surface-100 dark:bg-surface-950 gap-y-2 py-2 pr-3">
 
-    <!-- ── TOPBAR ───────────────────────────────────────────────── -->
+    <!-- -- TOPBAR ------------------------------------------------ -->
     <header class="col-span-full grid grid-cols-subgrid items-center z-10">
 
       <!-- Logo -->
@@ -181,7 +182,7 @@ function clasesSnackbar(notif) {
       </div>
     </header>
 
-    <!--── SIDEBAR desktop ──────────────────────────────────────── -->
+    <!----–––––––  SIDEBAR desktop ------------------------------------------------ -->
     <aside class="hidden sm:block sm:p-1 lg:p-3">
       <Sidebar
         :perfil="perfil"
@@ -190,14 +191,17 @@ function clasesSnackbar(notif) {
       />
     </aside>
 
-    <!--── MAIN ───────────────────────────────────────────────────-->
-    <main class="overflow-hidden bg-surface-0 dark:bg-surface-900 rounded-2xl ml-3">
-      <router-view />
+    <!--── MAIN -------------------------------------------------->
+    <main class="flex min-w-0 overflow-hidden bg-surface-0 dark:bg-surface-900 rounded-2xl ml-3">
+      <div class="flex-1 min-w-0 overflow-hidden">
+        <router-view />
+      </div>
+      <InfoPanel />
     </main>
 
   </div>
 
-  <!--── PANEL USUARIO MÓVIL ──────────────────────────────────────── -->
+  <!--── PANEL USUARIO MÓVIL ───────────────────────────────────────-->
   <Teleport to="body">
     <Transition name="panel-movil">
       <div
@@ -285,7 +289,7 @@ function clasesSnackbar(notif) {
   <ModalMover />
   <ModalPrevisualizar />
 
-  <!-- DIÁLOG -->
+  <!-- DIALOG -->
   <Dialog
     v-model:visible="confirmacion.abierto"
     :header="confirmacion.header"

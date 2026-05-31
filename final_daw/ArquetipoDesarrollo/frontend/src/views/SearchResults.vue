@@ -61,24 +61,11 @@ watch(
               </span>
             </div>
 
-            <Button
-              icon="pi pi-download"
-              label="Descargar"
-              text size="small" rounded
-              :loading="gestor.descargando"
-              @click="gestor.descargarItems()"
-            />
-            <Button icon="pi pi-arrow-right" label="Mover a..." text size="small" rounded @click="gestor.abrirModalMover()" />
-            <Button
-              v-if="gestor.itemsSeleccionados.length === 1"
-              icon="pi pi-pencil" label="Renombrar" text size="small" rounded
-              @click="gestor.abrirModalRenombrar()"
-            />
+            <Button icon="pi pi-download" label="Descargar" text size="small" rounded :loading="gestor.descargando" @click="gestor.descargarItems()" />
+            <Button icon="pi pi-arrow-right" label="Mover" text size="small" rounded @click="gestor.abrirModalMover()" />
+            <Button v-if="gestor.itemsSeleccionados.length === 1" icon="pi pi-pencil" label="Renombrar" text size="small" rounded @click="gestor.abrirModalRenombrar()" />
             <Divider layout="vertical" class="h-4! mx-1!" />
-            <Button
-              icon="pi pi-trash" label="Eliminar" text size="small" rounded severity="danger"
-              @click="gestor.eliminarItems(gestor.itemsSeleccionados.map(i => i.id))"
-            />
+            <Button icon="pi pi-trash" label="Eliminar" text size="small" rounded severity="danger" @click="gestor.eliminarItems(gestor.itemsSeleccionados.map(i => i.id))" />
           </div>
         </Transition>
       </div>

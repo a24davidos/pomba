@@ -11,8 +11,8 @@ from django.http import FileResponse
 from django.db import transaction
 
 from core.settings import development
-from .models import Item
-from .serializers import ItemSerializer
+from .models import Item, ItemVersion
+from .serializers import ItemSerializer, ItemVersionSerializer
 from .services import ItemService
 
 
@@ -331,6 +331,85 @@ class ItemViewSet(viewsets.ModelViewSet):
         response['Content-Type'] = 'application/zip'
         return response
 
+
+    # =========================================================
+    # VERSIONES (solo audio)
+    # =========================================================
+
+    @action(detail=True, methods=['get'], url_path='versiones', url_name='versiones-listar')
+    def versiones_listar(self, request, pk=None):
+        item = self.get_object()
+        versiones = ItemService.listar_versiones(item)
+        serializer = ItemVersionSerializer(versiones, many=True)
+        numero_actual = item.versiones.count() + 1
+        return Response({'versiones': serializer.data, 'numero_actual': numero_actual})
+
+    @action(detail=True, methods=['post'], url_path='versiones/solicitar_subida', url_name='versiones-solicitar')
+    def versiones_solicitar_subida(self, request, pk=None):
+        item = self.get_object()
+        if item.tipo != Item.Tipo.ARCHIVO or not (item.mime_type or '').startswith('audio/'):
+            return Response(
+                {'detail': 'El control de versiones solo está disponible para archivos de audio.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        url_subida, key = ItemService.generar_url_presignada_version(item)
+        return Response({'url_subida': url_subida, 'key': key})
+
+    @action(detail=True, methods=['post'], url_path='versiones/confirmar_subida', url_name='versiones-confirmar')
+    def versiones_confirmar_subida(self, request, pk=None):
+        item       = self.get_object()
+        key        = request.data.get('key', '').strip()
+        tamano     = request.data.get('tamano_bytes', 0)
+        mime_type  = request.data.get('mime_type', '')
+        if not key:
+            return Response({'detail': 'key es obligatorio.'}, status=status.HTTP_400_BAD_REQUEST)
+        item = ItemService.confirmar_nueva_version(item, key, tamano, mime_type)
+        threading.Thread(target=ItemService.indexar_item, args=(item,), daemon=True).start()
+        return Response(ItemSerializer(item, context={'request': request}).data)
+
+    @action(detail=True, methods=['get'], url_path=r'versiones/(?P<num>[0-9]+)/descargar', url_name='versiones-descargar')
+    def versiones_descargar(self, request, pk=None, num=None):
+        item = self.get_object()
+        try:
+            version = item.versiones.get(numero=int(num))
+        except ItemVersion.DoesNotExist:
+            return Response({'detail': 'Versión no encontrada.'}, status=status.HTTP_404_NOT_FOUND)
+        url = ItemService.generar_url_descarga_version(version, item.nombre)
+        return Response({'url': url})
+
+    @action(detail=True, methods=['post'], url_path=r'versiones/(?P<num>[0-9]+)/restaurar', url_name='versiones-restaurar')
+    def versiones_restaurar(self, request, pk=None, num=None):
+        item = self.get_object()
+        try:
+            version = item.versiones.get(numero=int(num))
+        except ItemVersion.DoesNotExist:
+            return Response({'detail': 'Versión no encontrada.'}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            item = ItemService.restaurar_version(item, version)
+        except Exception as e:
+            return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        threading.Thread(target=ItemService.indexar_item, args=(item,), daemon=True).start()
+        return Response(ItemSerializer(item, context={'request': request}).data)
+
+    @action(detail=True, methods=['get'], url_path=r'versiones/(?P<num>[0-9]+)/previsualizar', url_name='versiones-previsualizar')
+    def versiones_previsualizar(self, request, pk=None, num=None):
+        item = self.get_object()
+        try:
+            version = item.versiones.get(numero=int(num))
+        except ItemVersion.DoesNotExist:
+            return Response({'detail': 'Versión no encontrada.'}, status=status.HTTP_404_NOT_FOUND)
+        url = ItemService.generar_url_preview_version(version)
+        return Response({'url': url})
+
+    @action(detail=True, methods=['delete'], url_path=r'versiones/(?P<num>[0-9]+)', url_name='versiones-eliminar')
+    def versiones_eliminar(self, request, pk=None, num=None):
+        item = self.get_object()
+        try:
+            version = item.versiones.get(numero=int(num))
+        except ItemVersion.DoesNotExist:
+            return Response({'detail': 'Versión no encontrada.'}, status=status.HTTP_404_NOT_FOUND)
+        ItemService.eliminar_version(version, development.AWS_STORAGE_BUCKET_NAME)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     # =========================================================
     # BÚSQUEDA
