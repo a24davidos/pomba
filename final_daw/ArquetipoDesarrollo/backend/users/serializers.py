@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core import exceptions
+from drf_spectacular.utils import extend_schema_field
 
 Usuario = get_user_model()
 
@@ -34,6 +35,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         model = Usuario
         fields = ("id", "email", "nombre", "apellidos", "foto_perfil_url", "tema")
 
+    @extend_schema_field(serializers.URLField(allow_null=True))
     def get_foto_perfil_url(self, obj):
         if not obj.foto_perfil:
             return None
