@@ -1,19 +1,21 @@
 <script setup>
-import { ref, onMounted, computed, watch, nextTick } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { authService } from '@/api/auth'
-import { servicioUsuario } from '@/api/users'
-import api from '@/api/api'
-import { useItemsStore } from '@/stores/items'
-import SettingsModal from '@/components/SettingsModal.vue'
+import { apiUsers } from '@/api/users'
+import { useGestorItems } from '@/stores/items'
+import SettingsModal from '@/components/modals/SettingsModal.vue'
 import Sidebar from '@/components/Sidebar.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
+import ModalRenombrar from '@/components/modals/ModalRenombrar.vue'
+import ModalMover from '@/components/modals/ModalMover.vue'
+import ModalPrevisualizar from '@/components/modals/ModalPrevisualizar.vue'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import { useConfirmacion } from '@/composables/useConfirmacion'
 
-const store = useItemsStore()
+const gestor = useGestorItems()
 const { estado: confirmacion, aceptar: aceptarConfirmacion, cancelar: cancelarConfirmacion } = useConfirmacion()
 
 const router = useRouter()
@@ -23,7 +25,6 @@ const route = useRoute()
 const textoBusqueda = ref('')
 let timerBusqueda = null
 
-// Sincroniza el input cuando el usuario naveg
 watch(() => route.query.q, (q) => {
   textoBusqueda.value = q || ''
 }, { immediate: true })
@@ -45,7 +46,7 @@ const perfil = ref({ nombre: '', apellidos: '', email: '', foto_perfil_url: null
 
 const cargarPerfil = async () => {
   try {
-    const datos = await servicioUsuario.obtenerPerfil()
+    const datos = await apiUsers.obtenerPerfil()
     perfil.value = { ...datos }
     if (datos.tema) {
       const dark = datos.tema === 'oscuro'
@@ -95,90 +96,6 @@ function alActualizarPerfil(actualizado) {
 // ── Panel de usuario móvil ────────────────────────────────────────
 const panelUsuarioMovil = ref(false)
 
-// ── Modal renombrar (global, compartido por Home y SearchResults) ─
-const inputRenombrar = ref('')
-
-// ── Modal mover!! ──────────────────────────────────────────
-// Le llamo Picker porque como el file explorer tb te permite seleccionar para que no haya lios
-const carpetaPickerId = ref(null)
-const carpetasEnPicker = ref([])
-const breadcrumbPicker = ref([{ label: 'Mi unidad', id: null }])
-const cargandoPicker = ref(false)
-const idsMoviendo = ref([])
-let tokenPicker = 0
-
-watch(() => store.ui.modal, async (modal) => {
-  if (modal.open && modal.name === 'renombrar') {
-    inputRenombrar.value = modal.payload?.nombre || ''
-  } else if (modal.open && modal.name === 'mover') {
-    carpetaPickerId.value = null
-    breadcrumbPicker.value = [{ label: 'Mi unidad', id: null }]
-    if (modal.payload && modal.payload.ids) {
-      idsMoviendo.value = modal.payload.ids
-    } else {
-      idsMoviendo.value = []
-    }
-    await cargarCarpetasEnPicker(null)
-  }
-}, { deep: true })
-
-async function cargarCarpetasEnPicker(carpetaId) {
-  const token = ++tokenPicker
-  cargandoPicker.value = true
-  try {
-    const params = { papelera: 'false' }
-    if (carpetaId) {
-      params.carpeta = carpetaId
-    }
-    const resp = await api.get('items/', { params })
-    if (token !== tokenPicker) return
-    carpetasEnPicker.value = resp.data.items.filter(
-      (i) => i.tipo === 'carpeta' && !idsMoviendo.value.includes(i.id)
-    )
-  } catch {
-    carpetasEnPicker.value = []
-  } finally {
-    if (token === tokenPicker) cargandoPicker.value = false
-  }
-}
-
-async function navegarAPicker(carpeta) {
-  carpetaPickerId.value = carpeta.id
-  breadcrumbPicker.value.push({ label: carpeta.nombre, id: carpeta.id })
-  await cargarCarpetasEnPicker(carpeta.id)
-}
-
-async function irABreadcrumbPicker(idx) {
-  const nodo = breadcrumbPicker.value[idx]
-  breadcrumbPicker.value = breadcrumbPicker.value.slice(0, idx + 1)
-  carpetaPickerId.value = nodo.id
-  await cargarCarpetasEnPicker(nodo.id)
-}
-
-async function confirmarMover() {
-  await store.moverItems(idsMoviendo.value, carpetaPickerId.value)
-  store.cerrarModal()
-}
-
-async function renombrar() {
-  const id = store.ui.modal.payload.id
-  const exito = await store.renombrarItem(id, inputRenombrar.value)
-  if (exito) {
-    store.cerrarModal()
-    inputRenombrar.value = ''
-  }
-}
-
-//  Preview 
-const tipoPreview = computed(() => {
-  const mime = store.ui.modal.payload?.item?.mime_type || ''
-  if (mime.startsWith('image/')) return 'imagen'
-  if (mime.startsWith('audio/')) return 'audio'
-  if (mime === 'application/pdf') return 'pdf'
-  return null
-})
-
-
 // ── Snackbars ─────────────────────────────────────────────────────
 const CLASES_SNACKBAR = {
   neutro:      'bg-surface-800 dark:bg-surface-100 text-white dark:text-surface-900',
@@ -197,10 +114,9 @@ function clasesSnackbar(notif) {
   <div class="grid grid-cols-1 sm:grid-cols-[60px_1fr] lg:grid-cols-[260px_1fr] grid-rows-[64px_1fr] h-screen w-full bg-surface-100 dark:bg-surface-950 gap-y-2 py-2 pr-3">
 
     <!-- ── TOPBAR ───────────────────────────────────────────────── -->
-    <!-- Sub-grid que utiliza las mismas columnas del layout principal -->
     <header class="col-span-full grid grid-cols-subgrid items-center z-10">
 
-      <!-- Logo — ocupa exactamente la columna del sidebar -->
+      <!-- Logo -->
       <div class="hidden sm:flex items-center justify-center gap-3 sm:p-1 lg:py-3 lg:pl-6 lg:justify-start">
         <div class="w-11 h-11 shrink-0 text-surface-900 dark:text-surface-0">
           <svg viewBox="0 0 358 316" class="w-full h-full" fill="currentColor" aria-hidden="true">
@@ -212,7 +128,7 @@ function clasesSnackbar(notif) {
         </span>
       </div>
 
-      <!-- Buscador + controles — columna del main, con el mismo margen izquierdo que <main> -->
+      <!-- Buscador + controles -->
       <div class="flex gap-2 items-center pl-4 pr-0 sm:pl-3 lg:pr-6">
 
         <!-- Buscador -->
@@ -268,7 +184,7 @@ function clasesSnackbar(notif) {
       </div>
     </header>
 
-    <!-- ── SIDEBAR desktop ──────────────────────────────────────── -->
+    <!--── SIDEBAR desktop ──────────────────────────────────────── -->
     <aside class="hidden sm:block sm:p-1 lg:p-3">
       <Sidebar
         :perfil="perfil"
@@ -277,14 +193,14 @@ function clasesSnackbar(notif) {
       />
     </aside>
 
-    <!-- ── MAIN ─────────────────────────────────────────────────── -->
+    <!--── MAIN ───────────────────────────────────────────────────-->
     <main class="overflow-hidden bg-surface-0 dark:bg-surface-900 rounded-2xl ml-3">
       <router-view />
     </main>
 
   </div>
 
-  <!-- ── PANEL USUARIO MÓVIL ──────────────────────────────────────── -->
+  <!--── PANEL USUARIO MÓVIL ──────────────────────────────────────── -->
   <Teleport to="body">
     <Transition name="panel-movil">
       <div
@@ -341,11 +257,11 @@ function clasesSnackbar(notif) {
     @profile-updated="alActualizarPerfil"
   />
 
-  <!-- SNACKBARS — globales, visibles en cualquier vista -->
+  <!-- SNACKBARS -->
   <div class="fixed bottom-20 left-3 z-50 flex flex-col-reverse gap-2 sm:bottom-6 sm:left-6">
     <TransitionGroup name="snack">
       <div
-        v-for="notif in store.notificaciones"
+        v-for="notif in gestor.notificaciones"
         :key="notif.id"
         class="flex items-center gap-3 text-sm font-medium px-4 py-3 rounded-xl shadow-lg"
         :class="clasesSnackbar(notif)"
@@ -357,7 +273,7 @@ function clasesSnackbar(notif) {
         <span>{{ notif.mensaje }}</span>
         <button
           v-if="notif.tipo !== 'cargando'"
-          @click="store.eliminarNotificacion(notif.id)"
+          @click="gestor.eliminarNotificacion(notif.id)"
           class="ml-1 shrink-0 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
           aria-label="Cerrar"
         >
@@ -367,189 +283,12 @@ function clasesSnackbar(notif) {
     </TransitionGroup>
   </div>
 
-  <!-- MODAL RENOMBRAR — global, abierto desde cualquier vista -->
-  <Dialog
-    v-if="store.ui.modal.name === 'renombrar'"
-    v-model:visible="store.ui.modal.open"
-    header="Renombrar"
-    :style="{ width: '25rem' }"
-    modal :draggable="false" :closable="false"
-  >
-    <div class="flex flex-col gap-2 mb-4">
-      <InputText
-        v-model="inputRenombrar"
-        class="flex-auto"
-        autocomplete="off"
-        placeholder="Nuevo nombre"
-        @keyup.enter="renombrar"
-        autofocus
-      />
-    </div>
-    <template #footer>
-      <Button label="Cancelar" text severity="secondary" @click="store.cerrarModal" />
-      <Button label="Confirmar" @click="renombrar" :disabled="!inputRenombrar.trim()" />
-    </template>
-  </Dialog>
+  <!-- MODALES GLOBALES -->
+  <ModalRenombrar />
+  <ModalMover />
+  <ModalPrevisualizar />
 
-  <!-- MODAL MOVER-->
-  <Dialog
-    v-if="store.ui.modal.name === 'mover'"
-    v-model:visible="store.ui.modal.open"
-    header="Mover a..."
-    :style="{ width: '28rem' }"
-    modal :draggable="false" :closable="false"
-  >
-    <!-- Breadcrumb del picker -->
-    <div class="flex items-center gap-1 text-sm mb-3 flex-wrap min-h-6">
-      <template v-for="(nodo, idx) in breadcrumbPicker" :key="idx">
-        <span v-if="idx > 0" class="text-surface-300 dark:text-surface-600 select-none">›</span>
-        <button
-          v-if="idx < breadcrumbPicker.length - 1"
-          @click="irABreadcrumbPicker(idx)"
-          class="font-medium text-primary hover:underline cursor-pointer bg-transparent border-none p-0"
-        >{{ nodo.label }}</button>
-        <span v-else class="text-surface-600 dark:text-surface-400 font-medium">{{ nodo.label }}</span>
-      </template>
-    </div>
-
-    <!-- Lista de carpetas -->
-    <div class="min-h-40 max-h-65 overflow-y-auto rounded-lg border border-surface-200 dark:border-surface-700">
-      <div v-if="cargandoPicker" class="flex items-center justify-center py-10 text-surface-400">
-        <i class="pi pi-spin pi-spinner text-xl" />
-      </div>
-      <div
-        v-else-if="!carpetasEnPicker.length"
-        class="flex flex-col items-center justify-center py-10 gap-2 text-surface-400"
-      >
-        <i class="pi pi-folder-open text-2xl" />
-        <span class="text-xs">Sin subcarpetas</span>
-      </div>
-      <div v-else>
-        <button
-          v-for="carpeta in carpetasEnPicker"
-          :key="carpeta.id"
-          @click="navegarAPicker(carpeta)"
-          class="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-left
-                 text-surface-700 dark:text-surface-300
-                 hover:bg-surface-50 dark:hover:bg-surface-800
-                 transition-colors border-b border-surface-100 dark:border-surface-800 last:border-0"
-        >
-          <i class="pi pi-folder text-yellow-500 shrink-0" />
-          <span class="truncate flex-1">{{ carpeta.nombre }}</span>
-          <i class="pi pi-chevron-right text-surface-300 dark:text-surface-600 text-xs shrink-0" />
-        </button>
-      </div>
-    </div>
-
-    <template #footer>
-      <Button label="Cancelar" text severity="secondary" @click="store.cerrarModal" />
-      <Button label="Mover aquí" icon="pi pi-check" @click="confirmarMover" />
-    </template>
-  </Dialog>
-
-  <!-- MODAL PREVISUALIZAR -->
-  <Dialog
-    v-if="store.ui.modal.name === 'previsualizar'"
-    v-model:visible="store.ui.modal.open"
-    :style="tipoPreview === 'audio' ? { width: '26rem' } : { width: '92vw', maxWidth: '1200px' }"
-    :breakpoints="{ '640px': '96vw' }"
-    modal :draggable="false" :closable="false"
-    @hide="store.cerrarModal"
-    :pt="{
-      root:    { class: 'overflow-hidden !rounded-2xl shadow-2xl' },
-      header:  { class: '!hidden' },
-      content: { style: 'padding:0; overflow:hidden' },
-    }"
-  >
-    <!-- IMAGEN -->
-    <div v-if="tipoPreview === 'imagen'" class="relative bg-black select-none">
-      <div class="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 py-3">
-        <div class="flex items-center gap-2 min-w-0 bg-black/40 backdrop-blur-sm rounded-full px-3 py-1">
-          <i class="pi pi-image text-white/60 text-xs shrink-0" />
-          <span class="text-white/90 text-sm font-medium truncate max-w-xs">
-            {{ store.ui.modal.payload?.item?.nombre }}
-          </span>
-        </div>
-      </div>
-      <button
-        @click="store.cerrarModal"
-        class="absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-black/40 hover:bg-black/70
-               flex items-center justify-center text-white transition-colors cursor-pointer"
-        aria-label="Cerrar"
-      >
-        <i class="pi pi-times text-xs" />
-      </button>
-      <img
-        :src="store.ui.modal.payload?.url"
-        :alt="store.ui.modal.payload?.item?.nombre"
-        class="block mx-auto max-w-full object-contain"
-        style="max-height: 90vh"
-      />
-    </div>
-
-    <!--  AUDIO  -->
-    <div v-else-if="tipoPreview === 'audio'"
-         class="flex flex-col bg-surface-0 dark:bg-surface-900">
-      <div class="flex items-center justify-between px-5 py-4">
-        <div class="flex items-center gap-2 min-w-0">
-          <i class="pi pi-headphones text-pink-400 shrink-0" />
-          <span class="text-surface-800 dark:text-surface-100 text-sm font-semibold truncate">
-            {{ store.ui.modal.payload?.item?.nombre }}
-          </span>
-        </div>
-        <button
-          @click="store.cerrarModal"
-          class="w-7 h-7 shrink-0 rounded-full
-                 bg-surface-100 hover:bg-surface-200
-                 dark:bg-surface-700 dark:hover:bg-surface-600
-                 flex items-center justify-center
-                 text-surface-500 dark:text-surface-400
-                 transition-colors cursor-pointer ml-2"
-          aria-label="Cerrar"
-        >
-          <i class="pi pi-times text-xs" />
-        </button>
-      </div>
-      <div class="px-5 py-6">
-        <audio
-          controls
-          autoplay
-          :src="store.ui.modal.payload?.url"
-          class="w-full"
-        />
-      </div>
-    </div>
-
-    <!-- PDF-->
-    <div v-else-if="tipoPreview === 'pdf'" class="flex flex-col">
-      <div class="flex items-center justify-between px-4 py-3
-                  bg-surface-100 dark:bg-surface-800
-                  border-b border-surface-200 dark:border-surface-700">
-        <div class="flex items-center gap-2 min-w-0">
-          <i class="pi pi-file-pdf text-red-400 shrink-0" />
-          <span class="text-surface-700 dark:text-surface-200 text-sm font-medium truncate">
-            {{ store.ui.modal.payload?.item?.nombre }}
-          </span>
-        </div>
-        <button
-          @click="store.cerrarModal"
-          class="w-7 h-7 shrink-0 rounded-full bg-surface-200 dark:bg-surface-700
-                 hover:bg-surface-300 dark:hover:bg-surface-600
-                 flex items-center justify-center text-surface-500 dark:text-surface-400
-                 transition-colors cursor-pointer ml-2"
-          aria-label="Cerrar"
-        >
-          <i class="pi pi-times text-xs" />
-        </button>
-      </div>
-      <iframe
-        :src="store.ui.modal.payload?.url"
-        class="w-full block border-0"
-        style="height: 87vh"
-      />
-    </div>
-  </Dialog>
-
+  <!-- DIÁLOG -->
   <Dialog
     v-model:visible="confirmacion.abierto"
     :header="confirmacion.header"

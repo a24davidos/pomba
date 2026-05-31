@@ -1,7 +1,7 @@
 <script setup>
 import { ref, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useItemsStore } from '@/stores/items'
+import { useGestorItems } from '@/stores/items'
 import { useConfirmacion } from '@/composables/useConfirmacion'
 
 import FileTable from '../components/FileTable.vue'
@@ -12,7 +12,7 @@ import InputText from 'primevue/inputtext'
 import Divider from 'primevue/divider'
 
 
-const store = useItemsStore()
+const gestor = useGestorItems()
 const route = useRoute()
 const router = useRouter()
 const { confirmar } = useConfirmacion()
@@ -65,7 +65,7 @@ const breadcrumbInicio = computed(() => {
 })
 
 const rutaBreadcrumb = computed(() =>
-  store.breadcrumb
+  gestor.breadcrumb
     .filter((nodo) => nodo.id !== null)
     .map((nodo) => ({
       label: nodo.label,
@@ -82,17 +82,17 @@ function cargarDesdeRuta() {
   const vista = route.params.view || 'drive'
   const folderId = route.params.folderId || null
   const config = CONFIGURACION_VISTAS[vista] || CONFIGURACION_VISTAS.drive
-  return store.cargarItems({ ...config.paramsBase, carpeta: folderId })
+  return gestor.cargarItems({ ...config.paramsBase, carpeta: folderId })
 }
 
 function cerrarModal() {
-  store.cerrarModal()
+  gestor.cerrarModal()
   inputNuevaCarpeta.value = ''
 }
 
 async function crearCarpeta() {
   const idPadre = route.params.folderId || null
-  const exito = await store.crearCarpeta({ nombre: inputNuevaCarpeta.value, tipo: 'carpeta', padre: idPadre })
+  const exito = await gestor.crearCarpeta({ nombre: inputNuevaCarpeta.value, tipo: 'carpeta', padre: idPadre })
   if (exito) {
     cerrarModal()
     await cargarDesdeRuta()
@@ -101,13 +101,13 @@ async function crearCarpeta() {
 
 // ── Barra de acciones para elementos seleccionados ─────────────────
 async function eliminar() {
-  const ids = store.itemsSeleccionados.map((i) => i.id)
+  const ids = gestor.itemsSeleccionados.map((i) => i.id)
   if (!ids.length) return
-  await store.eliminarItems(ids)
+  await gestor.eliminarItems(ids)
 }
 
 async function eliminarDefinitivamente() {
-  const ids = store.itemsSeleccionados.map((i) => i.id)
+  const ids = gestor.itemsSeleccionados.map((i) => i.id)
   if (!ids.length) return
   const ok = await confirmar({
     header: '¿Eliminar definitivamente?',
@@ -115,23 +115,23 @@ async function eliminarDefinitivamente() {
     labelAceptar: 'Eliminar',
     peligro: true,
   })
-  if (ok) await store.eliminarDefinitivamente(ids)
+  if (ok) await gestor.eliminarDefinitivamente(ids)
 }
 
 async function restaurar() {
-  const ids = store.itemsSeleccionados.map((i) => i.id)
+  const ids = gestor.itemsSeleccionados.map((i) => i.id)
   if (!ids.length) return
-  await store.restaurarItems(ids)
+  await gestor.restaurarItems(ids)
 }
 
 async function descargar() {
-  await store.descargarItems()
+  await gestor.descargarItems()
 }
 
 watch(
   () => [route.params.view, route.params.folderId],
   async () => {
-    store.limpiarSeleccion()
+    gestor.limpiarSeleccion()
     popoverBreadcrumb.value?.hide()
     await cargarDesdeRuta()
   },
@@ -148,9 +148,8 @@ watch(
     <!-- BREADCRUMB -->
     <nav class="flex items-center flex-nowrap gap-0.5">
 
-      <!-- SIN COLAPSO: raíz + hasta 2 sub-niveles (todo visible) -->
+      <!-- SIN COLAPSO: raíz + hasta 2 sub-niveles -->
       <template v-if="rutaBreadcrumb.length <= 2">
-        <!-- En raíz: Mi unidad es el título de página -->
         <span
           v-if="rutaBreadcrumb.length === 0"
           class="flex items-center gap-2 px-2 py-1 text-lg font-bold
@@ -198,7 +197,7 @@ watch(
         >···</button>
 
         <i class="pi pi-angle-right text-sm text-surface-300 dark:text-surface-600 shrink-0 mx-0.5" />
-        <!-- Padre (penúltimo) — acceso rápido a "subir un nivel" -->
+        <!-- Padre del actual -->
         <button
           @click="rutaBreadcrumb.at(-2).command()"
           class="max-w-36 truncate px-2 py-1 rounded-md text-base font-medium shrink-0
@@ -245,9 +244,7 @@ watch(
 
     <!--
       ACTION BAR — solo desktop (sm:flex).
-      En móvil las acciones vienen del menú ··· y de la barra
-      de selección integrada en FileTable.
-    -->
+      En móvil las acciones vienen del menú ··· y de la barra de selección integrada en FileTable. -->
     <div class="h-9 hidden sm:block">
       <Transition
         enter-active-class="transition-all duration-150 ease-out"
@@ -256,7 +253,7 @@ watch(
         leave-to-class="opacity-0 -translate-y-1"
       >
         <div
-          v-if="store.itemsSeleccionados.length > 0"
+          v-if="gestor.itemsSeleccionados.length > 0"
           class="flex items-center gap-1
                  bg-surface-0 dark:bg-surface-900
                  border border-surface-200 dark:border-surface-700
@@ -264,7 +261,7 @@ watch(
         >
           <div class="flex items-center gap-2 pr-3 border-r border-surface-200 dark:border-surface-700 mr-1">
             <button
-              @click="store.limpiarSeleccion()"
+              @click="gestor.limpiarSeleccion()"
               aria-label="Deseleccionar todo"
               class="w-6 h-6 rounded-full flex items-center justify-center
                      text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-800
@@ -273,8 +270,8 @@ watch(
               <i class="pi pi-times text-xs" />
             </button>
             <span class="text-xs font-medium whitespace-nowrap">
-              {{ store.itemsSeleccionados.length }}
-              {{ store.itemsSeleccionados.length === 1 ? 'seleccionado' : 'seleccionados' }}
+              {{ gestor.itemsSeleccionados.length }}
+              {{ gestor.itemsSeleccionados.length === 1 ? 'seleccionado' : 'seleccionados' }}
             </span>
           </div>
 
@@ -289,14 +286,14 @@ watch(
               icon="pi pi-download"
               label="Descargar"
               text size="small" rounded
-              :loading="store.descargando"
+              :loading="gestor.descargando"
               @click="descargar()"
             />
-            <Button icon="pi pi-arrow-right" label="Mover a..." text size="small" rounded @click="store.abrirModalMover()" />
+            <Button icon="pi pi-arrow-right" label="Mover a..." text size="small" rounded @click="gestor.abrirModalMover()" />
             <Button
-              v-if="store.itemsSeleccionados.length === 1"
+              v-if="gestor.itemsSeleccionados.length === 1"
               icon="pi pi-pencil" label="Renombrar" text size="small" rounded
-              @click="store.abrirModalRenombrar()"
+              @click="gestor.abrirModalRenombrar()"
             />
             <Divider layout="vertical" class="h-4! mx-1!" />
             <Button icon="pi pi-trash" label="Eliminar" text size="small" rounded severity="danger" @click="eliminar" />
@@ -313,13 +310,13 @@ watch(
                 [&::-webkit-scrollbar-thumb]:rounded-full
                 [&::-webkit-scrollbar-thumb]:bg-surface-300
                 dark:[&::-webkit-scrollbar-thumb]:bg-surface-600">
-      <FileTable @rename="store.abrirModalRenombrar" @move="store.abrirModalMover" />
+      <FileTable @rename="gestor.abrirModalRenombrar" @move="gestor.abrirModalMover" />
     </div>
 
     <!-- MODAL NUEVA CARPETA -->
     <Dialog
-      v-if="store.ui.modal.name === 'crearCarpeta'"
-      v-model:visible="store.ui.modal.open"
+      v-if="gestor.modal.name === 'crearCarpeta'"
+      v-model:visible="gestor.modal.open"
       header="Nueva Carpeta"
       :style="{ width: '25rem' }"
       modal :draggable="false" :closable="false"

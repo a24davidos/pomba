@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useItemsStore } from '@/stores/items'
+import { useGestorItems } from '@/stores/items'
 import { useConfirmacion } from '@/composables/useConfirmacion'
 
 import ContextMenu from 'primevue/contextmenu'
@@ -18,7 +18,7 @@ const emit = defineEmits(['abrir-ajustes', 'cerrar-sesion'])
 
 const route = useRoute()
 const router = useRouter()
-const store = useItemsStore()
+const gestor = useGestorItems()
 const { confirmar } = useConfirmacion()
 
 const menuPapelera = ref(null)
@@ -33,7 +33,7 @@ const nuevoMenuItems = [
   {
     label: 'Nueva carpeta',
     icon: 'pi pi-folder',
-    command: () => { store.abrirModal('crearCarpeta'); fabAbierto.value = false },
+    command: () => { gestor.abrirModal('crearCarpeta'); fabAbierto.value = false },
   },
   { separator: true },
   {
@@ -59,13 +59,13 @@ const trashMenuItems = [
         labelAceptar: 'Vaciar',
         peligro: true,
       })
-      if (ok) await store.vaciarPapelera()
+      if (ok) await gestor.vaciarPapelera()
     },
   },
   {
     label: 'Restaurar todo',
     icon: 'pi pi-replay',
-    command: async () => await store.restaurarPapelera(),
+    command: async () => await gestor.restaurarPapelera(),
   },
 ]
 
@@ -106,7 +106,7 @@ async function subirArchivo(event) {
   const archivo = event.target.files[0]
   if (!archivo) return
   const folderId = route.params.folderId ? Number(route.params.folderId) : null
-  await store.subirArchivo(archivo, folderId)
+  await gestor.subirArchivo(archivo, folderId)
   event.target.value = ''
 }
 
@@ -115,7 +115,7 @@ async function subirCarpeta(event) {
   const files = Array.from(event.target.files)
   if (!files.length) return
   const folderId = route.params.folderId ? Number(route.params.folderId) : null
-  await store.subirCarpeta(files, folderId)
+  await gestor.subirCarpeta(files, folderId)
   event.target.value = ''
 }
 
@@ -130,10 +130,10 @@ function togglePanelUsuario() {
 </script>
 
 <template>
-  <!-- INPUT FILE OCULTO — archivo individual -->
+  <!-- INPUT FILE OCULTO — Para subir archivo indivisual -->
   <input ref="fileInput" type="file" class="hidden" @change="subirArchivo" />
 
-  <!-- INPUT FILE OCULTO — carpeta completa -->
+  <!-- INPUT FILE OCULTO — Para subir carpeta de archivos -->
   <input ref="folderInput" type="file" class="hidden" webkitdirectory @change="subirCarpeta" />
 
   <!-- ── SIDEBAR DESKTOP ────────────────────────────────────────── -->
@@ -234,7 +234,7 @@ function togglePanelUsuario() {
       />
     </Transition>
 
-    <!-- Mini-menú del FAB -->
+    <!-- Minimenú del FAB -->
     <Transition name="fab-menu">
       <div
         v-if="fabAbierto"

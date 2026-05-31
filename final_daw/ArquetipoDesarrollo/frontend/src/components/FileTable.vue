@@ -1,11 +1,11 @@
 <script setup>
 import { ref, computed, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useItemsStore } from '@/stores/items'
+import { useGestorItems } from '@/stores/items'
 import { useConfirmacion } from '@/composables/useConfirmacion'
 import { formatDate } from '../utils/date'
 
-const store = useItemsStore()
+const gestor = useGestorItems()
 const { confirmar } = useConfirmacion()
 //Por defecto
 const sortCampo = ref('fecha_modificacion')
@@ -30,7 +30,7 @@ const comparadores = {
 const itemsOrdenados = computed(() => {
   const dir = sortDir.value === 'asc' ? 1 : -1
   const comparar = comparadores[sortCampo.value]
-  return [...store.items].sort((a, b) => dir * comparar(a, b))
+  return [...gestor.items].sort((a, b) => dir * comparar(a, b))
 })
 const route = useRoute()
 const router = useRouter()
@@ -65,38 +65,38 @@ function handleClick(event, item, index) {
   }
 
   if (esTactil) {
-    store.limpiarSeleccion()
+    gestor.limpiarSeleccion()
     abrirItem(item)
     return
   }
 
-  if (event.shiftKey && store.seleccion.lastIndex !== null) {
-    store.seleccionarRango(index, itemsOrdenados.value)
+  if (event.shiftKey && gestor.seleccion.lastIndex !== null) {
+    gestor.seleccionarRango(index, itemsOrdenados.value)
     return
   }
   if (event.ctrlKey || event.metaKey) {
-    store.toggleSeleccion(item, index)
+    gestor.toggleSeleccion(item, index)
     return
   }
-  if (store.seleccion.ids.length === 1 && store.seleccion.ids[0] === item.id) {
-    store.limpiarSeleccion()
+  if (gestor.seleccion.ids.length === 1 && gestor.seleccion.ids[0] === item.id) {
+    gestor.limpiarSeleccion()
     return
   }
-  store.seleccionar(item, index)
+  gestor.seleccionar(item, index)
 }
 
 function handleDoubleClick(item) {
-  store.limpiarSeleccion()
+  gestor.limpiarSeleccion()
   if (item.tipo === 'carpeta') {
     abrirItem(item)
   } else if (esPrevisualizableItem(item) && !enPapelera.value) {
-    store.abrirModalPrevisualizar(item)
+    gestor.abrirModalPrevisualizar(item)
   }
 }
 
 function handleBackgroundClick(event) {
   if (event.target === event.currentTarget) {
-    store.limpiarSeleccion()
+    gestor.limpiarSeleccion()
     menuAbierto.value = null
   }
 }
@@ -104,16 +104,16 @@ function handleBackgroundClick(event) {
 // ── Lógica compartida de acciones ────────────────────────────────────
 async function ejecutarAccion(accion, item) {
   if (accion === 'preview') {
-    await store.abrirModalPrevisualizar(item)
+    await gestor.abrirModalPrevisualizar(item)
   } else if (accion === 'download') {
-    store.seleccionar(item, null)
-    await store.descargarItems()
+    gestor.seleccionar(item, null)
+    await gestor.descargarItems()
   } else if (accion === 'favorite' || accion === 'unfavorite') {
-    await store.marcarFavoritos([item.id])
+    await gestor.marcarFavoritos([item.id])
   } else if (accion === 'delete') {
-    await store.eliminarItems([item.id])
+    await gestor.eliminarItems([item.id])
   } else if (accion === 'restore') {
-    await store.restaurarItems([item.id])
+    await gestor.restaurarItems([item.id])
   } else if (accion === 'deleteForever') {
     const ok = await confirmar({
       header: '¿Eliminar definitivamente?',
@@ -121,7 +121,7 @@ async function ejecutarAccion(accion, item) {
       labelAceptar: 'Eliminar',
       peligro: true,
     })
-    if (ok) await store.eliminarDefinitivamente([item.id])
+    if (ok) await gestor.eliminarDefinitivamente([item.id])
   } else {
     emit(accion, item)
   }
@@ -146,8 +146,8 @@ function handleContextMenu(event, item, index) {
   event.preventDefault()
   menuAbierto.value = null
 
-  if (!store.seleccion.ids.includes(item.id)) {
-    store.seleccionar(item, index)
+  if (!gestor.seleccion.ids.includes(item.id)) {
+    gestor.seleccionar(item, index)
   }
 
   const MENU_W = 176
@@ -160,19 +160,19 @@ function handleContextMenu(event, item, index) {
 
 async function accionContextMenu(accion) {
   contextMenu.value.visible = false
-  const ids = store.seleccion.ids
+  const ids = gestor.seleccion.ids
 
   if (accion === 'preview') {
-    const item = store.itemsSeleccionados[0]
-    if (item) await store.abrirModalPrevisualizar(item)
+    const item = gestor.itemsSeleccionados[0]
+    if (item) await gestor.abrirModalPrevisualizar(item)
   } else if (accion === 'download') {
-    await store.descargarItems()
+    await gestor.descargarItems()
   } else if (accion === 'favorite' || accion === 'unfavorite') {
-    await store.marcarFavoritos(ids)
+    await gestor.marcarFavoritos(ids)
   } else if (accion === 'delete') {
-    await store.eliminarItems(ids)
+    await gestor.eliminarItems(ids)
   } else if (accion === 'restore') {
-    await store.restaurarItems(ids)
+    await gestor.restaurarItems(ids)
   } else if (accion === 'deleteForever') {
     const ok = await confirmar({
       header: '¿Eliminar definitivamente?',
@@ -180,7 +180,7 @@ async function accionContextMenu(accion) {
       labelAceptar: 'Eliminar',
       peligro: true,
     })
-    if (ok) await store.eliminarDefinitivamente(ids)
+    if (ok) await gestor.eliminarDefinitivamente(ids)
   } else {
     emit(accion)
   }
@@ -207,7 +207,7 @@ onUnmounted(() => {
 })
 
 function estaSeleccionado(item) {
-  return store.seleccion.ids.includes(item.id)
+  return gestor.seleccion.ids.includes(item.id)
 }
 
 function formatBytes(bytes) {
@@ -249,13 +249,13 @@ function obtenerIconoArchivo(mimeType) {
   >
 
     <!-- ── Loading ─────────────────────────────────────────────── -->
-    <div v-if="store.loading" class="flex items-center justify-center py-16 text-surface-400">
+    <div v-if="gestor.loading" class="flex items-center justify-center py-16 text-surface-400">
       <i class="pi pi-spin pi-spinner text-2xl" />
     </div>
 
     <!-- ── Vacío ───────────────────────────────────────────────── -->
     <div
-      v-else-if="!store.items.length"
+      v-else-if="!gestor.items.length"
       class="flex flex-col items-center justify-center py-24 gap-4"
     >
       <div class="w-16 h-16 rounded-2xl bg-surface-100 dark:bg-surface-800 flex items-center justify-center">
@@ -473,7 +473,7 @@ function obtenerIconoArchivo(mimeType) {
 
         <template v-else>
           <button
-            v-if="store.seleccion.ids.length === 1 && esPrevisualizableItem(contextMenu.item)"
+            v-if="gestor.seleccion.ids.length === 1 && esPrevisualizableItem(contextMenu.item)"
             @click="accionContextMenu('preview')"
             class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
           >
@@ -486,7 +486,7 @@ function obtenerIconoArchivo(mimeType) {
             <i class="pi pi-download text-surface-400" /> Descargar
           </button>
           <button
-            v-if="store.seleccion.ids.length === 1"
+            v-if="gestor.seleccion.ids.length === 1"
             @click="accionContextMenu('rename')"
             class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
           >
@@ -499,14 +499,14 @@ function obtenerIconoArchivo(mimeType) {
             <i class="pi pi-arrow-right text-surface-400" /> Mover a...
           </button>
           <button
-            v-if="store.seleccion.ids.length === 1 && !store.itemsSeleccionados[0]?.favorito"
+            v-if="gestor.seleccion.ids.length === 1 && !gestor.itemsSeleccionados[0]?.favorito"
             @click="accionContextMenu('favorite')"
             class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
           >
             <i class="pi pi-star text-surface-400" /> Marcar favorito
           </button>
           <button
-            v-else-if="store.seleccion.ids.length === 1 && store.itemsSeleccionados[0]?.favorito"
+            v-else-if="gestor.seleccion.ids.length === 1 && gestor.itemsSeleccionados[0]?.favorito"
             @click="accionContextMenu('unfavorite')"
             class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
           >
