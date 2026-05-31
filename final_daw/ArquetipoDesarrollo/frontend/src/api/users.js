@@ -1,6 +1,6 @@
-import api from './api';
+import api from './axios';
 
-export const servicioUsuario = {
+export const apiUsers = {
 
   /* Devuelve el perfil del usuario autenticado */
   async obtenerPerfil() {
@@ -8,13 +8,13 @@ export const servicioUsuario = {
     return data;
   },
 
-  /* Actualiza nombre, apellidos o email (PATCH parcial) */
+  /* Actualiza nombre, apellidos o email*/
   async actualizarPerfil(datos) {
     const { data } = await api.patch('user/me/', datos);
     return data;
   },
 
-  /* Sube o reemplaza la foto de perfil (multipart/form-data) */
+  /* Sube o reemplaza la foto de perfil) */
   async subirFotoPerfil(archivo) {
     const datos = new FormData();
     datos.append('foto_perfil', archivo);

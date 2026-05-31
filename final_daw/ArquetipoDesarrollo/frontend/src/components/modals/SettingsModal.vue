@@ -189,7 +189,7 @@
 <script setup>
 import { ref, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { servicioUsuario } from '@/api/users'
+import { apiUsers } from '@/api/users'
 import { getErrorMessage } from '@/utils/errors'
 import { authService } from '@/api/auth'
 
@@ -232,7 +232,7 @@ watch(() => props.profile, (valor) => {
   formularioDatos.value.email     = valor.email     || ''
 })
 
-// ----- FOTO -----
+// --- FOTO ----------------------------------
 const inputArchivo       = ref(null)
 const archivoSeleccionado = ref(null)
 const urlPrevia          = ref(null)
@@ -257,7 +257,7 @@ const guardarFoto = async () => {
   errorFoto.value = ''
   exitoFoto.value = false
   try {
-    const respuesta = await servicioUsuario.subirFotoPerfil(archivoSeleccionado.value)
+    const respuesta = await apiUsers.subirFotoPerfil(archivoSeleccionado.value)
     datosPerfil.value.foto_perfil_url = respuesta.foto_perfil_url
     exitoFoto.value = true
     archivoSeleccionado.value = null
@@ -269,7 +269,7 @@ const guardarFoto = async () => {
   }
 }
 
-// ----- DATOS PERSONALES -----
+// --- DATOS PERSONALES ---------------------------
 const formularioDatos = ref({
   nombre:    props.profile?.nombre    || '',
   apellidos: props.profile?.apellidos || '',
@@ -284,7 +284,7 @@ const guardarDatos = async () => {
   errorDatos.value = ''
   exitoDatos.value = false
   try {
-    const actualizado = await servicioUsuario.actualizarPerfil(formularioDatos.value)
+    const actualizado = await apiUsers.actualizarPerfil(formularioDatos.value)
     exitoDatos.value = true
     emit('profile-updated', actualizado)
   } catch (e) {
@@ -294,7 +294,7 @@ const guardarDatos = async () => {
   }
 }
 
-// ----- CONTRASEÑA -----
+// --- CONTRASEÑA ------------------------------------
 const formularioContrasena = ref({ actual: '', nueva: '', confirmar: '' })
 const cargandoContrasena   = ref(false)
 const exitoContrasena      = ref(false)
@@ -309,7 +309,7 @@ const guardarContrasena = async () => {
   }
   cargandoContrasena.value = true
   try {
-    await servicioUsuario.cambiarContrasena(
+    await apiUsers.cambiarContrasena(
       formularioContrasena.value.actual,
       formularioContrasena.value.nueva,
     )
@@ -332,7 +332,7 @@ const eliminarCuenta = async () => {
   cargandoEliminar.value = true
   errorEliminar.value = ''
   try {
-    await servicioUsuario.eliminarCuenta()
+    await apiUsers.eliminarCuenta()
     authService.logout()
     router.push('/')
   } catch (e) {

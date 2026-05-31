@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import Button from "primevue/button";
-import { servicioUsuario } from "@/api/users";
+import { apiUsers } from "@/api/users";
 import { authService } from "@/api/auth";
 
 const isDark = ref(false);
@@ -15,7 +15,7 @@ const toggleDark = async () => {
   isDark.value = !isDark.value;
   applyTheme(isDark.value);
   if (authService.isLoggedIn()) {
-    await servicioUsuario.guardarTema(isDark.value ? "oscuro" : "claro");
+    await apiUsers.guardarTema(isDark.value ? "oscuro" : "claro");
   }
 };
 

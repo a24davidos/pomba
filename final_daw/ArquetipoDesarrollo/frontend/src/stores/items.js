@@ -1,14 +1,12 @@
-import axios from 'axios'
 import { defineStore } from 'pinia'
-import api from '@/api/api'
+import { apiItems } from '@/api/items'
 import { getErrorMessage } from '@/utils/errors'
 
-export const useItemsStore = defineStore('items', {
+export const useGestorItems = defineStore('items', {
   state: () => ({
     items: [],
     breadcrumb: [],
     loading: false,
-    notificaciones: [],
     currentParams: {},
     loadToken: 0,
     queryBusqueda: '',
@@ -18,13 +16,13 @@ export const useItemsStore = defineStore('items', {
       lastIndex: null,
     },
 
-    ui: {
-      modal: {
-        open: false,
-        name: null,
-        payload: null,
-      },
+    modal: {
+      open: false,
+      name: null,
+      payload: null,
     },
+
+    notificaciones: [],
   }),
 
   getters: {
@@ -38,14 +36,18 @@ export const useItemsStore = defineStore('items', {
 
   actions: {
 
-    // -------------------------------------------------------
-    // MODALS
-    // -------------------------------------------------------
+    // ── Modales ──────────────────────────────────────────────────────
 
     abrirModal(name, payload = null) {
-      this.ui.modal.open = true
-      this.ui.modal.name = name
-      this.ui.modal.payload = payload
+      this.modal.open = true
+      this.modal.name = name
+      this.modal.payload = payload
+    },
+
+    cerrarModal() {
+      this.modal.open = false
+      this.modal.name = null
+      this.modal.payload = null
     },
 
     abrirModalRenombrar(item) {
@@ -62,8 +64,8 @@ export const useItemsStore = defineStore('items', {
 
     async abrirModalPrevisualizar(item) {
       try {
-        const resp = await api.get(`items/${item.id}/previsualizar/`)
-        this.abrirModal('previsualizar', { item, url: resp.data.url })
+        const { url } = await apiItems.previsualizar(item.id)
+        this.abrirModal('previsualizar', { item, url })
       } catch (e) {
         this.agregarNotificacion({
           id: 'preview-error',
@@ -74,15 +76,7 @@ export const useItemsStore = defineStore('items', {
       }
     },
 
-    cerrarModal() {
-      this.ui.modal.open = false
-      this.ui.modal.name = null
-      this.ui.modal.payload = null
-    },
-
-    // -------------------------------------------------------
-    // NOTIFICACIONES
-    // -------------------------------------------------------
+    // ── Notificaciones ───────────────────────────────────────────────
 
     agregarNotificacion({ id, tipo, mensaje, icono, severidad = 'neutro' }) {
       this.eliminarNotificacion(id)
@@ -113,9 +107,7 @@ export const useItemsStore = defineStore('items', {
       }
     },
 
-    // -------------------------------------------------------
-    // ITEMS — LECTURA
-    // -------------------------------------------------------
+    // ── Items (Lectura) ──────────────────────────────────────────────
 
     recargar() {
       return this.cargarItems(this.currentParams)
@@ -126,10 +118,10 @@ export const useItemsStore = defineStore('items', {
       this.loading = true
       this.currentParams = { ...params }
       try {
-        const response = await api.get('items/', { params })
+        const data = await apiItems.listar(params)
         if (token !== this.loadToken) return
-        this.items = response.data.items
-        this.breadcrumb = response.data.breadcrumb || []
+        this.items = data.items
+        this.breadcrumb = data.breadcrumb || []
       } catch (error) {
         if (token === this.loadToken) {
           this.agregarNotificacion({
@@ -149,8 +141,8 @@ export const useItemsStore = defineStore('items', {
       this.queryBusqueda = q
       this.limpiarSeleccion()
       try {
-        const response = await api.get('items/buscar/', { params: { q } })
-        this.items = response.data.items
+        const data = await apiItems.buscar(q)
+        this.items = data.items
         this.breadcrumb = []
       } catch (error) {
         this.items = []
@@ -165,13 +157,11 @@ export const useItemsStore = defineStore('items', {
       }
     },
 
-    // -------------------------------------------------------
-    // ITEMS — ESCRITURA
-    // -------------------------------------------------------
+    // ── Items (Escritura) ────────────────────────────────────────────
 
     async crearCarpeta(data) {
       try {
-        await api.post('items/', data)
+        await apiItems.crearCarpeta(data)
         return true
       } catch (error) {
         this.agregarNotificacion({
@@ -184,34 +174,11 @@ export const useItemsStore = defineStore('items', {
       }
     },
 
-    /**
-     * Sube un único archivo usando el flujo presigned URL:
-     * 1. Pide a Django una URL de subida + key
-     * 2. Hace PUT directo a Garage (sin pasar por Django)
-     * 3. Confirma a Django para que registre el Item en BD
-     */
     async _subirArchivoPresignado(file, padreId) {
       const mimeType = file.type || 'application/octet-stream'
-
-      // Paso 1: obtener URL presignada
-      const { data: { url_subida, key } } = await api.post('items/solicitar_subida/', {
-        nombre: file.name,
-        mime_type: mimeType,
-      })
-
-      // Paso 2: PUT directo al bucket (sin token JWT, la URL ya lleva la firma S3)
-      await axios.put(url_subida, file, {
-        headers: { 'Content-Type': mimeType },
-      })
-
-      // Paso 3: registrar en BD
-      await api.post('items/confirmar_subida/', {
-        nombre: file.name,
-        key,
-        padre: padreId,
-        tamano_bytes: file.size,
-        mime_type: mimeType,
-      })
+      const { url_subida, key } = await apiItems.solicitarSubida(file.name, mimeType)
+      await apiItems.subirDirecto(url_subida, file, mimeType)
+      await apiItems.confirmarSubida(file.name, key, padreId, file.size, mimeType)
     },
 
     async subirArchivo(file, padreId = null) {
@@ -237,35 +204,20 @@ export const useItemsStore = defineStore('items', {
       }
     },
 
-    // -------------------------------------------------------
-    // SUBIDA DE CARPETA
-    // -------------------------------------------------------
-
     _parsearEstructuraCarpeta(files) {
-      // Ficheros del sistema que nunca deben subirse
       const IGNORADOS = new Set(['.DS_Store', 'Thumbs.db', 'desktop.ini', '.localized'])
-
       const carpetas = new Set()
       const archivos = []
 
       for (const file of files) {
         if (IGNORADOS.has(file.name)) continue
-
-        // webkitRelativePath siempre empieza con el nombre de la carpeta raíz
         const partes = file.webkitRelativePath.split('/')
-
-        // Registrar todas las carpetas intermedias (excluye el nombre del archivo)
         for (let i = 1; i < partes.length; i++) {
           carpetas.add(partes.slice(0, i).join('/'))
         }
-
-        archivos.push({
-          file,
-          rutaRelativa: file.webkitRelativePath,
-        })
+        archivos.push({ file, rutaRelativa: file.webkitRelativePath })
       }
 
-      // Ordenar por profundidad para que el backend siempre reciba el padre antes que el hijo
       const carpetasOrdenadas = Array.from(carpetas).sort(
         (a, b) => a.split('/').length - b.split('/').length
       )
@@ -290,27 +242,17 @@ export const useItemsStore = defineStore('items', {
       try {
         const { carpetasOrdenadas, archivos } = this._parsearEstructuraCarpeta(files)
 
-        // 1. Crear árbol de carpetas 
         this.actualizarNotificacion(NOTIF_ID, {
           mensaje: `Creando ${carpetasOrdenadas.length} carpeta${carpetasOrdenadas.length !== 1 ? 's' : ''}…`,
         })
 
-        const { data } = await api.post('items/crear_arbol_carpetas/', {
-          rutas: carpetasOrdenadas,
-          padre: padreId,
-        })
+        const { mapa } = await apiItems.crearArbolCarpetas(carpetasOrdenadas, padreId)
 
-        // mapa: { "MiCarpeta": 12, "MiCarpeta/sub": 34, ... }
-        const mapa = data.mapa
-
-        // 2. Subir archivos en lotes 
         let subidos = 0
         let fallidos = 0
         const total = archivos.length
 
-        this.actualizarNotificacion(NOTIF_ID, {
-          mensaje: `Subiendo archivos… 0 / ${total}`,
-        })
+        this.actualizarNotificacion(NOTIF_ID, { mensaje: `Subiendo archivos… 0 / ${total}` })
 
         for (let i = 0; i < archivos.length; i += LOTE) {
           const lote = archivos.slice(i, i + LOTE)
@@ -381,7 +323,7 @@ export const useItemsStore = defineStore('items', {
 
     async renombrarItem(id, nombre) {
       try {
-        await api.post(`items/${id}/renombrar/`, { nombre })
+        await apiItems.renombrar(id, nombre)
         this.actualizarItemsLocal([id], { nombre })
         this.agregarNotificacion({
           id: 'renombrar',
@@ -412,8 +354,11 @@ export const useItemsStore = defineStore('items', {
 
     async moverItems(ids, destinoId) {
       try {
-        await api.post('items/mover/', { ids, destino: destinoId })
-        this.items = this.items.filter((item) => !ids.includes(item.id))
+        await apiItems.mover(ids, destinoId)
+        const carpetaActual = this.currentParams.carpeta ?? null
+        if (destinoId !== carpetaActual) {
+          this.items = this.items.filter((item) => !ids.includes(item.id))
+        }
         this.limpiarSeleccion()
         this.agregarNotificacion({
           id: 'mover',
@@ -435,8 +380,7 @@ export const useItemsStore = defineStore('items', {
 
     async marcarFavoritos(ids = []) {
       try {
-        const response = await api.post('items/favorito/', { ids })
-        const nuevoFavorito = response.data.favorito
+        const { favorito: nuevoFavorito } = await apiItems.marcarFavorito(ids)
         if (!nuevoFavorito && this.currentParams.favorito === 'true') {
           this.items = this.items.filter((item) => !ids.includes(item.id))
         } else {
@@ -453,13 +397,11 @@ export const useItemsStore = defineStore('items', {
       }
     },
 
-    // -------------------------------------------------------
-    // ITEMS — PAPELERA Y ELIMINACIÓN
-    // -------------------------------------------------------
+    // ── Papelera y Eliminación ────────────────────────────────────────
 
     async eliminarItems(ids = []) {
       try {
-        await api.post('items/trash/', { ids })
+        await apiItems.moverAPapelera(ids)
         this.items = this.items.filter((item) => !ids.includes(item.id))
         this.limpiarSeleccion()
         this.agregarNotificacion({
@@ -488,7 +430,7 @@ export const useItemsStore = defineStore('items', {
         severidad: 'neutro',
       })
       try {
-        await api.delete('items/eliminar_definitivo/', { data: { ids } })
+        await apiItems.eliminarDefinitivo(ids)
         this.items = this.items.filter((item) => !ids.includes(item.id))
         this.limpiarSeleccion()
         this.actualizarNotificacion(
@@ -504,7 +446,7 @@ export const useItemsStore = defineStore('items', {
 
     async restaurarItems(ids = []) {
       try {
-        await api.post('items/restaurar/', { ids })
+        await apiItems.restaurar(ids)
         this.items = this.items.filter((item) => !ids.includes(item.id))
         this.limpiarSeleccion()
         this.agregarNotificacion({
@@ -526,7 +468,7 @@ export const useItemsStore = defineStore('items', {
 
     async restaurarPapelera() {
       try {
-        await api.post('items/restaurar_papelera/')
+        await apiItems.restaurarTodo()
         await this.cargarItems(this.currentParams)
         this.agregarNotificacion({
           id: 'restaurar',
@@ -554,7 +496,7 @@ export const useItemsStore = defineStore('items', {
         severidad: 'neutro',
       })
       try {
-        await api.post('items/vaciar_papelera/')
+        await apiItems.vaciarPapelera()
         await this.cargarItems(this.currentParams)
         this.actualizarNotificacion(
           'vaciar-papelera',
@@ -571,20 +513,17 @@ export const useItemsStore = defineStore('items', {
       }
     },
 
-    // -------------------------------------------------------
-    // DESCARGA
-    // -------------------------------------------------------
+    // ── Descarga ─────────────────────────────────────────────────────
 
     async descargarItems() {
       const seleccion = this.itemsSeleccionados
       if (!seleccion.length) return
 
-      // Un solo archivo - presigned URL directa
       if (seleccion.length === 1 && seleccion[0].tipo === 'archivo') {
         try {
-          const resp = await api.get(`items/${seleccion[0].id}/descargar_archivo/`)
+          const { url } = await apiItems.descargarArchivo(seleccion[0].id)
           const a = document.createElement('a')
-          a.href = resp.data.url
+          a.href = url
           document.body.appendChild(a)
           a.click()
           document.body.removeChild(a)
@@ -599,7 +538,6 @@ export const useItemsStore = defineStore('items', {
         return
       }
 
-      // Carpeta o selección múltiple - ZIP generado en Django
       this.agregarNotificacion({
         id: 'descargar',
         tipo: 'cargando',
@@ -610,10 +548,8 @@ export const useItemsStore = defineStore('items', {
       try {
         const ids = seleccion.map((i) => i.id)
         const nombre = seleccion.length === 1 ? `${seleccion[0].nombre}.zip` : 'descarga.zip'
-
-        const resp = await api.post('items/descargar/', { ids }, { responseType: 'blob' })
-
-        const blobUrl = URL.createObjectURL(resp.data)
+        const blob = await apiItems.descargarZip(ids)
+        const blobUrl = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = blobUrl
         a.download = nombre
@@ -636,9 +572,7 @@ export const useItemsStore = defineStore('items', {
       }
     },
 
-    // -------------------------------------------------------
-    // SELECCIÓN
-    // -------------------------------------------------------
+    // ── Selección ─────────────────────────────────────────────────────
 
     seleccionar(item, index) {
       this.seleccion.ids = [item.id]

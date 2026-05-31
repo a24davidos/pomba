@@ -1,4 +1,4 @@
-import api from './api';
+import api from './axios';
 import { useRouter } from "vue-router";
 
 const setTokens = (data) => {
@@ -30,7 +30,7 @@ export const authService = {
         if (!token) return false;
 
         try {
-            // Decodificamos la parte central del JWT (el payload)
+            // Decodificamos la parte central del JWT
             const base64Url = token.split('.')[1];
             const payload = JSON.parse(window.atob(base64Url));
             
