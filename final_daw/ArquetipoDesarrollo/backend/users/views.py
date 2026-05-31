@@ -2,6 +2,8 @@ from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import extend_schema, inline_serializer
+from rest_framework import serializers as drf_serializers
 
 from .serializers import (
     UserSerializer,
@@ -26,10 +28,12 @@ class MeView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(responses=UserProfileSerializer)
     def get(self, request):
         serializador = UserProfileSerializer(request.user, context={"request": request})
         return Response(serializador.data)
 
+    @extend_schema(request=UpdateProfileSerializer, responses=UserProfileSerializer)
     def patch(self, request):
         serializador = UpdateProfileSerializer(
             request.user,
@@ -41,6 +45,7 @@ class MeView(APIView):
         serializador.save()
         return Response(UserProfileSerializer(request.user, context={"request": request}).data)
 
+    @extend_schema(request=None, responses={204: None})
     def delete(self, request):
         usuario = request.user
         usuario.delete()
@@ -51,6 +56,10 @@ class ChangePasswordView(APIView):
     """POST  cambia la contraseña del usuario autenticado."""
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        request=ChangePasswordSerializer,
+        responses={200: inline_serializer('ChangePasswordResponse', fields={'detail': drf_serializers.CharField()})},
+    )
     def post(self, request):
         serializador = ChangePasswordSerializer(
             data=request.data, context={"request": request}
@@ -65,6 +74,10 @@ class ProfilePhotoView(APIView):
     """POST  sube o reemplaza la foto de perfil del usuario (guardada en Garage/S3)."""
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        request=ProfilePhotoSerializer,
+        responses={200: inline_serializer('ProfilePhotoResponse', fields={'foto_perfil_url': drf_serializers.URLField(allow_null=True)})},
+    )
     def post(self, request):
         usuario = request.user
 

@@ -9,6 +9,9 @@ from rest_framework.response import Response
 from django.db.models import Exists, OuterRef
 from django.http import FileResponse
 from django.db import transaction
+from drf_spectacular.utils import extend_schema, extend_schema_view, inline_serializer, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
+from rest_framework import serializers as drf_serializers
 
 from core.settings import development
 from .models import Item, ItemVersion
@@ -16,6 +19,12 @@ from .serializers import ItemSerializer, ItemVersionSerializer
 from .services import ItemService
 
 
+@extend_schema_view(
+    retrieve=extend_schema(parameters=[OpenApiParameter('id', OpenApiTypes.INT, OpenApiParameter.PATH)]),
+    update=extend_schema(parameters=[OpenApiParameter('id', OpenApiTypes.INT, OpenApiParameter.PATH)]),
+    partial_update=extend_schema(parameters=[OpenApiParameter('id', OpenApiTypes.INT, OpenApiParameter.PATH)]),
+    destroy=extend_schema(parameters=[OpenApiParameter('id', OpenApiTypes.INT, OpenApiParameter.PATH)]),
+)
 class ItemViewSet(viewsets.ModelViewSet):
     serializer_class = ItemSerializer
     parser_classes = (MultiPartParser, FormParser, JSONParser)
@@ -64,6 +73,18 @@ class ItemViewSet(viewsets.ModelViewSet):
         return qs.annotate(tiene_hijos=Exists(hijos)).order_by("-tipo", "nombre")
     
     # MÉTODOS ESTÁNDAR
+    @extend_schema(
+        parameters=[
+            OpenApiParameter('carpeta', OpenApiTypes.INT, description='ID de carpeta a listar'),
+            OpenApiParameter('papelera', OpenApiTypes.STR, description='"true" para listar la papelera'),
+            OpenApiParameter('favorito', OpenApiTypes.STR, description='"true" para listar favoritos'),
+            OpenApiParameter('recientes', OpenApiTypes.STR, description='"true" para listar recientes'),
+        ],
+        responses=inline_serializer('ItemListResponse', fields={
+            'items': ItemSerializer(many=True),
+            'breadcrumb': drf_serializers.ListField(child=drf_serializers.DictField()),
+        }),
+    )
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(queryset, many=True)
@@ -85,6 +106,13 @@ class ItemViewSet(viewsets.ModelViewSet):
     # ACCIONES SOBRE ITEMS
     # =========================================================
 
+    @extend_schema(
+        request=inline_serializer('RenombrarRequest', fields={'nombre': drf_serializers.CharField()}),
+        responses=inline_serializer('RenombrarResponse', fields={
+            'mensaje': drf_serializers.CharField(),
+            'nombre': drf_serializers.CharField(),
+        }),
+    )
     @action(detail=True, methods=['post'])
     def renombrar(self, request, pk=None):
         item = self.get_object()
@@ -104,6 +132,13 @@ class ItemViewSet(viewsets.ModelViewSet):
 
         return Response({'mensaje': 'Renombrado correctamente', 'nombre': item.nombre})
 
+    @extend_schema(
+        request=inline_serializer('FavoritoRequest', fields={'ids': drf_serializers.ListField(child=drf_serializers.IntegerField())}),
+        responses=inline_serializer('FavoritoResponse', fields={
+            'detail': drf_serializers.CharField(),
+            'favorito': drf_serializers.BooleanField(),
+        }),
+    )
     @action(detail=False, methods=['post'])
     def favorito(self, request):
         ids = request.data.get('ids', [])
@@ -121,6 +156,10 @@ class ItemViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+    @extend_schema(
+        request=inline_serializer('TrashRequest', fields={'ids': drf_serializers.ListField(child=drf_serializers.IntegerField())}),
+        responses=inline_serializer('TrashResponse', fields={'detail': drf_serializers.CharField()}),
+    )
     @action(detail=False, methods=['post'])
     def trash(self, request):
         ids = request.data.get('ids', [])
@@ -135,6 +174,14 @@ class ItemViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+    @extend_schema(
+        request=inline_serializer('EliminarDefinitivoRequest', fields={'ids': drf_serializers.ListField(child=drf_serializers.IntegerField())}),
+        responses=inline_serializer('EliminarDefinitivoResponse', fields={
+            'detail': drf_serializers.CharField(),
+            'deleted_count': drf_serializers.IntegerField(),
+            's3_keys_deleted': drf_serializers.IntegerField(),
+        }),
+    )
     @action(detail=False, methods=['delete'])
     def eliminar_definitivo(self, request):
         ids = request.data.get('ids', [])
@@ -172,6 +219,10 @@ class ItemViewSet(viewsets.ModelViewSet):
             's3_keys_deleted': result['s3_keys_deleted'],
         })
 
+    @extend_schema(
+        request=inline_serializer('RestaurarRequest', fields={'ids': drf_serializers.ListField(child=drf_serializers.IntegerField())}),
+        responses=inline_serializer('RestaurarResponse', fields={'detail': drf_serializers.CharField()}),
+    )
     @action(detail=False, methods=['post'])
     def restaurar(self, request):
         ids = request.data.get('ids', [])
@@ -186,6 +237,13 @@ class ItemViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+    @extend_schema(
+        request=inline_serializer('MoverRequest', fields={
+            'ids': drf_serializers.ListField(child=drf_serializers.IntegerField()),
+            'destino': drf_serializers.IntegerField(allow_null=True),
+        }),
+        responses=inline_serializer('MoverResponse', fields={'detail': drf_serializers.CharField()}),
+    )
     @action(detail=False, methods=['post'])
     def mover(self, request):
         ids = request.data.get('ids', [])
@@ -218,6 +276,10 @@ class ItemViewSet(viewsets.ModelViewSet):
 
         return Response({'detail': f'Se han movido {len(items_obj)} elementos.'})
 
+    @extend_schema(
+        request=None,
+        responses=inline_serializer('RestaurarPapeleraResponse', fields={'detail': drf_serializers.CharField()}),
+    )
     @action(detail=False, methods=['post'])
     def restaurar_papelera(self, request):
         ids = list(
@@ -232,6 +294,14 @@ class ItemViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+    @extend_schema(
+        request=None,
+        responses=inline_serializer('VaciarPapeleraResponse', fields={
+            'detail': drf_serializers.CharField(),
+            'deleted_count': drf_serializers.IntegerField(),
+            's3_keys_deleted': drf_serializers.IntegerField(),
+        }),
+    )
     @action(detail=False, methods=['post'])
     def vaciar_papelera(self, request):
         ids_archivos = list(
@@ -263,6 +333,9 @@ class ItemViewSet(viewsets.ModelViewSet):
     # DESCARGA
     # =========================================================
 
+    @extend_schema(
+        responses=inline_serializer('DescargaArchivoResponse', fields={'url': drf_serializers.URLField()}),
+    )
     @action(detail=True, methods=['get'])
     def descargar_archivo(self, request, pk=None):
         """Devuelve una presigned URL de descarga directa para un archivo."""
@@ -274,6 +347,9 @@ class ItemViewSet(viewsets.ModelViewSet):
             )
         return Response({'url': ItemService.generar_url_descarga(item)})
 
+    @extend_schema(
+        responses=inline_serializer('PreviewResponse', fields={'url': drf_serializers.URLField()}),
+    )
     @action(detail=True, methods=['get'])
     def previsualizar(self, request, pk=None):
         """Devuelve una presigned URL de previsualización para imagen, audio o PDF."""
@@ -292,6 +368,10 @@ class ItemViewSet(viewsets.ModelViewSet):
             )
         return Response({'url': ItemService.generar_url_preview(item)})
 
+    @extend_schema(
+        request=inline_serializer('DescargarZipRequest', fields={'ids': drf_serializers.ListField(child=drf_serializers.IntegerField())}),
+        responses={(200, 'application/zip'): OpenApiTypes.BINARY},
+    )
     @action(detail=False, methods=['post'])
     def descargar(self, request):
         """
@@ -336,6 +416,12 @@ class ItemViewSet(viewsets.ModelViewSet):
     # VERSIONES (solo audio)
     # =========================================================
 
+    @extend_schema(
+        responses=inline_serializer('VersionesListarResponse', fields={
+            'versiones': ItemVersionSerializer(many=True),
+            'numero_actual': drf_serializers.IntegerField(),
+        }),
+    )
     @action(detail=True, methods=['get'], url_path='versiones', url_name='versiones-listar')
     def versiones_listar(self, request, pk=None):
         item = self.get_object()
@@ -344,6 +430,13 @@ class ItemViewSet(viewsets.ModelViewSet):
         numero_actual = item.versiones.count() + 1
         return Response({'versiones': serializer.data, 'numero_actual': numero_actual})
 
+    @extend_schema(
+        request=None,
+        responses=inline_serializer('VersionesSolicitarSubidaResponse', fields={
+            'url_subida': drf_serializers.URLField(),
+            'key': drf_serializers.CharField(),
+        }),
+    )
     @action(detail=True, methods=['post'], url_path='versiones/solicitar_subida', url_name='versiones-solicitar')
     def versiones_solicitar_subida(self, request, pk=None):
         item = self.get_object()
@@ -355,6 +448,14 @@ class ItemViewSet(viewsets.ModelViewSet):
         url_subida, key = ItemService.generar_url_presignada_version(item)
         return Response({'url_subida': url_subida, 'key': key})
 
+    @extend_schema(
+        request=inline_serializer('VersionesConfirmarSubidaRequest', fields={
+            'key': drf_serializers.CharField(),
+            'tamano_bytes': drf_serializers.IntegerField(required=False),
+            'mime_type': drf_serializers.CharField(required=False),
+        }),
+        responses=ItemSerializer,
+    )
     @action(detail=True, methods=['post'], url_path='versiones/confirmar_subida', url_name='versiones-confirmar')
     def versiones_confirmar_subida(self, request, pk=None):
         item       = self.get_object()
@@ -367,6 +468,9 @@ class ItemViewSet(viewsets.ModelViewSet):
         threading.Thread(target=ItemService.indexar_item, args=(item,), daemon=True).start()
         return Response(ItemSerializer(item, context={'request': request}).data)
 
+    @extend_schema(
+        responses=inline_serializer('VersionesDescargarResponse', fields={'url': drf_serializers.URLField()}),
+    )
     @action(detail=True, methods=['get'], url_path=r'versiones/(?P<num>[0-9]+)/descargar', url_name='versiones-descargar')
     def versiones_descargar(self, request, pk=None, num=None):
         item = self.get_object()
@@ -377,6 +481,7 @@ class ItemViewSet(viewsets.ModelViewSet):
         url = ItemService.generar_url_descarga_version(version, item.nombre)
         return Response({'url': url})
 
+    @extend_schema(request=None, responses=ItemSerializer)
     @action(detail=True, methods=['post'], url_path=r'versiones/(?P<num>[0-9]+)/restaurar', url_name='versiones-restaurar')
     def versiones_restaurar(self, request, pk=None, num=None):
         item = self.get_object()
@@ -391,6 +496,9 @@ class ItemViewSet(viewsets.ModelViewSet):
         threading.Thread(target=ItemService.indexar_item, args=(item,), daemon=True).start()
         return Response(ItemSerializer(item, context={'request': request}).data)
 
+    @extend_schema(
+        responses=inline_serializer('VersionesPreviewResponse', fields={'url': drf_serializers.URLField()}),
+    )
     @action(detail=True, methods=['get'], url_path=r'versiones/(?P<num>[0-9]+)/previsualizar', url_name='versiones-previsualizar')
     def versiones_previsualizar(self, request, pk=None, num=None):
         item = self.get_object()
@@ -401,6 +509,7 @@ class ItemViewSet(viewsets.ModelViewSet):
         url = ItemService.generar_url_preview_version(version)
         return Response({'url': url})
 
+    @extend_schema(responses={204: None})
     @action(detail=True, methods=['delete'], url_path=r'versiones/(?P<num>[0-9]+)', url_name='versiones-eliminar')
     def versiones_eliminar(self, request, pk=None, num=None):
         item = self.get_object()
@@ -415,6 +524,13 @@ class ItemViewSet(viewsets.ModelViewSet):
     # BÚSQUEDA
     # =========================================================
 
+    @extend_schema(
+        parameters=[OpenApiParameter('q', OpenApiTypes.STR, required=True, description='Texto de búsqueda')],
+        responses=inline_serializer('BuscarResponse', fields={
+            'items': ItemSerializer(many=True),
+            'query': drf_serializers.CharField(),
+        }),
+    )
     @action(detail=False, methods=['get'])
     def buscar(self, request):
         """
@@ -441,6 +557,16 @@ class ItemViewSet(viewsets.ModelViewSet):
     # SUBIDA PRESIGNADA (De Vue a Garage directo)
     # =========================================================
 
+    @extend_schema(
+        request=inline_serializer('SolicitarSubidaRequest', fields={
+            'nombre': drf_serializers.CharField(),
+            'mime_type': drf_serializers.CharField(required=False),
+        }),
+        responses=inline_serializer('SolicitarSubidaResponse', fields={
+            'url_subida': drf_serializers.URLField(),
+            'key': drf_serializers.CharField(),
+        }),
+    )
     @action(detail=False, methods=['post'])
     def solicitar_subida(self, request):
         """
@@ -460,6 +586,16 @@ class ItemViewSet(viewsets.ModelViewSet):
         url_subida = ItemService.generar_url_presignada_subida(key)
         return Response({'url_subida': url_subida, 'key': key})
 
+    @extend_schema(
+        request=inline_serializer('ConfirmarSubidaRequest', fields={
+            'nombre': drf_serializers.CharField(),
+            'key': drf_serializers.CharField(),
+            'padre': drf_serializers.IntegerField(required=False, allow_null=True),
+            'tamano_bytes': drf_serializers.IntegerField(required=False),
+            'mime_type': drf_serializers.CharField(required=False),
+        }),
+        responses={201: ItemSerializer},
+    )
     @action(detail=False, methods=['post'])
     def confirmar_subida(self, request):
         """
@@ -499,6 +635,15 @@ class ItemViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(item)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+    @extend_schema(
+        request=inline_serializer('CrearArbolCarpetasRequest', fields={
+            'rutas': drf_serializers.ListField(child=drf_serializers.CharField()),
+            'padre': drf_serializers.IntegerField(required=False, allow_null=True),
+        }),
+        responses=inline_serializer('CrearArbolCarpetasResponse', fields={
+            'mapa': drf_serializers.DictField(child=drf_serializers.IntegerField()),
+        }),
+    )
     @action(detail=False, methods=['post'])
     def crear_arbol_carpetas(self, request):
         """
