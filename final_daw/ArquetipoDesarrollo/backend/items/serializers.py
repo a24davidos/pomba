@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Item
+from .models import Item, ItemVersion
 from .services import ItemService
 
 
@@ -57,3 +57,9 @@ class ItemSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("No puedes usar una carpeta en papelera")
 
         return value
+
+
+class ItemVersionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = ItemVersion
+        fields = ['id', 'numero', 'tamano_bytes', 'mime_type', 'metadatos', 'fecha_creacion']

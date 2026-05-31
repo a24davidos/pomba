@@ -49,7 +49,6 @@ def extraer(datos: bytes, mime_type: str, tamano_bytes: int) -> dict:
     return resultado
 
 
-# ── Extractores privados ──────────────────────────────────────────────────────
 
 def _texto_plano(datos: bytes) -> str:
     return datos.decode('utf-8', errors='replace')
@@ -58,7 +57,7 @@ def _texto_plano(datos: bytes) -> str:
 def _imagen(datos: bytes) -> dict:
     from PIL import Image
 
-    # IDs de tags EXIF que nos interesan (excluimos 34853 = GPSInfo)
+    # IDs de tags EXIF que nos interesan
     TAGS_EXIF = {
         271:   'camara_marca',
         272:   'camara_modelo',
@@ -67,7 +66,7 @@ def _imagen(datos: bytes) -> dict:
         40963: 'alto',
     }
 
-    metadatos = {'tipo_medio': 'imagen'}
+    metadatos = {}
 
     imagen = Image.open(io.BytesIO(datos))
     metadatos['ancho'] = imagen.width
@@ -90,7 +89,7 @@ def _audio(datos: bytes) -> dict:
     from mutagen.flac import FLAC
     from mutagen.oggvorbis import OggVorbis
 
-    metadatos = {'tipo_medio': 'audio'}
+    metadatos = {}
 
     audio = mutagen.File(io.BytesIO(datos))
     if audio is None:

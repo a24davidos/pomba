@@ -89,4 +89,44 @@ export const apiItems = {
     const { data } = await api.post('items/descargar/', { ids }, { responseType: 'blob' })
     return data
   },
+
+  // ── Versiones (solo audio) ------------------------------------------------
+
+  async listarVersiones(itemId) {
+    const { data } = await api.get(`items/${itemId}/versiones/`)
+    return data  // { versiones: [...], numero_actual: N }
+  },
+
+  async solicitarSubidaVersion(itemId) {
+    const { data } = await api.post(`items/${itemId}/versiones/solicitar_subida/`)
+    return data  // { url_subida, key }
+  },
+
+  async confirmarSubidaVersion(itemId, key, tamanoBytes, mimeType) {
+    const { data } = await api.post(`items/${itemId}/versiones/confirmar_subida/`, {
+      key,
+      tamano_bytes: tamanoBytes,
+      mime_type: mimeType,
+    })
+    return data  // Item serializado actualizado
+  },
+
+  async descargarVersion(itemId, numero) {
+    const { data } = await api.get(`items/${itemId}/versiones/${numero}/descargar/`)
+    return data  // { url }
+  },
+
+  async restaurarVersion(itemId, numero) {
+    const { data } = await api.post(`items/${itemId}/versiones/${numero}/restaurar/`)
+    return data  // Item serializado actualizado
+  },
+
+  async eliminarVersion(itemId, numero) {
+    await api.delete(`items/${itemId}/versiones/${numero}/`)
+  },
+
+  async previsualizarVersion(itemId, numero) {
+    const { data } = await api.get(`items/${itemId}/versiones/${numero}/previsualizar/`)
+    return data  // { url }
+  },
 }

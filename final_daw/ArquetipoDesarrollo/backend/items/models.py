@@ -66,8 +66,26 @@ class Item(models.Model):
 
     class Meta:
         indexes = [
-            #Para entrar en carpetas (Lo que más usará el usuario)
             models.Index(fields=["usuario", "padre", "eliminado"], name="idx_items_navegacion"),
-
             models.Index(fields=["usuario", "eliminado"], name="idx_items_papelera"),
+        ]
+
+
+class ItemVersion(models.Model):
+    """Versión archivada de un archivo de audio. Item.file siempre apunta a la versión actual."""
+    item           = models.ForeignKey(Item, related_name='versiones', on_delete=models.CASCADE)
+    numero         = models.PositiveIntegerField()
+    file           = models.CharField(max_length=500)
+    tamano_bytes   = models.BigIntegerField()
+    mime_type      = models.CharField(max_length=100, blank=True, default='')
+    metadatos      = models.JSONField(default=dict, blank=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-numero']
+        constraints = [
+            models.UniqueConstraint(fields=['item', 'numero'], name='unique_item_version'),
+        ]
+        indexes = [
+            models.Index(fields=['item', 'numero'], name='idx_version_item_numero'),
         ]

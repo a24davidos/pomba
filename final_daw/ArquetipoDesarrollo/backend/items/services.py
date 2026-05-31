@@ -1,6 +1,7 @@
 import io
 import logging
 import os
+import uuid
 import zipfile
 
 import boto3
@@ -8,7 +9,7 @@ from botocore.client import Config
 from django.utils import timezone
 
 from django.core.exceptions import ValidationError
-from .models import Item
+from .models import Item, ItemVersion
 from django.db import transaction
 from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -121,6 +122,13 @@ class ItemService:
         all_ids = ItemService.recolectar_descendientes_id(ids_validados, usuario)
         items_qs = Item.objects.filter(usuario=usuario, id__in=all_ids)
         s3_keys = ItemService.get_s3_keys_for_items(items_qs)
+
+        # También borrar las keys S3 de versiones archivadas antes de que CASCADE las elimine de BD
+        version_keys = list(
+            ItemVersion.objects.filter(item_id__in=all_ids)
+            .exclude(file='').values_list('file', flat=True)
+        )
+        s3_keys += version_keys
 
         with transaction.atomic():
             ItemService.delete_s3_keys(s3_keys, bucket_name)
@@ -628,3 +636,127 @@ class ItemService:
 
         buffer.seek(0)
         return buffer
+
+    # =========================================================
+    # SECCIÓN 6: Control de versiones (solo audio)
+    # =========================================================
+
+    @staticmethod
+    def listar_versiones(item):
+        return item.versiones.all()
+
+    @staticmethod
+    def _siguiente_numero_version(item):
+        from django.db.models import Max
+        ultimo = item.versiones.aggregate(Max('numero'))['numero__max'] or 0
+        return ultimo + 1
+
+    @staticmethod
+    def archivar_version_actual(item):
+        """Crea un registro ItemVersion con el estado actual de Item antes de sobreescribirlo."""
+        version = ItemVersion(
+            item=item,
+            numero=ItemService._siguiente_numero_version(item),
+            file=str(item.file),
+            tamano_bytes=item.tamano_bytes or 0,
+            mime_type=item.mime_type or '',
+            metadatos=item.metadatos or {},
+        )
+        version.save()
+        return version
+
+    @staticmethod
+    def generar_url_presignada_version(item):
+        """Presigned PUT URL para subir una nueva versión. Key en subcarpeta /v/ para distinguirla."""
+        ext = os.path.splitext(str(item.file))[1]
+        key = f"users/{item.usuario.id}/v/{uuid.uuid4().hex}{ext}"
+        url = ItemService.generar_url_presignada_subida(key)
+        return url, key
+
+    @staticmethod
+    def confirmar_nueva_version(item, key, tamano_bytes, mime_type):
+        """Archiva la versión actual y actualiza Item con el nuevo archivo."""
+        with transaction.atomic():
+            ItemService.archivar_version_actual(item)
+            item.file         = key
+            item.tamano_bytes = int(tamano_bytes or 0)
+            item.mime_type    = mime_type or item.mime_type
+            item.save()
+        return item
+
+    @staticmethod
+    def restaurar_version(item, version):
+        """Copia el objeto S3 de la versión a una nueva key, archiva la actual y actualiza Item."""
+        s3     = ItemService.get_s3_client()
+        bucket = settings.AWS_STORAGE_BUCKET_NAME
+        ext       = os.path.splitext(version.file)[1]
+        nueva_key = f"users/{item.usuario.id}/{uuid.uuid4().hex}{ext}"
+
+        s3.copy_object(
+            Bucket=bucket,
+            CopySource={'Bucket': bucket, 'Key': version.file},
+            Key=nueva_key,
+        )
+
+        with transaction.atomic():
+            ItemService.archivar_version_actual(item)
+            item.file         = nueva_key
+            item.tamano_bytes = version.tamano_bytes
+            item.mime_type    = version.mime_type
+            item.metadatos    = version.metadatos
+            item.save()
+
+        return item
+
+    @staticmethod
+    def generar_url_preview_version(version):
+        """Presigned GET URL (inline) para reproducir una versión archivada directamente en el navegador."""
+        public_endpoint = getattr(settings, "GARAGE_PUBLIC_URL", settings.AWS_S3_ENDPOINT_URL)
+        client = boto3.client(
+            "s3",
+            endpoint_url=public_endpoint,
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name=settings.AWS_S3_REGION_NAME,
+            config=Config(signature_version="s3v4", s3={"addressing_style": "path"}),
+        )
+        params = {
+            "Bucket": settings.AWS_STORAGE_BUCKET_NAME,
+            "Key": version.file,
+            "ResponseContentDisposition": "inline",
+        }
+        if version.mime_type:
+            params["ResponseContentType"] = version.mime_type
+        return client.generate_presigned_url("get_object", Params=params, ExpiresIn=300)
+
+    @staticmethod
+    def eliminar_version(version, bucket_name):
+        """Borra la key S3 de una versión archivada y el registro de BD."""
+        s3 = ItemService.get_s3_client()
+        try:
+            s3.delete_object(Bucket=bucket_name, Key=version.file)
+        except Exception as e:
+            logger.warning("No se pudo borrar versión de S3 %s: %s", version.file, e)
+        version.delete()
+
+    @staticmethod
+    def generar_url_descarga_version(version, nombre_item):
+        """Presigned GET URL (attachment) para descargar una versión archivada."""
+        public_endpoint = getattr(settings, "GARAGE_PUBLIC_URL", settings.AWS_S3_ENDPOINT_URL)
+        client = boto3.client(
+            "s3",
+            endpoint_url=public_endpoint,
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name=settings.AWS_S3_REGION_NAME,
+            config=Config(signature_version="s3v4", s3={"addressing_style": "path"}),
+        )
+        return client.generate_presigned_url(
+            "get_object",
+            Params={
+                "Bucket": settings.AWS_STORAGE_BUCKET_NAME,
+                "Key": version.file,
+                "ResponseContentDisposition": f'attachment; filename="{nombre_item}"',
+            },
+            ExpiresIn=300,
+        )
