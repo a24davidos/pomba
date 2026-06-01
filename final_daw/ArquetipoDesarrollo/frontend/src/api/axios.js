@@ -48,8 +48,7 @@ api.interceptors.response.use(
         const refreshToken = localStorage.getItem('refresh_token');
         if (!refreshToken) throw new Error("No hay refresh token");
 
-        // Usamos una instancia limpia de axios
-        // para evitar bucles infinitos si esta petición también falla
+        // Usamos una instancia limpia de axios para evitar bucles infinitos si esta petición también falla
         const { data } = await axios.post(`${BASE_URL}auth/refresh_token/`, {
           refresh: refreshToken
         });
@@ -61,7 +60,6 @@ api.interceptors.response.use(
         return api(originalRequest);
 
       } catch (refreshError) {
-        //Borrar en prod
         console.error("Sesión expirada. Redirigiendo...");
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');

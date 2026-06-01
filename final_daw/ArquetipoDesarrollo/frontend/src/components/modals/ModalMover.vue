@@ -21,7 +21,7 @@ watch(() => gestor.modal, async (modal) => {
     idsMoviendo.value = modal.payload?.ids ?? []
     await cargarCarpetasEnPicker(null)
   }
-}, { deep: true })
+}, { deep: true }) //observa cambios en propiedades internas del objeto, no solo si cambia su referencia (Por eso no me funcionaba, necesitas que cambie la referencia de dentro)
 
 async function cargarCarpetasEnPicker(carpetaId) {
   const token = ++tokenPicker
@@ -47,9 +47,9 @@ async function navegarAPicker(carpeta) {
   await cargarCarpetasEnPicker(carpeta.id)
 }
 
-async function irABreadcrumbPicker(idx) {
-  const nodo = breadcrumbPicker.value[idx]
-  breadcrumbPicker.value = breadcrumbPicker.value.slice(0, idx + 1)
+async function irABreadcrumbPicker(id) {
+  const nodo = breadcrumbPicker.value[id]
+  breadcrumbPicker.value = breadcrumbPicker.value.slice(0, id + 1)
   carpetaPickerId.value = nodo.id
   await cargarCarpetasEnPicker(nodo.id)
 }
@@ -70,11 +70,11 @@ async function confirmarMover() {
   >
     <!-- Breadcrumb del picker -->
     <div class="flex items-center gap-1 text-sm mb-3 flex-wrap min-h-6">
-      <template v-for="(nodo, idx) in breadcrumbPicker" :key="idx">
-        <span v-if="idx > 0" class="text-surface-300 dark:text-surface-600 select-none">›</span>
+      <template v-for="(nodo, indice) in breadcrumbPicker" :key="indice">
+        <span v-if="indice > 0" class="text-surface-300 dark:text-surface-600 select-none">›</span>
         <button
-          v-if="idx < breadcrumbPicker.length - 1"
-          @click="irABreadcrumbPicker(idx)"
+          v-if="indice < breadcrumbPicker.length - 1"
+          @click="irABreadcrumbPicker(indice)"
           class="font-medium text-primary hover:underline cursor-pointer bg-transparent border-none p-0"
         >{{ nodo.label }}</button>
         <span v-else class="text-surface-600 dark:text-surface-400 font-medium">{{ nodo.label }}</span>
@@ -99,9 +99,9 @@ async function confirmarMover() {
           :key="carpeta.id"
           @click="navegarAPicker(carpeta)"
           class="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-left
-                 text-surface-700 dark:text-surface-300
-                 hover:bg-surface-50 dark:hover:bg-surface-800
-                 transition-colors border-b border-surface-100 dark:border-surface-800 last:border-0"
+                text-surface-700 dark:text-surface-300
+                hover:bg-surface-50 dark:hover:bg-surface-800
+                transition-colors border-b border-surface-100 dark:border-surface-800 last:border-0"
         >
           <i class="pi pi-folder text-yellow-500 shrink-0" />
           <span class="truncate flex-1">{{ carpeta.nombre }}</span>

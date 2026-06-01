@@ -1,9 +1,9 @@
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { authService } from '@/api/auth'
-import { apiUsers } from '@/api/users'
 import { useGestorItems } from '@/stores/items'
+import { useUserStore } from '@/stores/user'
 import SettingsModal from '@/components/modals/SettingsModal.vue'
 import Sidebar from '@/components/Sidebar.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
@@ -18,53 +18,37 @@ import { useConfirmacion } from '@/composables/useConfirmacion'
 import PombaLogo from '@/components/PombaLogo.vue'
 
 const gestor = useGestorItems()
+const userStore = useUserStore()
 const { estado: confirmacion, aceptar: aceptarConfirmacion, cancelar: cancelarConfirmacion } = useConfirmacion()
 
 const router = useRouter()
 const route = useRoute()
 
-//  BUSQUEDA ------------------------------------------------
+
+// === BUSQUEDA ==============================================
 const textoBusqueda = ref('')
 let timerBusqueda = null
 
 watch(() => route.query.q, (q) => {
   textoBusqueda.value = q || ''
-}, { immediate: true })
+}, { immediate: true }) //Se ejecuta al montar el componente
 
-watch(textoBusqueda, (texto) => {
+watch(textoBusqueda, (valor) => {
   clearTimeout(timerBusqueda)
-  const trimado = texto.trim()
-  if (!trimado) {
+  const texto = valor.trim()
+  if (!texto) {
     if (route.name === 'search') router.push('/home')
     return
   }
   timerBusqueda = setTimeout(() => {
-    router.push({ name: 'search', query: { q: trimado } })
+    router.push({ name: 'search', query: { q: texto } })
   }, 400)
 })
 
-//  PERFIL ------------------------------------------------
-const perfil = ref({ nombre: '', apellidos: '', email: '', foto_perfil_url: null })
+onMounted(userStore.cargarPerfil)
 
-const cargarPerfil = async () => {
-  try {
-    const datos = await apiUsers.obtenerPerfil()
-    perfil.value = { ...datos }
-    if (datos.tema) {
-      const dark = datos.tema === 'oscuro'
-      document.documentElement.classList.toggle('dark', dark)
-      localStorage.setItem('theme', datos.tema)
-    }
-  } catch {}
-}
 
-onMounted(cargarPerfil)
-
-const inicial = computed(() =>
-  perfil.value.nombre ? perfil.value.nombre.charAt(0).toUpperCase() : null
-)
-
-// MENU DE USUARIO (ESCRITORIO) -----------------------
+// === MENU DE USUARIO (ESCRITORIO) =========================
 const menuUsuario = ref()
 const mostrarAjustes = ref(false)
 
@@ -91,14 +75,11 @@ function cerrarSesion() {
   router.push('/')
 }
 
-function alActualizarPerfil(actualizado) {
-  perfil.value = { ...perfil.value, ...actualizado }
-}
-
-// MENU DE USUARIO (MOVIL) ------------------------------------------------
+// === MENU DE USUARIO (MOVIL) ============================
 const panelUsuarioMovil = ref(false)
 
-// SNACKBAR ------------------------------------------------
+
+// === SNACKBAR ===========================================
 const CLASES_SNACKBAR = {
   neutro:      'bg-surface-800 dark:bg-surface-100 text-white dark:text-surface-900',
   exito:       'bg-green-700 dark:bg-green-100 text-white dark:text-green-900',
@@ -115,7 +96,7 @@ function clasesSnackbar(notif) {
 <template>
   <div class="grid grid-cols-1 sm:grid-cols-[60px_1fr] lg:grid-cols-[260px_1fr] grid-rows-[64px_1fr] h-screen w-full bg-surface-100 dark:bg-surface-950 gap-y-2 py-2 pr-3">
 
-    <!-- -- TOPBAR ------------------------------------------------ -->
+    <!-- TOPBAR -->
     <header class="col-span-full grid grid-cols-subgrid items-center z-10">
 
       <!-- Logo -->
@@ -140,11 +121,11 @@ function clasesSnackbar(notif) {
                 v-model="textoBusqueda"
                 placeholder="Buscar"
                 class="w-full py-3 px-12 border-none rounded-3xl transition-all duration-200
-                       bg-surface-150 dark:bg-surface-800
-                       hover:bg-surface-200 dark:hover:bg-surface-700
-                       focus:bg-surface-0 dark:focus:bg-surface-900
-                       focus:shadow-[0_1px_1px_0_rgba(65,69,73,.3),0_1px_3px_1px_rgba(65,69,73,.15)]
-                       dark:focus:shadow-[0_1px_3px_rgba(0,0,0,.5)]"
+                      bg-surface-150 dark:bg-surface-800
+                      hover:bg-surface-200 dark:hover:bg-surface-700
+                      focus:bg-surface-0 dark:focus:bg-surface-900
+                      focus:shadow-[0_1px_1px_0_rgba(65,69,73,.3),0_1px_3px_1px_rgba(65,69,73,.15)]
+                      dark:focus:shadow-[0_1px_3px_rgba(0,0,0,.5)]"
               />
             </IconField>
           </div>
@@ -162,16 +143,16 @@ function clasesSnackbar(notif) {
           >
             <div class="w-full h-full rounded-full overflow-hidden ring-2 ring-transparent hover:ring-primary transition-all duration-200 bg-surface-200 dark:bg-surface-700 flex items-center justify-center">
               <img
-                v-if="perfil.foto_perfil_url"
-                :src="perfil.foto_perfil_url"
+                v-if="userStore.perfil.foto_perfil_url"
+                :src="userStore.perfil.foto_perfil_url"
                 alt="Avatar"
                 class="w-full h-full object-cover block pointer-events-none"
               />
               <span
-                v-else-if="inicial"
+                v-else-if="userStore.inicial"
                 class="text-sm font-semibold text-surface-600 dark:text-surface-300 select-none pointer-events-none leading-none"
               >
-                {{ inicial }}
+                {{ userStore.inicial }}
               </span>
               <i v-else class="pi pi-user text-surface-500 text-sm pointer-events-none" />
             </div>
@@ -182,16 +163,12 @@ function clasesSnackbar(notif) {
       </div>
     </header>
 
-    <!----–––––––  SIDEBAR desktop ------------------------------------------------ -->
+    <!-- SIDEBAR (Desktop) -->
     <aside class="hidden sm:block sm:p-1 lg:p-3">
-      <Sidebar
-        :perfil="perfil"
-        @abrir-ajustes="mostrarAjustes = true"
-        @cerrar-sesion="cerrarSesion"
-      />
+      <Sidebar @abrir-ajustes="mostrarAjustes = true" />
     </aside>
 
-    <!--── MAIN -------------------------------------------------->
+    <!-- MAIN -->
     <main class="flex min-w-0 overflow-hidden bg-surface-0 dark:bg-surface-900 rounded-2xl ml-3">
       <div class="flex-1 min-w-0 overflow-hidden">
         <router-view />
@@ -201,7 +178,7 @@ function clasesSnackbar(notif) {
 
   </div>
 
-  <!--── PANEL USUARIO MÓVIL ───────────────────────────────────────-->
+  <!-- PANEL USUARIO MÓVIL -->
   <Teleport to="body">
     <Transition name="panel-movil">
       <div
@@ -217,13 +194,13 @@ function clasesSnackbar(notif) {
 
           <div class="flex items-center gap-3 mb-5">
             <div class="w-12 h-12 rounded-full overflow-hidden bg-surface-200 dark:bg-surface-700 flex items-center justify-center shrink-0">
-              <img v-if="perfil.foto_perfil_url" :src="perfil.foto_perfil_url" class="w-full h-full object-cover" />
-              <span v-else-if="inicial" class="text-lg font-semibold text-surface-600 dark:text-surface-300">{{ inicial }}</span>
+              <img v-if="userStore.perfil.foto_perfil_url" :src="userStore.perfil.foto_perfil_url" class="w-full h-full object-cover" />
+              <span v-else-if="userStore.inicial" class="text-lg font-semibold text-surface-600 dark:text-surface-300">{{ userStore.inicial }}</span>
               <i v-else class="pi pi-user text-surface-500" />
             </div>
             <div class="min-w-0">
-              <p class="font-semibold text-surface-900 dark:text-surface-0 truncate">{{ perfil.nombre }} {{ perfil.apellidos }}</p>
-              <p class="text-xs text-surface-500 truncate">{{ perfil.email }}</p>
+              <p class="font-semibold text-surface-900 dark:text-surface-0 truncate">{{ userStore.perfil.nombre }} {{ userStore.perfil.apellidos }}</p>
+              <p class="text-xs text-surface-500 truncate">{{ userStore.perfil.email }}</p>
             </div>
           </div>
 
@@ -252,11 +229,7 @@ function clasesSnackbar(notif) {
     </Transition>
   </Teleport>
 
-  <SettingsModal
-    v-model="mostrarAjustes"
-    :profile="perfil"
-    @profile-updated="alActualizarPerfil"
-  />
+  <SettingsModal v-model="mostrarAjustes" />
 
   <!-- SNACKBARS -->
   <div class="fixed bottom-20 left-3 z-50 flex flex-col-reverse gap-2 sm:bottom-6 sm:left-6">

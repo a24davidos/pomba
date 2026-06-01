@@ -13,7 +13,7 @@ watch(() => gestor.modal, (modal) => {
   if (modal.open && modal.name === 'renombrar') {
     inputRenombrar.value = modal.payload?.nombre || ''
   }
-}, { deep: true })
+}, { deep: true }) //observa cambios en propiedades internas del objeto, no solo si cambia su referencia
 
 async function renombrar() {
   const id = gestor.modal.payload.id

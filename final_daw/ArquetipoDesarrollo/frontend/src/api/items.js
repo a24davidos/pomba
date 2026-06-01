@@ -22,6 +22,8 @@ export const apiItems = {
     await api.post(`items/${id}/renombrar/`, { nombre })
   },
 
+  // Pide al backend que genere una URL presignada para subir directamente al bucket.
+  // Devuelve { url_subida, key } donde key es la ruta del objeto en el bucket.
   async solicitarSubida(nombre, mimeType) {
     const { data } = await api.post('items/solicitar_subida/', { nombre, mime_type: mimeType })
     return data
@@ -90,16 +92,16 @@ export const apiItems = {
     return data
   },
 
-  // ── Versiones (solo audio) ------------------------------------------------
+  // === Versiones (solo audio de momento) ================================
 
   async listarVersiones(itemId) {
     const { data } = await api.get(`items/${itemId}/versiones/`)
-    return data  // { versiones: [...], numero_actual: N }
+    return data
   },
 
   async solicitarSubidaVersion(itemId) {
     const { data } = await api.post(`items/${itemId}/versiones/solicitar_subida/`)
-    return data  // { url_subida, key }
+    return data
   },
 
   async confirmarSubidaVersion(itemId, key, tamanoBytes, mimeType) {
@@ -108,17 +110,17 @@ export const apiItems = {
       tamano_bytes: tamanoBytes,
       mime_type: mimeType,
     })
-    return data  // Item serializado actualizado
+    return data
   },
 
   async descargarVersion(itemId, numero) {
     const { data } = await api.get(`items/${itemId}/versiones/${numero}/descargar/`)
-    return data  // { url }
+    return data
   },
 
   async restaurarVersion(itemId, numero) {
     const { data } = await api.post(`items/${itemId}/versiones/${numero}/restaurar/`)
-    return data  // Item serializado actualizado
+    return data
   },
 
   async eliminarVersion(itemId, numero) {
@@ -127,6 +129,6 @@ export const apiItems = {
 
   async previsualizarVersion(itemId, numero) {
     const { data } = await api.get(`items/${itemId}/versiones/${numero}/previsualizar/`)
-    return data  // { url }
+    return data
   },
 }

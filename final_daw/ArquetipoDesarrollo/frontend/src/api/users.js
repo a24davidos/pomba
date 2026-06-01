@@ -14,7 +14,7 @@ export const apiUsers = {
     return data;
   },
 
-  /* Sube o reemplaza la foto de perfil) */
+  /* Sube o reemplaza la foto de perfil */
   async subirFotoPerfil(archivo) {
     const datos = new FormData();
     datos.append('foto_perfil', archivo);
@@ -33,7 +33,7 @@ export const apiUsers = {
     return data;
   },
 
-  /* Guarda la preferencia de tema en la BD */
+  /* Guarda la preferencia de tema claro/oscuro en la BD */
   async guardarTema(tema) {
     await api.patch('user/me/', { tema });
   },

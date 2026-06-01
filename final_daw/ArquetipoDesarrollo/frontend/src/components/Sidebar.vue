@@ -1,24 +1,22 @@
 <script setup>
 import { ref, computed } from 'vue'
+
 import { useRoute, useRouter } from 'vue-router'
 import { useGestorItems } from '@/stores/items'
+import { useUserStore } from '@/stores/user'
 import { useConfirmacion } from '@/composables/useConfirmacion'
 
 import ContextMenu from 'primevue/contextmenu'
 import Menu from 'primevue/menu'
 
-const props = defineProps({
-  perfil: {
-    type: Object,
-    default: () => ({ nombre: '', foto_perfil_url: null }),
-  },
-})
-
-const emit = defineEmits(['abrir-ajustes', 'cerrar-sesion'])
+// Utilizamos PERFIL para mostrar el avatar de usuario en la barra de navegación móvil
+// AppLayout es el encargado de pasarlo y es el dueño del dato.
+const emit = defineEmits(['abrir-ajustes'])
 
 const route = useRoute()
 const router = useRouter()
 const gestor = useGestorItems()
+const userStore = useUserStore()
 const { confirmar } = useConfirmacion()
 
 const menuPapelera = ref(null)
@@ -26,7 +24,7 @@ const nuevoMenu = ref(null)
 const fileInput = ref(null)
 const folderInput = ref(null)
 
-// Este es el menú de acción para las pantallas táctiles
+// Este es el menú de acción para las pantallas táctiles (Subir archivo, subir carpeta o crear carpeta) - Con el controlamos que aparezca o no
 const fabAbierto = ref(false)
 
 const nuevoMenuItems = [
@@ -69,14 +67,14 @@ const trashMenuItems = [
   },
 ]
 
-// ── Navegación ───────────────────────────────────────────────────
+// === Navegación ======================================================
 const active = computed(() => route.params.view || 'drive')
 
 const navItems = [
-  { key: 'drive',  label: 'Mi unidad', icon: 'pi pi-folder' },
-  { key: 'fav',    label: 'Favoritos', icon: 'pi pi-star'   },
-  { key: 'recent', label: 'Reciente',  icon: 'pi pi-clock'  },
-  { key: 'trash',  label: 'Papelera',  icon: 'pi pi-trash'  },
+  { key: 'drive', label: 'Mi unidad', icon: 'pi pi-folder' },
+  { key: 'fav', label: 'Favoritos', icon: 'pi pi-star' },
+  { key: 'recent', label: 'Reciente',  icon: 'pi pi-clock' },
+  { key: 'trash', label: 'Papelera',  icon: 'pi pi-trash' },
 ]
 
 function setActive(key) {
@@ -101,7 +99,7 @@ function handleFAB(event) {
 
 function cerrarFAB() { fabAbierto.value = false }
 
-// ── Subida de archivo individual ─────────────────────────────────
+// === Subida de archivo individual ============================================
 async function subirArchivo(event) {
   const archivo = event.target.files[0]
   if (!archivo) return
@@ -110,7 +108,7 @@ async function subirArchivo(event) {
   event.target.value = ''
 }
 
-// ── Subida de carpeta completa ────────────────────────────────────
+// === Subida de carpeta completa ==============================================
 async function subirCarpeta(event) {
   const files = Array.from(event.target.files)
   if (!files.length) return
@@ -119,10 +117,6 @@ async function subirCarpeta(event) {
   event.target.value = ''
 }
 
-// ── Avatar ───────────────────────────────────────────────────────
-const inicial = computed(() =>
-  props.perfil?.nombre ? props.perfil.nombre.charAt(0).toUpperCase() : null
-)
 
 function togglePanelUsuario() {
   emit('abrir-ajustes')
@@ -136,16 +130,16 @@ function togglePanelUsuario() {
   <!-- INPUT FILE OCULTO — Para subir carpeta de archivos -->
   <input ref="folderInput" type="file" class="hidden" webkitdirectory @change="subirCarpeta" />
 
-  <!-- ── SIDEBAR DESKTOP ────────────────────────────────────────── -->
+  <!--  SIDEBAR DESKTOP -->
   <aside class="hidden sm:flex w-full h-full flex-col sm:items-center sm:p-1 lg:items-stretch lg:p-3">
 
     <!-- Botón Nuevo -->
     <button
       @click="toggleNuevoMenu"
       class="mb-4 flex items-center justify-center gap-2 bg-primary text-primary-contrast rounded-full text-base font-medium
-             hover:bg-primary/90 active:scale-[0.98] transition-all duration-150 shadow-sm
-             sm:w-10 sm:h-10 sm:p-0
-             lg:w-full lg:h-auto lg:px-4 lg:py-2.5"
+            hover:bg-primary/90 active:scale-[0.98] transition-all duration-150 shadow-sm
+            sm:w-10 sm:h-10 sm:p-0
+            lg:w-full lg:h-auto lg:px-4 lg:py-2.5"
       title="Nuevo"
     >
       <i class="pi pi-plus text-sm" />
@@ -180,14 +174,14 @@ function togglePanelUsuario() {
     </nav>
   </aside>
 
-  <!-- ── BOTTOM NAV MÓVIL ──────────────────────────────────────── -->
+  <!-- BOTTOM NAV MÓVIL  -->
   <Teleport to="body">
     <nav
       class="sm:hidden fixed bottom-0 left-0 right-0 z-40
-             bg-surface-0/95 dark:bg-surface-900/95
-             backdrop-blur-md
-             border-t border-surface-200 dark:border-surface-700
-             flex items-stretch"
+            bg-surface-0/95 dark:bg-surface-900/95
+            backdrop-blur-md
+            border-t border-surface-200 dark:border-surface-700
+            flex items-stretch"
       style="padding-bottom: env(safe-area-inset-bottom);"
     >
       <button
@@ -214,8 +208,8 @@ function togglePanelUsuario() {
         aria-label="Mi cuenta"
       >
         <div class="w-6 h-6 rounded-full overflow-hidden bg-surface-200 dark:bg-surface-700 flex items-center justify-center ring-2 ring-transparent transition-all">
-          <img v-if="perfil?.foto_perfil_url" :src="perfil.foto_perfil_url" class="w-full h-full object-cover" />
-          <span v-else-if="inicial" class="text-[10px] font-semibold text-surface-600 dark:text-surface-300 leading-none">{{ inicial }}</span>
+          <img v-if="userStore.perfil.foto_perfil_url" :src="userStore.perfil.foto_perfil_url" class="w-full h-full object-cover" />
+          <span v-else-if="userStore.inicial" class="text-[10px] font-semibold text-surface-600 dark:text-surface-300 leading-none">{{ userStore.inicial }}</span>
           <i v-else class="pi pi-user text-surface-500" style="font-size:11px" />
         </div>
         <span class="text-[10px] font-medium leading-none text-surface-400 dark:text-surface-500">Cuenta</span>
@@ -223,7 +217,7 @@ function togglePanelUsuario() {
     </nav>
   </Teleport>
 
-  <!-- ── FAB MÓVIL (botón +) ───────────────────────────────────── -->
+  <!-- FAB MÓVIL (botón +)  -->
   <Teleport to="body">
     <!-- Overlay para cerrar el mini-menú -->
     <Transition name="fab-overlay">
@@ -246,10 +240,10 @@ function togglePanelUsuario() {
           :key="opcion.label"
           @click="opcion.command"
           class="flex items-center gap-3 bg-surface-0 dark:bg-surface-800
-                 border border-surface-200 dark:border-surface-700
-                 rounded-2xl px-4 py-3 shadow-lg text-sm font-medium
-                 text-surface-700 dark:text-surface-200
-                 active:scale-95 transition-transform"
+                border border-surface-200 dark:border-surface-700
+                rounded-2xl px-4 py-3 shadow-lg text-sm font-medium
+                text-surface-700 dark:text-surface-200
+                active:scale-95 transition-transform"
         >
           <div class="w-8 h-8 rounded-xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center">
             <i :class="[opcion.icon, 'text-primary text-sm']" />

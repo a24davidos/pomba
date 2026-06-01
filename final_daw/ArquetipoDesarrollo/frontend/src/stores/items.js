@@ -2,7 +2,11 @@ import { defineStore } from 'pinia'
 import { apiItems } from '@/api/items'
 import { getErrorMessage } from '@/utils/errors'
 
+const NOTIF_DURACION_EXITO = 3
+const NOTIF_DURACION_ERROR = 5
+
 export const useGestorItems = defineStore('items', {
+  // Datos reactivos del store. Equivale a data() en un componente Vue.
   state: () => ({
     items: [],
     breadcrumb: [],
@@ -30,6 +34,7 @@ export const useGestorItems = defineStore('items', {
     },
   }),
 
+  // Propiedades calculadas derivadas del state. Se cachean y solo se recalculan cuando cambian los datos de los que dependen.
   getters: {
     itemPanelInfo: (state) => state.items.find((i) => i.id === state.panelInfo.itemId) ?? null,
 
@@ -41,9 +46,10 @@ export const useGestorItems = defineStore('items', {
       state.notificaciones.some((n) => n.id === 'descargar' && n.tipo === 'cargando'),
   },
 
+  // Funciones que modifican el state o llaman a la API. Equivalen a methods en un componente Vue.
   actions: {
 
-    //PANEL DE INFORMACIÓN -----------------------------------
+    // === PANEL DE INFORMACIÓN ================================
 
     abrirPanelInfo(item) {
       this.panelInfo.visible = true
@@ -55,7 +61,7 @@ export const useGestorItems = defineStore('items', {
       this.panelInfo.itemId = null
     },
 
-    // MODALES ------------------------------------------------
+    // === MODALES ============================================
 
     abrirModal(name, payload = null) {
       this.modal.open = true
@@ -95,44 +101,66 @@ export const useGestorItems = defineStore('items', {
       }
     },
 
-    // NOTIFICACIONES ------------------------------------------------
+    // === NOTIFICACIONES ======================================
 
     agregarNotificacion({ id, tipo, mensaje, icono, severidad = 'neutro' }) {
+      //Evita duplicados: si ya existe una notificación con ese id, la borramos primero
       this.eliminarNotificacion(id)
-      this.notificaciones.push({ id, tipo, mensaje, icono, severidad, timerId: null })
-      if (tipo === 'exito' || tipo === 'error') {
+
+      const nuevaNotificacion = { id, tipo, mensaje, icono, severidad, timerId: null }
+      this.notificaciones.push(nuevaNotificacion)
+
+      // Las de éxito y error se cierran solas pasados unos segundos
+      const seCierraAutomaticamente = tipo === 'exito' || tipo === 'error'
+
+      if (seCierraAutomaticamente) {
+        const segundos = tipo === 'error' ? NOTIF_DURACION_ERROR : NOTIF_DURACION_EXITO
         const notif = this.notificaciones.find((n) => n.id === id)
-        const secs = tipo === 'error' ? 5 : 3
-        if (notif) notif.timerId = setTimeout(() => this.eliminarNotificacion(id), secs * 1000)
+
+        // Guardamos el id del temporizador para poder cancelarlo si hace falta
+        notif.timerId = setTimeout(() => this.eliminarNotificacion(id), segundos * 1000)
       }
     },
 
     actualizarNotificacion(id, cambios, autoCloseSeg = 3) {
       const notif = this.notificaciones.find((n) => n.id === id)
       if (!notif) return
+
+      // Cancelamos el temporizador anterior para no cerrar la notificación antes de tiempo
       if (notif.timerId) clearTimeout(notif.timerId)
+
+      // Aplicamos los cambios encima de la notificación existente
       Object.assign(notif, cambios)
-      if (cambios.tipo === 'exito' || cambios.tipo === 'error') {
-        const secs = cambios.tipo === 'error' ? 5 : autoCloseSeg
-        notif.timerId = setTimeout(() => this.eliminarNotificacion(id), secs * 1000)
+
+      // Si el nuevo tipo es éxito o error, arrancamos un nuevo temporizador de cierre
+      const seCierraAutomaticamente = cambios.tipo === 'exito' || cambios.tipo === 'error'
+      if (seCierraAutomaticamente) {
+        const segundos = cambios.tipo === 'error' ? NOTIF_DURACION_ERROR : autoCloseSeg
+        notif.timerId = setTimeout(() => this.eliminarNotificacion(id), segundos * 1000)
       }
     },
 
     eliminarNotificacion(id) {
-      const idx = this.notificaciones.findIndex((n) => n.id === id)
-      if (idx !== -1) {
-        if (this.notificaciones[idx].timerId) clearTimeout(this.notificaciones[idx].timerId)
-        this.notificaciones.splice(idx, 1)
-      }
+      const indice = this.notificaciones.findIndex((n) => n.id === id)
+      if (indice === -1) return
+
+      // Cancelamos el temporizador antes de eliminarla para que no intente borrar una notificación que ya no existe
+      const notif = this.notificaciones[indice]
+      if (notif.timerId) clearTimeout(notif.timerId)
+
+      this.notificaciones.splice(indice, 1)
     },
 
-    // ITEMS (Lectura) ------------------------------------------------
+
+    // === ITEMS (Lectura) ====================================
 
     recargar() {
       return this.cargarItems(this.currentParams)
     },
 
     async cargarItems(params = {}) {
+      // Uso un token para poder ignorar respuestas de peticiones antiguas.
+      // Ej. Un usuario navega a otra carpeta antes de que llegara la información de la primera query.
       const token = ++this.loadToken
       this.loading = true
       this.currentParams = { ...params }
@@ -176,7 +204,7 @@ export const useGestorItems = defineStore('items', {
       }
     },
 
-    // ── Items (Escritura) ------------------------------------------------
+    // === Items (Escritura) =====================================
 
     async crearCarpeta(data) {
       try {
@@ -193,6 +221,10 @@ export const useGestorItems = defineStore('items', {
       }
     },
 
+    // Sube un archivo usando una url presignada de 3 pasos:
+    // 1. Pide al backend una URL temporal para subir directamente al bucket
+    // 2. Sube los bytes directo al bucket (sin pasar por el servidor)
+    // 3. Notifica al backend para que registre el archivo en la base de datos
     async _subirArchivoPresignado(file, padreId) {
       const mimeType = file.type || 'application/octet-stream'
       const { url_subida, key } = await apiItems.solicitarSubida(file.name, mimeType)
@@ -223,6 +255,7 @@ export const useGestorItems = defineStore('items', {
       }
     },
 
+    //Lo necesitamos para subir carpetas enteras con sus archivos
     _parsearEstructuraCarpeta(files) {
       const IGNORADOS = new Set(['.DS_Store', 'Thumbs.db', 'desktop.ini', '.localized'])
       const carpetas = new Set()
@@ -230,13 +263,22 @@ export const useGestorItems = defineStore('items', {
 
       for (const file of files) {
         if (IGNORADOS.has(file.name)) continue
+
+        // webkitRelativePath contiene la ruta completa. 
+        // Ejemplo "musica/rock/cancion.mp3"
         const partes = file.webkitRelativePath.split('/')
+
+        // Añade todos los segmentos intermedios como carpetas a crear
+        // i empieza en 1 para saltarse la carpeta raíz, que ya existe en el destino
         for (let i = 1; i < partes.length; i++) {
           carpetas.add(partes.slice(0, i).join('/'))
         }
+
         archivos.push({ file, rutaRelativa: file.webkitRelativePath })
       }
 
+      // Ordena por número de '/' para que los padres se creen antes que los hijos
+      // Por las restricciones no se pueden crear los hijos antes que los padres
       const carpetasOrdenadas = Array.from(carpetas).sort(
         (a, b) => a.split('/').length - b.split('/').length
       )
@@ -248,6 +290,7 @@ export const useGestorItems = defineStore('items', {
       if (!files.length) return
 
       const NOTIF_ID = 'subir-carpeta'
+      //Para subir de 3 en 3
       const LOTE = 3
 
       this.agregarNotificacion({
@@ -275,7 +318,7 @@ export const useGestorItems = defineStore('items', {
 
         for (let i = 0; i < archivos.length; i += LOTE) {
           const lote = archivos.slice(i, i + LOTE)
-
+          //Usamos allSettled porque lanza todas las promesas a la vez y nos evita que si una falla se aborte la subida
           const resultados = await Promise.allSettled(
             lote.map(async ({ file, rutaRelativa }) => {
               const partes = rutaRelativa.split('/')
@@ -353,7 +396,7 @@ export const useGestorItems = defineStore('items', {
         })
         return true
       } catch (error) {
-        const mensaje = error?.response?.data?.detail || 'No se pudo renombrar el elemento'
+        const mensaje = getErrorMessage(error) || 'No se pudo renombrar el elemento'
         this.agregarNotificacion({
           id: 'renombrar',
           tipo: 'error',
@@ -364,6 +407,8 @@ export const useGestorItems = defineStore('items', {
       }
     },
 
+    //Lo usamos para reflejar un cambio en la UI de forma inmediata. 
+    // Ejemplo: Pinto la estrella de favorito sin necesidad de recargar todo el servidor
     actualizarItemsLocal(ids, cambios) {
       const set = new Set(ids)
       this.items = this.items.map((item) =>
@@ -416,7 +461,7 @@ export const useGestorItems = defineStore('items', {
       }
     },
 
-    // ── Papelera y Eliminación ────────────────────────────────────────
+    // === Papelera y Eliminación ============================================
 
     async eliminarItems(ids = []) {
       try {
@@ -532,7 +577,7 @@ export const useGestorItems = defineStore('items', {
       }
     },
 
-    // -- DESCARGAR ------------------------------------------------
+    // === DESCARGAR ==============================================================
 
     async descargarItems() {
       const seleccion = this.itemsSeleccionados
@@ -591,8 +636,9 @@ export const useGestorItems = defineStore('items', {
       }
     },
 
-    //  VERSIONES (solo audio) ------------------------------------------------
-
+    // === VERSIONES (solo audio) =====================================================
+    
+    //Esto lo usamos para poder subir nuevas versiones de canciones
     async subirNuevaVersion(file, itemId) {
       const NOTIF_ID = `version-${itemId}`
       this.agregarNotificacion({
@@ -625,7 +671,7 @@ export const useGestorItems = defineStore('items', {
       }
     },
 
-    //  SELECCIONADOS  ------------------------------------------------
+    // === SELECCIONADOS ============================================================
 
     seleccionar(item, index) {
       this.seleccion.ids = [item.id]

@@ -4,6 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useGestorItems } from '@/stores/items'
 import { useConfirmacion } from '@/composables/useConfirmacion'
 import { formatDate } from '../utils/date'
+import { formatBytes } from '../utils/bytes'
+import { obtenerIcono } from '../utils/iconos'
 
 const gestor = useGestorItems()
 const { confirmar } = useConfirmacion()
@@ -28,16 +30,22 @@ const comparadores = {
 }
 
 const itemsOrdenados = computed(() => {
+  // 1 si ascendente, -1 si descendente (multiplicamos para invertir orden)
   const dir = sortDir.value === 'asc' ? 1 : -1
+  // coge la función de comparación según la columna activa (nombre, fecha, tamaño...)
   const comparar = comparadores[sortCampo.value]
+  // copia el array para no mutar gestor.items y ordena aplicando la dirección
   return [...gestor.items].sort((a, b) => dir * comparar(a, b))
 })
+
 const route = useRoute()
 const router = useRouter()
 
 const emit = defineEmits(['rename', 'move'])
 
 const menuAbierto = ref(null)
+
+//Query al navegador para saber si es movil/tablet o desktop (Esto define el tipo de click)
 const esTactil = window.matchMedia('(pointer: coarse)').matches
 const enPapelera = computed(() => (route.params.view || 'drive') === 'trash')
 
@@ -101,7 +109,7 @@ function handleBackgroundClick(event) {
   }
 }
 
-// ── Lógica compartida de acciones ────────────────────────────────────
+// === Lógica compartida de acciones ==============================
 async function ejecutarAccion(accion, item) {
   if (accion === 'info') {
     gestor.abrirPanelInfo(item)
@@ -129,7 +137,7 @@ async function ejecutarAccion(accion, item) {
   }
 }
 
-// ── Menú ··· ─────────────────────────────────────────────────────────
+// === Menú ··· ==================================================
 function toggleMenu(event, itemId) {
   event.stopPropagation()
   menuAbierto.value = menuAbierto.value === itemId ? null : itemId
@@ -141,7 +149,7 @@ async function accionMenu(event, accion, item) {
   await ejecutarAccion(accion, item)
 }
 
-// ── Context menu (click derecho) ────────────────────────────
+// === Context menu (click derecho) ===============================
 const contextMenu = ref({ visible: false, x: 0, y: 0, item: null })
 
 function handleContextMenu(event, item, index) {
@@ -191,7 +199,7 @@ async function accionContextMenu(accion) {
   }
 }
 
-// ── Cierre de menús ──────────────────────────────────────────
+// === Cierre de menús ===========================================
 function handleDocumentClick() {
   if (menuAbierto.value !== null) menuAbierto.value = null
   if (contextMenu.value.visible) contextMenu.value.visible = false
@@ -215,12 +223,6 @@ function estaSeleccionado(item) {
   return gestor.seleccion.ids.includes(item.id)
 }
 
-function formatBytes(bytes) {
-  if (!bytes) return '—'
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
 
 const emptyState = computed(() => {
   const estados = {
@@ -232,19 +234,6 @@ const emptyState = computed(() => {
   return estados[route.params.view] ?? estados.drive
 })
 
-function obtenerIconoArchivo(mimeType) {
-  const mime = (mimeType || '').toLowerCase()
-  if (mime.startsWith('image/')) return 'pi-image text-purple-400'
-  if (mime.startsWith('video/')) return 'pi-video text-sky-400'
-  if (mime.startsWith('audio/')) return 'pi-headphones text-pink-400'
-  if (mime === 'application/pdf') return 'pi-file-pdf text-red-400'
-  if (mime === 'application/msword' || mime.includes('wordprocessingml')) return 'pi-file-word text-blue-500'
-  if (mime === 'application/vnd.ms-excel' || mime.includes('spreadsheetml') || mime === 'text/csv' || mime === 'application/csv' || mime === 'text/x-csv') return 'pi-file-excel text-green-500'
-  if (mime.includes('zip') || mime.includes('tar') || mime.includes('rar') || mime.includes('7z') || mime.includes('gzip') || mime.includes('compress')) return 'pi-box text-amber-500'
-  if (mime === 'application/json' || mime.startsWith('text/html') || mime.startsWith('text/css') || mime.includes('javascript') || mime.includes('xml')) return 'pi-code text-emerald-500'
-  if (mime.startsWith('text/')) return 'pi-file-edit text-surface-500'
-  return 'pi-file text-surface-400'
-}
 </script>
 
 <template>
@@ -253,12 +242,12 @@ function obtenerIconoArchivo(mimeType) {
     @click="handleBackgroundClick"
   >
 
-    <!-- ── Loading ─────────────────────────────────────────────── -->
+    <!-- Loading  -->
     <div v-if="gestor.loading" class="flex items-center justify-center py-16 text-surface-400">
       <i class="pi pi-spin pi-spinner text-2xl" />
     </div>
 
-    <!-- ── Vacío ────────────────────── -->
+    <!-- Vacío -->
     <div
       v-else-if="!gestor.items.length"
       class="flex flex-col items-center justify-center py-24 gap-4"
@@ -274,13 +263,12 @@ function obtenerIconoArchivo(mimeType) {
       </div>
     </div>
 
-    <!-- ── Tabla ───────────────────────────────────────────────── -->
+    <!--  Tabla  -->
     <table v-else role="grid" aria-label="Archivos" class="w-full table-fixed border-collapse">
       <thead class="sticky top-0 z-10">
         <tr
           role="presentation"
-          class="bg-surface-0 dark:bg-surface-900 border-b border-surface-200 dark:border-surface-800
-                 text-sm font-medium text-surface-400 dark:text-surface-500"
+          class="bg-surface-0 dark:bg-surface-900 border-b border-surface-200 dark:border-surface-800 text-sm font-medium text-surface-400 dark:text-surface-500"
         >
           <th scope="col" class="text-left px-4 py-2 font-medium">
             <button @click="ordenarPor('nombre')" class="flex items-center gap-1 hover:text-surface-600 dark:hover:text-surface-300 transition-colors">
@@ -326,7 +314,7 @@ function obtenerIconoArchivo(mimeType) {
               <i
                 :class="[
                   'pi text-base shrink-0',
-                  item.tipo === 'carpeta' ? 'pi-folder text-yellow-500' : obtenerIconoArchivo(item.mime_type),
+                  obtenerIcono(item),
                 ]"
               />
               <span class="truncate text-sm">{{ item.nombre }}</span>
@@ -370,9 +358,9 @@ function obtenerIconoArchivo(mimeType) {
                   v-if="menuAbierto === item.id"
                   @click.stop
                   class="absolute right-0 top-8 z-50 w-44
-                         bg-white dark:bg-surface-900
-                         border border-surface-200 dark:border-surface-700
-                         rounded-xl shadow-lg py-1 overflow-hidden"
+                        bg-white dark:bg-surface-900
+                        border border-surface-200 dark:border-surface-700
+                        rounded-xl shadow-lg py-1 overflow-hidden"
                 >
                   <template v-if="enPapelera">
                     <button
@@ -469,9 +457,9 @@ function obtenerIconoArchivo(mimeType) {
         v-if="contextMenu.visible"
         @click.stop
         class="fixed z-200 w-44
-               bg-white dark:bg-surface-900
-               border border-surface-200 dark:border-surface-700
-               rounded-xl shadow-lg py-1 overflow-hidden"
+              bg-white dark:bg-surface-900
+              border border-surface-200 dark:border-surface-700
+              rounded-xl shadow-lg py-1 overflow-hidden"
         :style="{ top: contextMenu.y + 'px', left: contextMenu.x + 'px' }"
       >
         <template v-if="enPapelera">
