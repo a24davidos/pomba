@@ -4,13 +4,15 @@ import { useGestorItems } from '@/stores/items'
 import { apiItems } from '@/api/items'
 import { useConfirmacion } from '@/composables/useConfirmacion'
 import { formatDate } from '@/utils/date'
-import { etiquetaAmigable, CLAVES_OCULTAS } from '@/utils/metadatos'
+import { formatBytes } from '@/utils/bytes'
+import { obtenerIcono } from '@/utils/iconos'
+import { etiquetaAmigable } from '@/utils/metadatos'
 
-// STORE Y COMPOSABLES ─────────────────────────────────────────────
+// === STORE Y COMPOSABLES =============================================
 const gestor = useGestorItems()
 const { confirmar } = useConfirmacion()
 
-// PANTALLA RESPONSIVENES ─────────────────────────────────────────────
+// === PANTALLA RESPONSIVENES ==========================================
 //Consultrar el tamaño 
 const consultaMediaQuery = typeof window !== 'undefined'
   ? window.matchMedia('(min-width: 1024px)')
@@ -43,7 +45,7 @@ const estiloPanel = computed(() =>
     : { transform: gestor.panelInfo.visible ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 0.25s cubic-bezier(0.32,0.72,0,1)' }
 )
 
-// ÍTEM SELECCIONADO ------------------------------
+// === ÍTEM SELECCIONADO ===============================
 const item = computed(() => gestor.itemPanelInfo)
 const tabActiva = ref('detalles')
 
@@ -72,12 +74,12 @@ watch(mostrarPestanaVersiones, (disponible) => {
   if (!disponible) tabActiva.value = 'detalles'
 })
 
-// VERSIONES ----------------------------------
-const versiones         = ref([])
-const numeroActual      = ref(1)
+// === VERSIONES ==================================================
+const versiones = ref([])
+const numeroActual = ref(1)
 const cargandoVersiones = ref(false)
-const inputVersion      = ref(null)   // referencia al <input type="file"> oculto
-const reproduciendo     = ref(null)   // 'actual' o número de versión archivada
+const inputVersion = ref(null)   // referencia al <input type="file"> oculto
+const reproduciendo = ref(null)   // 'actual' o número de versión archivada
 const urlReproduciendo  = ref('')
 
 async function cargarVersiones() {
@@ -85,7 +87,7 @@ async function cargarVersiones() {
   cargandoVersiones.value = true
   try {
     const data = await apiItems.listarVersiones(item.value.id)
-    versiones.value    = data.versiones
+    versiones.value = data.versiones
     numeroActual.value = data.numero_actual
   } catch {
     gestor.agregarNotificacion({
@@ -164,14 +166,16 @@ async function eliminarVersion(version) {
   }
 }
 
+// Reproduce o pausa una versión de audio.
 async function toggleReproducir(id) {
   // Llamar con el mismo id pausa; con un id distinto cambia de versión
   if (reproduciendo.value === id) {
-    reproduciendo.value    = null
+    reproduciendo.value = null
     urlReproduciendo.value = ''
     return
   }
   try {
+    // Pedimos al backend una presigned URL temporal de S3
     const { url } = id === 'actual'
       ? await apiItems.previsualizar(item.value.id)
       : await apiItems.previsualizarVersion(item.value.id, id)
@@ -192,55 +196,50 @@ watch(tabActiva, (tab) => {
 
 // Al cambiar de ítem: resetear todo el estado de versiones y reproducción
 watch(() => item.value?.id, () => {
-  versiones.value        = []
-  numeroActual.value     = 1
-  reproduciendo.value    = null
+  versiones.value = []
+  numeroActual.value = 1
+  reproduciendo.value = null
   urlReproduciendo.value = ''
   if (tabActiva.value === 'versiones') cargarVersiones()
 })
 
-// UTILIDADES DE PRESENTACIÓN ---------------------------------------
-function formatBytes(bytes) {
-  if (!bytes) return '—'
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
 
-function obtenerIcono(it) {
-  if (!it) return 'pi-file text-surface-400'
-  if (it.tipo === 'carpeta') return 'pi-folder text-yellow-500'
-  const mime = (it.mime_type || '').toLowerCase()
-  if (mime.startsWith('image/'))   return 'pi-image text-purple-400'
-  if (mime.startsWith('video/'))   return 'pi-video text-sky-400'
-  if (mime.startsWith('audio/'))   return 'pi-headphones text-pink-400'
-  if (mime === 'application/pdf')  return 'pi-file-pdf text-red-400'
-  if (mime === 'application/msword' || mime.includes('wordprocessingml'))           return 'pi-file-word text-blue-500'
-  if (mime === 'application/vnd.ms-excel' || mime.includes('spreadsheetml') || mime === 'text/csv') return 'pi-file-excel text-green-500'
-  if (mime.includes('zip') || mime.includes('tar') || mime.includes('rar') || mime.includes('compress') || mime.includes('7z')) return 'pi-box text-amber-500'
-  if (mime === 'application/json' || mime.startsWith('text/html') || mime.startsWith('text/css') || mime.includes('javascript') || mime.includes('xml')) return 'pi-code text-emerald-500'
-  if (mime.startsWith('text/'))    return 'pi-file-edit text-surface-500'
-  return 'pi-file text-surface-400'
-}
+// Mime que se identifican por prefijo (image/png, audio/mp3, etc.)
+const TIPOS_POR_PREFIJO = [
+  ['image/', 'Imagen'],
+  ['video/', 'Vídeo'],
+  ['audio/', 'Audio'],
+  ['text/', 'Archivo de texto'],
+]
 
-function tipoLegible(it) {
-  if (!it) return ''
-  if (it.tipo === 'carpeta') return 'Carpeta'
-  const mime = (it.mime_type || '').toLowerCase()
-  if (mime.startsWith('image/'))   return 'Imagen'
-  if (mime.startsWith('video/'))   return 'Vídeo'
-  if (mime.startsWith('audio/'))   return 'Audio'
-  if (mime === 'application/pdf')  return 'PDF'
-  if (mime === 'application/msword' || mime.includes('wordprocessingml'))  return 'Documento Word'
-  if (mime === 'application/vnd.ms-excel' || mime.includes('spreadsheetml')) return 'Hoja de cálculo'
-  if (mime.includes('zip') || mime.includes('tar') || mime.includes('rar') || mime.includes('compress')) return 'Archivo comprimido'
-  if (mime.startsWith('text/'))    return 'Archivo de texto'
+// Mimme que no tienen prefijo común: se busca si el mime contiene alguno de los fragmentos
+const TIPOS_POR_FRAGMENTO = [
+  [['application/pdf'], 'PDF'],
+  [['application/msword', 'wordprocessingml'], 'Documento Word'],
+  [['application/vnd.ms-excel', 'spreadsheetml'], 'Hoja de cálculo'],
+  [['zip', 'tar', 'rar', 'compress'], 'Archivo comprimido'],
+]
+
+function tipoLegible(item) {
+  if (!item) return ''
+  if (item.tipo === 'carpeta') return 'Carpeta'
+
+  const mime = (item.mime_type || '').toLowerCase()
+
+  for (const [prefijo, etiqueta] of TIPOS_POR_PREFIJO) {
+    if (mime.startsWith(prefijo)) return etiqueta
+  }
+
+  for (const [fragmentos, etiqueta] of TIPOS_POR_FRAGMENTO) {
+    if (fragmentos.some(f => mime.includes(f))) return etiqueta
+  }
+
   return 'Archivo'
 }
 
+
 const tieneMetadatos = computed(() =>
-  item.value?.metadatos &&
-  Object.keys(item.value.metadatos).some((k) => !CLAVES_OCULTAS.has(k)),
+  item.value?.metadatos && Object.keys(item.value.metadatos).length > 0,
 )
 </script>
 
@@ -279,8 +278,8 @@ const tieneMetadatos = computed(() =>
             <button
               @click="gestor.cerrarPanelInfo()"
               class="w-7 h-7 shrink-0 rounded-full flex items-center justify-center
-                     text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800
-                     transition-colors cursor-pointer"
+              text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800
+              transition-colors cursor-pointer"
               aria-label="Cerrar panel de detalles"
             >
               <i class="pi pi-times text-xs" />
@@ -317,11 +316,11 @@ const tieneMetadatos = computed(() =>
           <!-- Contenido scrollable  -->
           <div
             class="flex-1 overflow-y-auto
-                   [&::-webkit-scrollbar]:w-1.5
-                   [&::-webkit-scrollbar-track]:bg-transparent
-                   [&::-webkit-scrollbar-thumb]:rounded-full
-                   [&::-webkit-scrollbar-thumb]:bg-surface-300
-                   dark:[&::-webkit-scrollbar-thumb]:bg-surface-600"
+            [&::-webkit-scrollbar]:w-1.5
+            [&::-webkit-scrollbar-track]:bg-transparent
+            [&::-webkit-scrollbar-thumb]:rounded-full
+            [&::-webkit-scrollbar-thumb]:bg-surface-300
+            dark:[&::-webkit-scrollbar-thumb]:bg-surface-600"
           >
 
             <!--  PESTAÑA: DETALLES  -->
@@ -358,7 +357,7 @@ const tieneMetadatos = computed(() =>
                 </div>
                 <div class="space-y-3">
                   <div
-                    v-for="(valor, clave) in Object.fromEntries(Object.entries(item.metadatos).filter(([k]) => !CLAVES_OCULTAS.has(k)))"
+                    v-for="(valor, clave) in item.metadatos"
                     :key="clave"
                     class="flex justify-between gap-4 text-sm"
                   >
@@ -393,10 +392,10 @@ const tieneMetadatos = computed(() =>
                 <button
                   @click="iniciarSubidaVersion"
                   class="flex items-center gap-2 w-full justify-center px-3 py-2 rounded-lg text-sm font-medium
-                         text-primary-600 dark:text-primary-400
-                         border border-primary-300 dark:border-primary-700
-                         hover:bg-primary-50 dark:hover:bg-primary-950/30
-                         transition-colors cursor-pointer"
+                  text-primary-600 dark:text-primary-400
+                  border border-primary-300 dark:border-primary-700
+                  hover:bg-primary-50 dark:hover:bg-primary-950/30
+                  transition-colors cursor-pointer"
                 >
                   <i class="pi pi-upload text-xs" />
                   Subir nueva versión
@@ -415,8 +414,8 @@ const tieneMetadatos = computed(() =>
                 <div class="rounded-xl p-3 bg-surface-50 dark:bg-surface-800/60">
                   <div class="flex items-center gap-2 mb-1">
                     <span class="text-xs font-semibold px-1.5 py-0.5 rounded-md
-                                 bg-primary-100 dark:bg-primary-900/50
-                                 text-primary-700 dark:text-primary-300">
+                                bg-primary-100 dark:bg-primary-900/50
+                                text-primary-700 dark:text-primary-300">
                       v{{ numeroActual }}
                     </span>
                     <span class="text-xs text-surface-500">Versión actual</span>
@@ -440,9 +439,9 @@ const tieneMetadatos = computed(() =>
                     <button
                       @click="gestor.seleccionar(item, null); gestor.descargarItems()"
                       class="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs
-                             text-surface-600 dark:text-surface-300
-                             hover:bg-surface-200 dark:hover:bg-surface-700
-                             transition-colors cursor-pointer"
+                            text-surface-600 dark:text-surface-300
+                            hover:bg-surface-200 dark:hover:bg-surface-700
+                            transition-colors cursor-pointer"
                     >
                       <i class="pi pi-download text-xs" /> Descargar
                     </button>
@@ -460,8 +459,8 @@ const tieneMetadatos = computed(() =>
                 >
                   <div class="flex items-center gap-2 mb-1">
                     <span class="text-xs font-semibold px-1.5 py-0.5 rounded-md
-                                 bg-surface-200 dark:bg-surface-700
-                                 text-surface-600 dark:text-surface-300">
+                                bg-surface-200 dark:bg-surface-700
+                                text-surface-600 dark:text-surface-300">
                       v{{ version.numero }}
                     </span>
                     <span v-if="version.numero === 1" class="text-xs text-surface-400">Versión original</span>
@@ -485,27 +484,27 @@ const tieneMetadatos = computed(() =>
                     <button
                       @click="descargarVersionAntigua(version)"
                       class="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs
-                             text-surface-600 dark:text-surface-300
-                             hover:bg-surface-200 dark:hover:bg-surface-700
-                             transition-colors cursor-pointer"
+                            text-surface-600 dark:text-surface-300
+                            hover:bg-surface-200 dark:hover:bg-surface-700
+                            transition-colors cursor-pointer"
                     >
                       <i class="pi pi-download text-xs" /> Descargar
                     </button>
                     <button
                       @click="restaurarVersion(version)"
                       class="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs
-                             text-surface-600 dark:text-surface-300
-                             hover:bg-surface-200 dark:hover:bg-surface-700
-                             transition-colors cursor-pointer"
+                            text-surface-600 dark:text-surface-300
+                            hover:bg-surface-200 dark:hover:bg-surface-700
+                            transition-colors cursor-pointer"
                     >
                       <i class="pi pi-history text-xs" /> Restaurar
                     </button>
                     <button
                       @click="eliminarVersion(version)"
                       class="ml-auto flex items-center justify-center w-6 h-6 rounded-md text-xs
-                             text-surface-400 hover:text-red-500
-                             hover:bg-red-50 dark:hover:bg-red-950/30
-                             transition-colors cursor-pointer"
+                            text-surface-400 hover:text-red-500
+                            hover:bg-red-50 dark:hover:bg-red-950/30
+                            transition-colors cursor-pointer"
                       title="Eliminar esta versión"
                     >
                       <i class="pi pi-trash text-xs" />

@@ -33,7 +33,6 @@
 
 @layer base {
   html, body {
-    /* Usamos la variable de superficie 50 que es el fondo base */
     background-color: var(--p-surface-50);
     color: var(--p-surface-900);
     min-height: 100dvh;
@@ -41,7 +40,7 @@
   }
 
   .dark html, .dark body {
-    background-color: var(--p-surface-950); /* Un negro más profundo para el dark */
+    background-color: var(--p-surface-950);
     color: var(--p-surface-0);
   }
   

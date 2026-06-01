@@ -99,7 +99,7 @@ async function crearCarpeta() {
   }
 }
 
-// Barra de acciones para elementos seleccionados ─────────────────
+// === Barra de acciones para elementos seleccionados ==================
 async function eliminar() {
   const ids = gestor.itemsSeleccionados.map((i) => i.id)
   if (!ids.length) return
@@ -192,8 +192,8 @@ watch(
           @click="togglePopoverBreadcrumb($event)"
           title="Mostrar ruta completa"
           class="px-2 py-0.5 rounded text-base font-bold tracking-widest shrink-0
-                 text-surface-400 dark:text-surface-500
-                 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
+                text-surface-400 dark:text-surface-500
+                hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
         >···</button>
 
         <i class="pi pi-angle-right text-sm text-surface-300 dark:text-surface-600 shrink-0 mx-0.5" />
@@ -201,8 +201,8 @@ watch(
         <button
           @click="rutaBreadcrumb.at(-2).command()"
           class="max-w-36 truncate px-2 py-1 rounded-md text-base font-medium shrink-0
-                 text-surface-500 dark:text-surface-400
-                 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
+                text-surface-500 dark:text-surface-400
+                hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
         >{{ rutaBreadcrumb.at(-2).label }}</button>
 
         <i class="pi pi-angle-right text-sm text-surface-300 dark:text-surface-600 shrink-0 mx-0.5" />
@@ -222,8 +222,8 @@ watch(
         <button
           @click="navegarDesdePopover(breadcrumbInicio)"
           class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left w-full
-                 text-surface-700 dark:text-surface-200
-                 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
+                text-surface-700 dark:text-surface-200
+                hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
         >
           <i :class="[breadcrumbInicio.icon, 'text-xs text-surface-400 dark:text-surface-500 shrink-0']" />
           <span class="truncate">{{ breadcrumbInicio.label }}</span>
@@ -233,8 +233,8 @@ watch(
           :key="item.id"
           @click="navegarDesdePopover(item)"
           class="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left w-full
-                 text-surface-700 dark:text-surface-200
-                 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
+                text-surface-700 dark:text-surface-200
+                hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
         >
           <i class="pi pi-folder text-xs text-surface-400 dark:text-surface-500 shrink-0" />
           <span class="truncate">{{ item.label }}</span>
@@ -242,8 +242,7 @@ watch(
       </div>
     </Popover>
 
-    <!--
-      ACTION BAR — solo desktop (sm:flex).
+    <!-- ACTION BAR — solo en desktop (sm:flex).
       En móvil las acciones vienen del menú ··· y de la barra de selección integrada en FileTable. -->
     <div class="h-9 hidden sm:block">
       <Transition
@@ -255,17 +254,17 @@ watch(
         <div
           v-if="gestor.itemsSeleccionados.length > 0"
           class="flex items-center gap-1
-                 bg-surface-0 dark:bg-surface-900
-                 border border-surface-200 dark:border-surface-700
-                 rounded-full px-2 py-1 h-9 w-fit"
+                bg-surface-0 dark:bg-surface-900
+                border border-surface-200 dark:border-surface-700
+                rounded-full px-2 py-1 h-9 w-fit"
         >
           <div class="flex items-center gap-2 pr-3 border-r border-surface-200 dark:border-surface-700 mr-1">
             <button
               @click="gestor.limpiarSeleccion()"
               aria-label="Deseleccionar todo"
               class="w-6 h-6 rounded-full flex items-center justify-center
-                     text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-800
-                     transition-colors cursor-pointer"
+                    text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-800
+                    transition-colors cursor-pointer"
             >
               <i class="pi pi-times text-xs" />
             </button>

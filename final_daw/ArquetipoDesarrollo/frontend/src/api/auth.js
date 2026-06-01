@@ -2,8 +2,8 @@ import api from './axios';
 import { useRouter } from "vue-router";
 
 const setTokens = (data) => {
-  localStorage.setItem('access_token', data.access);
-  localStorage.setItem('refresh_token', data.refresh);
+    localStorage.setItem('access_token', data.access);
+    localStorage.setItem('refresh_token', data.refresh);
 };
 
 export const authService = {

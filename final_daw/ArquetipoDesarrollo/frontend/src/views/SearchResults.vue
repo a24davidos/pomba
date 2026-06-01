@@ -41,17 +41,17 @@ watch(
           <div
             v-if="gestor.itemsSeleccionados.length > 0"
             class="flex items-center gap-1
-                   bg-surface-0 dark:bg-surface-900
-                   border border-surface-200 dark:border-surface-700
-                   rounded-full px-2 py-1 h-9 w-fit"
+                  bg-surface-0 dark:bg-surface-900
+                  border border-surface-200 dark:border-surface-700
+                  rounded-full px-2 py-1 h-9 w-fit"
           >
             <div class="flex items-center gap-2 pr-3 border-r border-surface-200 dark:border-surface-700 mr-1">
               <button
                 @click="gestor.limpiarSeleccion()"
                 aria-label="Deseleccionar todo"
                 class="w-6 h-6 rounded-full flex items-center justify-center
-                       text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-800
-                       transition-colors cursor-pointer"
+                      text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-800
+                      transition-colors cursor-pointer"
               >
                 <i class="pi pi-times text-xs" />
               </button>
@@ -89,11 +89,11 @@ watch(
     <div
       v-else
       class="flex-1 min-h-0 overflow-auto pb-24 lg:pb-0
-             [&::-webkit-scrollbar]:w-1.5
-             [&::-webkit-scrollbar-track]:bg-transparent
-             [&::-webkit-scrollbar-thumb]:rounded-full
-             [&::-webkit-scrollbar-thumb]:bg-surface-300
-             dark:[&::-webkit-scrollbar-thumb]:bg-surface-600"
+            [&::-webkit-scrollbar]:w-1.5
+            [&::-webkit-scrollbar-track]:bg-transparent
+            [&::-webkit-scrollbar-thumb]:rounded-full
+            [&::-webkit-scrollbar-thumb]:bg-surface-300
+            dark:[&::-webkit-scrollbar-thumb]:bg-surface-600"
     >
       <FileTable @rename="gestor.abrirModalRenombrar" @move="gestor.abrirModalMover" />
     </div>

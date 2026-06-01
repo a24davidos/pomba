@@ -18,9 +18,6 @@ const ETIQUETAS = {
   fecha: 'Fecha',
 }
 
-// Claves redundantes o que no aportan valor visible al usuario
-export const CLAVES_OCULTAS = new Set(['tipo_medio'])
-
 export function etiquetaAmigable(clave) {
   return ETIQUETAS[clave] ?? clave.charAt(0).toUpperCase() + clave.slice(1).replace(/_/g, ' ')
 }

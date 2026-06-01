@@ -32,8 +32,8 @@
       <div class="relative group cursor-pointer" @click="abrirSelector">
         <div class="w-32 h-32 rounded-full overflow-hidden border-2 border-surface-200 dark:border-surface-700 bg-surface-100 dark:bg-surface-800 flex items-center justify-center">
           <img
-            v-if="urlPrevia || datosPerfil.foto_perfil_url"
-            :src="urlPrevia || datosPerfil.foto_perfil_url"
+            v-if="urlPrevia || userStore.perfil.foto_perfil_url"
+            :src="urlPrevia || userStore.perfil.foto_perfil_url"
             alt="Avatar"
             class="w-full h-full object-cover"
           />
@@ -188,11 +188,12 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from 'vue'
+import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { apiUsers } from '@/api/users'
 import { getErrorMessage } from '@/utils/errors'
 import { authService } from '@/api/auth'
+import { useUserStore } from '@/stores/user'
 
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
@@ -200,46 +201,33 @@ import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Message from 'primevue/message'
 
-const props = defineProps({
-  modelValue: { type: Boolean, default: false },
-  profile: { type: Object, default: () => ({}) },
-})
+const visible = defineModel({ default: false })
 
-const emit = defineEmits(['update:modelValue', 'profile-updated'])
-
+const userStore = useUserStore()
 const router = useRouter()
-
-// visible es el puente entre v-model del padre y el Dialog de PrimeVue
-const visible = computed({
-  get: () => props.modelValue,
-  set: (valor) => emit('update:modelValue', valor),
-})
 
 // Pestañas
 const pestanas = [
-  { clave: 'foto',      etiqueta: 'Foto',       icono: 'pi pi-image' },
-  { clave: 'datos',     etiqueta: 'Datos',      icono: 'pi pi-id-card' },
+  { clave: 'foto', etiqueta: 'Foto', icono: 'pi pi-image' },
+  { clave: 'datos', etiqueta: 'Datos', icono: 'pi pi-id-card' },
   { clave: 'contrasena', etiqueta: 'Contraseña', icono: 'pi pi-lock' },
-  { clave: 'eliminar',  etiqueta: 'Eliminar',   icono: 'pi pi-trash' },
+  { clave: 'eliminar', etiqueta: 'Eliminar', icono: 'pi pi-trash' },
 ]
 const tabActiva = ref('foto')
 
-// Datos del perfil recibidos del componente padre
-const datosPerfil = ref({ ...props.profile })
-watch(() => props.profile, (valor) => {
-  datosPerfil.value = { ...valor }
-  formularioDatos.value.nombre    = valor.nombre    || ''
+watch(() => userStore.perfil, (valor) => {
+  formularioDatos.value.nombre = valor.nombre || ''
   formularioDatos.value.apellidos = valor.apellidos || ''
-  formularioDatos.value.email     = valor.email     || ''
+  formularioDatos.value.email = valor.email || ''
 })
 
-// --- FOTO ----------------------------------
-const inputArchivo       = ref(null)
+// === FOTO ==============================
+const inputArchivo = ref(null)
 const archivoSeleccionado = ref(null)
-const urlPrevia          = ref(null)
-const cargandoFoto       = ref(false)
-const exitoFoto          = ref(false)
-const errorFoto          = ref('')
+const urlPrevia = ref(null)
+const cargandoFoto = ref(false)
+const exitoFoto = ref(false)
+const errorFoto = ref('')
 
 const abrirSelector = () => inputArchivo.value?.click()
 
@@ -259,10 +247,9 @@ const guardarFoto = async () => {
   exitoFoto.value = false
   try {
     const respuesta = await apiUsers.subirFotoPerfil(archivoSeleccionado.value)
-    datosPerfil.value.foto_perfil_url = respuesta.foto_perfil_url
+    userStore.actualizarPerfil({ foto_perfil_url: respuesta.foto_perfil_url })
     exitoFoto.value = true
     archivoSeleccionado.value = null
-    emit('profile-updated', { foto_perfil_url: respuesta.foto_perfil_url })
   } catch (e) {
     errorFoto.value = getErrorMessage(e)
   } finally {
@@ -270,11 +257,11 @@ const guardarFoto = async () => {
   }
 }
 
-// --- DATOS PERSONALES ---------------------------
+// === DATOS PERSONALES ==============================
 const formularioDatos = ref({
-  nombre:    props.profile?.nombre    || '',
-  apellidos: props.profile?.apellidos || '',
-  email:     props.profile?.email     || '',
+  nombre: userStore.perfil.nombre || '',
+  apellidos: userStore.perfil.apellidos || '',
+  email: userStore.perfil.email || '',
 })
 const cargandoDatos = ref(false)
 const exitoDatos    = ref(false)
@@ -286,8 +273,8 @@ const guardarDatos = async () => {
   exitoDatos.value = false
   try {
     const actualizado = await apiUsers.actualizarPerfil(formularioDatos.value)
+    userStore.actualizarPerfil(actualizado)
     exitoDatos.value = true
-    emit('profile-updated', actualizado)
   } catch (e) {
     errorDatos.value = getErrorMessage(e)
   } finally {
@@ -295,11 +282,11 @@ const guardarDatos = async () => {
   }
 }
 
-// --- CONTRASEÑA ------------------------------------
+// === CONTRASEÑA =================================
 const formularioContrasena = ref({ actual: '', nueva: '', confirmar: '' })
-const cargandoContrasena   = ref(false)
-const exitoContrasena      = ref(false)
-const errorContrasena      = ref('')
+const cargandoContrasena = ref(false)
+const exitoContrasena = ref(false)
+const errorContrasena = ref('')
 
 const guardarContrasena = async () => {
   errorContrasena.value = ''
@@ -323,11 +310,11 @@ const guardarContrasena = async () => {
   }
 }
 
-// ----- ELIMINAR CUENTA -----
-const confirmarEliminar  = ref(false)
-const textoConfirmacion  = ref('')
-const cargandoEliminar   = ref(false)
-const errorEliminar      = ref('')
+// === ELIMINAR CUENTA ===========================
+const confirmarEliminar = ref(false)
+const textoConfirmacion = ref('')
+const cargandoEliminar = ref(false)
+const errorEliminar = ref('')
 
 const eliminarCuenta = async () => {
   cargandoEliminar.value = true
