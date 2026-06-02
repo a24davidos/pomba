@@ -3,34 +3,36 @@ from django_elasticsearch_dsl.registries import registry
 
 from .models import Item
 
-
+# Definimos como se iindexean los Item en Elasticsearch
 @registry.register_document
 class ItemDocument(Document):
 
     # Búsqueda principal
+    #TexField para encontrar aproximandos, con erores, sin tildes etc.
     nombre = fields.TextField(analyzer='spanish')
+    #Para buscar exactamente igual ("Miguel del Río" === "Miguel del Río")
     nombre_raw = fields.KeywordField()
 
     # Filtros
-    tipo = fields.KeywordField()
-    mime_type = fields.KeywordField()
+    tipo       = fields.KeywordField()
+    mime_type  = fields.KeywordField()
     usuario_id = fields.IntegerField()
-    padre_id = fields.IntegerField()
-    eliminado = fields.BooleanField()
-    favorito = fields.BooleanField()
+    padre_id   = fields.IntegerField()
+    eliminado  = fields.BooleanField()
+    favorito   = fields.BooleanField()
 
     # Contenido texto extraído (TXT, MD, CSV)
     contenido = fields.TextField(analyzer='spanish')
 
     # Metadatos de audio
-    meta_titulo = fields.TextField()
+    meta_titulo  = fields.TextField()
     meta_artista = fields.TextField()
-    meta_album = fields.TextField()
-    meta_anno = fields.IntegerField()
-    meta_genero = fields.TextField()
+    meta_album   = fields.TextField()
+    meta_anno    = fields.IntegerField()
+    meta_genero  = fields.TextField()
 
     # Metadatos de imagen
-    meta_camara_marca = fields.KeywordField()
+    meta_camara_marca  = fields.KeywordField()
     meta_camara_modelo = fields.KeywordField()
 
     # Fechas y tamaño para filtros avanzados
@@ -47,6 +49,7 @@ class ItemDocument(Document):
     class Django:
         model = Item
         fields = []
+
 
     # Estos métodos son llamados tanto al indexar manualmente (ItemService) como al reconstruir el índice con: manage.py search_index --rebuild (Para que no me de problemas después)
 

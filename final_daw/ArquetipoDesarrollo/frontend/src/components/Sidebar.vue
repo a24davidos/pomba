@@ -71,10 +71,10 @@ const trashMenuItems = [
 const active = computed(() => route.params.view || 'drive')
 
 const navItems = [
-  { key: 'drive', label: 'Mi unidad', icon: 'pi pi-folder' },
-  { key: 'fav', label: 'Favoritos', icon: 'pi pi-star' },
+  { key: 'drive',  label: 'Mi unidad', icon: 'pi pi-folder' },
+  { key: 'fav',    label: 'Favoritos', icon: 'pi pi-star' },
   { key: 'recent', label: 'Reciente',  icon: 'pi pi-clock' },
-  { key: 'trash', label: 'Papelera',  icon: 'pi pi-trash' },
+  { key: 'trash',  label: 'Papelera',  icon: 'pi pi-trash' },
 ]
 
 function setActive(key) {
@@ -172,6 +172,7 @@ function togglePanelUsuario() {
         <span class="hidden lg:inline font-medium">{{ item.label }}</span>
       </button>
     </nav>
+
   </aside>
 
   <!-- BOTTOM NAV MÓVIL  -->
@@ -256,8 +257,8 @@ function togglePanelUsuario() {
     <!-- Botón FAB -->
     <button
       class="sm:hidden fixed z-47 w-14 h-14 rounded-full bg-primary shadow-lg
-             flex items-center justify-center
-             active:scale-95 transition-all duration-200"
+            flex items-center justify-center
+            active:scale-95 transition-all duration-200"
       style="bottom: calc(env(safe-area-inset-bottom) + 4.5rem); right: 1.25rem;"
       :class="fabAbierto ? 'rotate-45' : 'rotate-0'"
       @click="handleFAB"

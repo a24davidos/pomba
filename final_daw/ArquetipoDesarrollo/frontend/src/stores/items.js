@@ -443,12 +443,13 @@ export const useGestorItems = defineStore('items', {
     },
 
     async marcarFavoritos(ids = []) {
+      const id = ids[0]
       try {
-        const { favorito: nuevoFavorito } = await apiItems.marcarFavorito(ids)
+        const { favorito: nuevoFavorito } = await apiItems.marcarFavorito(id)
         if (!nuevoFavorito && this.currentParams.favorito === 'true') {
-          this.items = this.items.filter((item) => !ids.includes(item.id))
+          this.items = this.items.filter((item) => item.id !== id)
         } else {
-          this.actualizarItemsLocal(ids, { favorito: nuevoFavorito })
+          this.actualizarItemsLocal([id], { favorito: nuevoFavorito })
         }
         this.limpiarSeleccion()
       } catch (error) {

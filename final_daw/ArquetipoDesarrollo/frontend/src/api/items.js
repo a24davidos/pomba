@@ -52,8 +52,8 @@ export const apiItems = {
     await api.post('items/mover/', { ids, destino: destinoId })
   },
 
-  async marcarFavorito(ids) {
-    const { data } = await api.post('items/favorito/', { ids })
+  async marcarFavorito(id) {
+    const { data } = await api.post('items/favorito/', { id })
     return data
   },
 

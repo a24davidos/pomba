@@ -1,8 +1,8 @@
 export const errorMessages = {
   fields: {
     email: {
-      unique: "Este email ya se encuentra en uso",
-      invalid: "El formato del correo no es válido",
+      unique  : "Este email ya se encuentra en uso",
+      invalid : "El formato del correo no es válido",
       required: "El correo es obligatorio",
     },
     password: {
@@ -17,5 +17,5 @@ export const errorMessages = {
   },
 
   fallback: "Ha ocurrido un error inesperado",
-  network: "No se pudo conectar con el servidor",
+  network : "No se pudo conectar con el servidor",
 };

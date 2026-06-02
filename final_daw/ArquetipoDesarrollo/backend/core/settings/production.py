@@ -1,6 +1,6 @@
 from .base import *
 
-# En producción nunca DEBUG=True: Django mostraría stack traces completos
+# En producción nunca DEBUG=True - Django mostraría stack traces completos
 DEBUG = False
 
 # Django solo responde a peticiones dirigidas a estos dominios.
@@ -25,13 +25,13 @@ SECURE_SSL_REDIRECT = True
 # Sin esto SECURE_SSL_REDIRECT entraría en bucle infinito.
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-# La cookie de sesión solo se envía por HTTPS, nunca por HTTP en claro.
+# La cookie de sesión solo se envía por HTTPS
 SESSION_COOKIE_SECURE = True
 
-# El token CSRF solo se envía por HTTPS.
+# El token CSRF solo se envía por HTTPS
 CSRF_COOKIE_SECURE = True
 
-# En producción solo loguear WARNING o superior así me evito ruido innecesario.
+# En producción solo loguear WARNING o superior
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,

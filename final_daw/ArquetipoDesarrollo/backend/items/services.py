@@ -10,6 +10,9 @@ from django.utils import timezone
 
 from django.core.exceptions import ValidationError
 from .models import Item, ItemVersion
+from .documents import ItemDocument
+from .extractors import extraer
+from elasticsearch.exceptions import NotFoundError
 from django.db import transaction
 from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -170,8 +173,6 @@ class ItemService:
     def eliminar_del_indice(item_id):
         """Elimina el documento de Elasticsearch. Si no existe, no hace nada."""
         try:
-            from .documents import ItemDocument
-            from elasticsearch.exceptions import NotFoundError
             ItemDocument.get(id=item_id).delete()
         except Exception as e:
             logger.warning("No se pudo eliminar del índice item %s: %s", item_id, e)
@@ -317,7 +318,7 @@ class ItemService:
         # 2. Mapa en memoria
         mapa_carpetas = {c['id']: c for c in carpetas}
 
-        # 3. Construcción del camino
+        # 3. Construcción del map
         nodos_padre = []
 
         while id_actual is not None:
@@ -420,15 +421,11 @@ class ItemService:
         )
     
     @staticmethod
-    def marcar_favorito(ids, usuario):
-        items = Item.objects.filter(id__in=ids, usuario=usuario)
-
-        # Revisar esto!!! POrque si alguna esta y otro no, no tiene sentid oque ahora sean todos favoritos!!!!!!!!!!!!!!!
-        todos_favoritos = all(item.favorito for item in items)
-        nuevo_valor = not todos_favoritos
-
-        items.update(favorito=nuevo_valor)
-        return nuevo_valor
+    def marcar_favorito(item_id, usuario):
+        item = Item.objects.get(id=item_id, usuario=usuario)
+        item.favorito = not item.favorito
+        item.save(update_fields=['favorito'])
+        return item.favorito
 
     # =========================================================
     # SECCIÓN 5: Descarga de archivos
@@ -497,10 +494,9 @@ class ItemService:
     @staticmethod
     def recolectar_archivos_para_zip(root_ids, usuario):
         """
-        Recorre el árbol de ítemsy devuelve una lista de manteniendo la estructura de carpetas.
+        Recorre el árbol de items y devuelve una lista de manteniendo la estructura de carpetas.
         """
         resultado = []
-        # Mapa id
         pendientes = {int(i): "" for i in root_ids}
 
         while pendientes:
@@ -579,11 +575,11 @@ class ItemService:
         item.file = key
         return ItemService.guardar_item(item)
 
-    # Límite de descarga por tipo MIME antes de intentar extraer metadatos
+    # Si el archivo es pequeño, lo descarga de S3 para extraer metadatos; si es demasiado grande lo ignora.
     _LIMITE_DESCARGA_BYTES = {
-        'audio': 50  * 1024 * 1024,  # 50 MB — cubre MP3/FLAC; WAV sin tags no aporta nada
-        'image': 40  * 1024 * 1024,  # 40 MB — cubre JPEG/PNG/WebP 
-        'text':   5  * 1024 * 1024,  # 5 MB  — coherente con LIMITE_CONTENIDO_BYTES del extractor
+        'audio': 100 * 1024 * 1024,  # 100 MB
+        'image':  60 * 1024 * 1024,  # 60 MB
+        'text':    10 * 1024 * 1024,  # 10 MB
     }
 
     @staticmethod
@@ -596,9 +592,6 @@ class ItemService:
         if item.tipo != Item.Tipo.ARCHIVO or not item.file:
             return
         try:
-            from .extractors import extraer
-            from .documents import ItemDocument
-
             mime_prefix = (item.mime_type or '').split('/')[0].lower()
             limite = ItemService._LIMITE_DESCARGA_BYTES.get(mime_prefix)
             tamano = item.tamano_bytes or 0
@@ -621,21 +614,60 @@ class ItemService:
             logger.warning("No se pudo indexar item %s: %s", item.id, e)
 
     @staticmethod
-    def construir_zip(archivos_con_ruta, bucket_name):
+    def stream_zip(archivos_con_ruta, bucket_name):
         """
-        Descarga cada archivo desde Garage S3 y lo empaqueta en un ZIP
-        en memoria (io.BytesIO). Devuelve el buffer listo para enviar.
+        Generador que emite el ZIP en chunks descargando un archivo de S3
+        cada vez, sin cargar todos en RAM simultáneamente.
         """
         s3 = ItemService.get_s3_client()
-        buffer = io.BytesIO()
 
-        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        class _Buf(io.RawIOBase):
+            def __init__(self):
+                self._chunks = []
+                self._pos = 0
+
+            def write(self, b):
+                data = bytes(b)
+                self._chunks.append(data)
+                self._pos += len(data)
+                return len(data)
+
+            def tell(self):
+                return self._pos
+
+            def seek(self, offset, whence=io.SEEK_SET):
+                # ZipFile.__init__ llama seek(0, SEEK_END) en modo escritura;
+                # lo permitimos como no-op porque ya estamos al final.
+                if whence == io.SEEK_END and offset == 0:
+                    return self._pos
+                raise io.UnsupportedOperation('seek')
+
+            def seekable(self):
+                return False
+
+            def readable(self):
+                return False
+
+            def writable(self):
+                return True
+
+            def pop(self):
+                chunks, self._chunks = self._chunks, []
+                return chunks
+
+        buf = _Buf()
+        with zipfile.ZipFile(buf, 'w', zipfile.ZIP_STORED) as zf:
+            yield from buf.pop()
+
             for item, zip_path in archivos_con_ruta:
                 obj = s3.get_object(Bucket=bucket_name, Key=str(item.file))
-                zf.writestr(zip_path, obj["Body"].read())
+                with zf.open(zipfile.ZipInfo(zip_path), 'w', force_zip64=True) as entry:
+                    for chunk in obj['Body'].iter_chunks(chunk_size=4 * 1024 * 1024):
+                        entry.write(chunk)
+                        yield from buf.pop()
+                yield from buf.pop()
 
-        buffer.seek(0)
-        return buffer
+        yield from buf.pop()
 
     # =========================================================
     # SECCIÓN 6: Control de versiones (solo audio)
@@ -667,7 +699,7 @@ class ItemService:
 
     @staticmethod
     def generar_url_presignada_version(item):
-        """Presigned PUT URL para subir una nueva versión. Key en subcarpeta /v/ para distinguirla."""
+        """Genera una presigned PUT URL para subir una nueva versión. El archivo se guarda en la subcarpeta para distinguirlo de la versión activa."""
         ext = os.path.splitext(str(item.file))[1]
         key = f"users/{item.usuario.id}/v/{uuid.uuid4().hex}{ext}"
         url = ItemService.generar_url_presignada_subida(key)
@@ -687,8 +719,8 @@ class ItemService:
     @staticmethod
     def restaurar_version(item, version):
         """Copia el objeto S3 de la versión a una nueva key, archiva la actual y actualiza Item."""
-        s3     = ItemService.get_s3_client()
-        bucket = settings.AWS_STORAGE_BUCKET_NAME
+        s3        = ItemService.get_s3_client()
+        bucket    = settings.AWS_STORAGE_BUCKET_NAME
         ext       = os.path.splitext(version.file)[1]
         nueva_key = f"users/{item.usuario.id}/{uuid.uuid4().hex}{ext}"
 

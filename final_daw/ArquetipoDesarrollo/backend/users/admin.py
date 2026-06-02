@@ -7,7 +7,7 @@ class UserAdmin(admin.ModelAdmin):
     list_display = ('email', 'nombre', 'is_staff', 'is_active')
     
     fieldsets = (
-        ('Usuario y Constraseña', {
+        ('Usuario y Contraseña', {
             'fields': ('email', 'password')
         }),
         ('Información Personal', {
