@@ -29,6 +29,22 @@ const route = useRoute()
 const textoBusqueda = ref('')
 let timerBusqueda = null
 
+const mostrarHints = ref(false)
+
+const PREFIJOS_BUSQUEDA = [
+  { prefijo: 'artista:', icono: 'pi pi-user',      descripcion: 'Artista' },
+  { prefijo: 'album:',   icono: 'pi pi-book',       descripcion: 'Álbum'   },
+  { prefijo: 'genero:',  icono: 'pi pi-tag',        descripcion: 'Género'  },
+  { prefijo: 'titulo:',  icono: 'pi pi-file-audio', descripcion: 'Título'  },
+  { prefijo: 'camara:',  icono: 'pi pi-camera',     descripcion: 'Cámara'  },
+  { prefijo: 'año:',     icono: 'pi pi-calendar',   descripcion: 'Año'     },
+]
+
+function insertarPrefijo(prefijo) {
+  textoBusqueda.value = prefijo
+  mostrarHints.value = false
+}
+
 watch(() => route.query.q, (q) => {
   textoBusqueda.value = q || ''
 }, { immediate: true }) //Se ejecuta al montar el componente
@@ -112,22 +128,60 @@ function clasesSnackbar(notif) {
 
         <!-- Buscador -->
         <div class="flex-1">
-          <div class="w-full max-w-4xl">
+          <div class="w-full max-w-4xl relative">
             <IconField class="w-full group">
               <InputIcon>
                 <i class="pi pi-search text-surface-500 group-focus-within:text-surface-900 dark:group-focus-within:text-surface-0 transition-colors duration-200" />
               </InputIcon>
               <InputText
                 v-model="textoBusqueda"
-                placeholder="Buscar"
+                placeholder="Buscar..."
                 class="w-full py-3 px-12 border-none rounded-3xl transition-all duration-200
                       bg-surface-150 dark:bg-surface-800
                       hover:bg-surface-200 dark:hover:bg-surface-700
                       focus:bg-surface-0 dark:focus:bg-surface-900
                       focus:shadow-[0_1px_1px_0_rgba(65,69,73,.3),0_1px_3px_1px_rgba(65,69,73,.15)]
                       dark:focus:shadow-[0_1px_3px_rgba(0,0,0,.5)]"
+                @focus="mostrarHints = true"
+                @blur="mostrarHints = false"
               />
             </IconField>
+
+            <!-- Panel de búsqueda avanzada -->
+            <Transition
+              enter-active-class="transition-all duration-150 ease-out"
+              enter-from-class="opacity-0 -translate-y-1"
+              leave-active-class="transition-all duration-100 ease-in"
+              leave-to-class="opacity-0 -translate-y-1"
+            >
+              <div
+                v-if="mostrarHints && !textoBusqueda"
+                class="absolute top-full left-0 right-0 mt-1 z-50
+                      bg-surface-0 dark:bg-surface-900
+                      border border-surface-200 dark:border-surface-700
+                       rounded-2xl shadow-lg p-3"
+              >
+                <p class="text-xs font-medium text-surface-400 dark:text-surface-500 mb-2 px-1">
+                  Búsqueda por campo
+                </p>
+                <div class="flex flex-wrap gap-1.5">
+                  <button
+                    v-for="hint in PREFIJOS_BUSQUEDA"
+                    :key="hint.prefijo"
+                    @mousedown.prevent="insertarPrefijo(hint.prefijo)"
+                    class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium
+                          bg-surface-100 dark:bg-surface-800
+                          text-surface-600 dark:text-surface-300
+                          hover:bg-surface-200 dark:hover:bg-surface-700
+                          transition-colors cursor-pointer border-0"
+                  >
+                    <i :class="[hint.icono, 'text-xs']" />
+                    {{ hint.descripcion }}
+                    <span class="text-surface-400 dark:text-surface-500 font-mono">{{ hint.prefijo }}</span>
+                  </button>
+                </div>
+              </div>
+            </Transition>
           </div>
         </div>
 

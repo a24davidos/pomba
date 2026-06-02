@@ -201,6 +201,8 @@ class ItemService:
         'audio':  'audio/',
         'imagen': 'image/',
         'image':  'image/',
+        'video':  'video/',
+        'pdf':    'application/pdf',
         'texto':  'text/',
         'text':   'text/',
     }
@@ -241,7 +243,7 @@ class ItemService:
                 else:
                     mime_prefix = ItemService._TIPOS_MIME.get(valor_lower)
                     if mime_prefix:
-                        filter_extra.append({'prefix': {'mime_type': mime_prefix}})
+                        filter_extra.append({'prefix': {'mime_type.keyword': mime_prefix}})
                     else:
                         texto_libre.append(token)
 
@@ -280,7 +282,11 @@ class ItemService:
         if must:
             bool_query['must'] = must
 
-        respuesta = es.search(index='items', size=50, min_score=1.0, query={'bool': bool_query})
+
+        kwargs = {'index': 'items', 'size': 50, 'query': {'bool': bool_query}}
+        if texto_libre:
+            kwargs['min_score'] = 1.0
+        respuesta = es.search(**kwargs)
         ids = [int(hit['_id']) for hit in respuesta['hits']['hits']]
 
         if not ids:

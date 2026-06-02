@@ -1,5 +1,5 @@
 <script setup>
-import { watch } from 'vue'
+import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useGestorItems } from '@/stores/items'
 import FileTable from '@/components/FileTable.vue'
@@ -9,9 +9,27 @@ import Divider from 'primevue/divider'
 const route = useRoute()
 const gestor = useGestorItems()
 
+const CHIPS = [
+  { key: null,      label: 'Todo',    icon: 'pi pi-th-large' },
+  { key: 'carpeta', label: 'Carpeta', icon: 'pi pi-folder' },
+  { key: 'audio',   label: 'Audio',   icon: 'pi pi-volume-up' },
+  { key: 'imagen',  label: 'Imagen',  icon: 'pi pi-image' },
+  { key: 'video',   label: 'Vídeo',   icon: 'pi pi-video' },
+  { key: 'pdf',     label: 'PDF',     icon: 'pi pi-file-pdf' },
+]
+
+const filtroActivo = ref(null)
+
+function queryConFiltro(q, filtro) {
+  if (!filtro) return q
+  return `${q} tipo:${filtro}`
+}
+
 watch(
-  () => route.query.q,
-  (q) => { if (q) gestor.buscarItems(q) },
+  [() => route.query.q, filtroActivo],
+  ([q, filtro]) => {
+    if (q) gestor.buscarItems(queryConFiltro(q, filtro))
+  },
   { immediate: true }
 )
 </script>
@@ -20,14 +38,30 @@ watch(
   <div class="flex flex-col h-full">
 
     <!-- CABECERA -->
-    <div class="px-4 pt-4 space-y-4 shrink-0">
+    <div class="px-4 pt-4 space-y-3 shrink-0">
       <div>
         <h1 class="text-lg font-semibold text-surface-900 dark:text-surface-0">
-          Resultados para "{{ gestor.queryBusqueda }}"
+          Resultados para "{{ route.query.q }}"
         </h1>
         <p v-if="!gestor.loading" class="text-sm text-surface-500 mt-0.5">
           {{ gestor.items.length }} {{ gestor.items.length === 1 ? 'resultado' : 'resultados' }}
         </p>
+      </div>
+
+      <!-- CHIPS DE FILTRO -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <button
+          v-for="chip in CHIPS"
+          :key="chip.key"
+          @click="filtroActivo = chip.key"
+          class="flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium transition-colors cursor-pointer"
+          :class="filtroActivo === chip.key
+            ? 'bg-surface-900 dark:bg-surface-0 text-surface-0 dark:text-surface-900'
+            : 'bg-surface-100 dark:bg-surface-800 text-surface-600 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-700'"
+        >
+          <i :class="[chip.icon, 'text-xs']" />
+          {{ chip.label }}
+        </button>
       </div>
 
       <!-- ACTION BAR -->
@@ -82,7 +116,7 @@ watch(
       class="flex-1 flex flex-col items-center justify-center gap-3 text-surface-400"
     >
       <i class="pi pi-search text-5xl" />
-      <p class="text-sm">No se encontraron resultados para "{{ gestor.queryBusqueda }}"</p>
+      <p class="text-sm">No se encontraron resultados para "{{ route.query.q }}"</p>
     </div>
 
     <!-- TABLA DE RESULTADOS -->
