@@ -118,8 +118,8 @@ export const apiItems = {
     return data
   },
 
-  async restaurarVersion(itemId, numero) {
-    const { data } = await api.post(`items/${itemId}/versiones/${numero}/restaurar/`)
+  async activarVersion(itemId, numero) {
+    const { data } = await api.post(`items/${itemId}/versiones/${numero}/activar/`)
     return data
   },
 

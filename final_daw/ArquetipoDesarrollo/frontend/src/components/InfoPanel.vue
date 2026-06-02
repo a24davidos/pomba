@@ -127,22 +127,15 @@ async function descargarVersionAntigua(version) {
   }
 }
 
-async function restaurarVersion(version) {
-  const ok = await confirmar({
-    header: `¿Restaurar la versión ${version.numero}?`,
-    mensaje: 'La versión actual se guardará como versión anterior. La versión restaurada se convertirá en la actual.',
-    labelAceptar: 'Restaurar',
-    peligro: false,
-  })
-  if (!ok) return
+async function marcarComoActual(version) {
   try {
-    const itemActualizado = await apiItems.restaurarVersion(item.value.id, version.numero)
+    const itemActualizado = await apiItems.activarVersion(item.value.id, version.numero)
     gestor.actualizarItemsLocal([item.value.id], itemActualizado)
     await cargarVersiones()
   } catch {
     gestor.agregarNotificacion({
       id: 'restaurar-version', tipo: 'error',
-      mensaje: 'No se pudo restaurar la versión', icono: 'pi-history',
+      mensaje: 'No se pudo marcar la versión como actual', icono: 'pi-history',
     })
   }
 }
@@ -166,21 +159,17 @@ async function eliminarVersion(version) {
   }
 }
 
-// Reproduce o pausa una versión de audio.
-async function toggleReproducir(id) {
-  // Llamar con el mismo id pausa; con un id distinto cambia de versión
-  if (reproduciendo.value === id) {
+// Reproduce o pausa una versión de audio por número.
+async function toggleReproducir(numero) {
+  if (reproduciendo.value === numero) {
     reproduciendo.value = null
     urlReproduciendo.value = ''
     return
   }
   try {
-    // Pedimos al backend una presigned URL temporal de S3
-    const { url } = id === 'actual'
-      ? await apiItems.previsualizar(item.value.id)
-      : await apiItems.previsualizarVersion(item.value.id, id)
+    const { url } = await apiItems.previsualizarVersion(item.value.id, numero)
     urlReproduciendo.value = url
-    reproduciendo.value    = id
+    reproduciendo.value    = numero
   } catch {
     gestor.agregarNotificacion({
       id: 'preview-version', tipo: 'error',
@@ -410,60 +399,29 @@ const tieneMetadatos = computed(() =>
               <!-- Lista de versiones -->
               <div v-else class="px-4 py-4 space-y-1">
 
-                <!-- Versión actual (siempre primera) -->
-                <div class="rounded-xl p-3 bg-surface-50 dark:bg-surface-800/60">
-                  <div class="flex items-center gap-2 mb-1">
-                    <span class="text-xs font-semibold px-1.5 py-0.5 rounded-md
-                                bg-primary-100 dark:bg-primary-900/50
-                                text-primary-700 dark:text-primary-300">
-                      v{{ numeroActual }}
-                    </span>
-                    <span class="text-xs text-surface-500">Versión actual</span>
-                  </div>
-                  <p class="text-xs text-surface-400 dark:text-surface-500 mb-2">
-                    {{ formatDate(item.fecha_modificacion) }} · {{ formatBytes(item.tamano_bytes) }}
-                  </p>
-                  <div class="flex gap-1">
-                    <button
-                      @click="toggleReproducir('actual')"
-                      :class="[
-                        'flex items-center gap-1.5 px-2 py-1 rounded-md text-xs transition-colors cursor-pointer',
-                        reproduciendo === 'actual'
-                          ? 'bg-pink-100 dark:bg-pink-900/40 text-pink-600 dark:text-pink-300'
-                          : 'text-surface-600 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-700',
-                      ]"
-                    >
-                      <i :class="['pi text-xs', reproduciendo === 'actual' ? 'pi-pause' : 'pi-play']" />
-                      {{ reproduciendo === 'actual' ? 'Pausar' : 'Reproducir' }}
-                    </button>
-                    <button
-                      @click="gestor.seleccionar(item, null); gestor.descargarItems()"
-                      class="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs
-                            text-surface-600 dark:text-surface-300
-                            hover:bg-surface-200 dark:hover:bg-surface-700
-                            transition-colors cursor-pointer"
-                    >
-                      <i class="pi pi-download text-xs" /> Descargar
-                    </button>
-                  </div>
-                  <div v-if="reproduciendo === 'actual'" class="mt-2">
-                    <audio controls autoplay :src="urlReproduciendo" class="w-full h-8" style="border-radius:0.5rem" />
-                  </div>
-                </div>
-
-                <!-- Versiones archivadas -->
+                <!-- Todas las versiones -->
                 <div
                   v-for="version in versiones"
                   :key="version.id"
-                  class="rounded-xl p-3 hover:bg-surface-50 dark:hover:bg-surface-800/40 transition-colors"
+                  :class="[
+                    'rounded-xl p-3 transition-colors',
+                    version.es_actual
+                      ? 'bg-surface-50 dark:bg-surface-800/60'
+                      : 'hover:bg-surface-50 dark:hover:bg-surface-800/40',
+                  ]"
                 >
                   <div class="flex items-center gap-2 mb-1">
-                    <span class="text-xs font-semibold px-1.5 py-0.5 rounded-md
-                                bg-surface-200 dark:bg-surface-700
-                                text-surface-600 dark:text-surface-300">
+                    <span
+                      :class="[
+                        'text-xs font-semibold px-1.5 py-0.5 rounded-md',
+                        version.es_actual
+                          ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300'
+                          : 'bg-surface-200 dark:bg-surface-700 text-surface-600 dark:text-surface-300',
+                      ]"
+                    >
                       v{{ version.numero }}
                     </span>
-                    <span v-if="version.numero === 1" class="text-xs text-surface-400">Versión original</span>
+                    <span v-if="version.es_actual" class="text-xs text-surface-500">Versión actual</span>
                   </div>
                   <p class="text-xs text-surface-400 dark:text-surface-500 mb-2">
                     {{ formatDate(version.fecha_creacion) }} · {{ formatBytes(version.tamano_bytes) }}
@@ -491,15 +449,17 @@ const tieneMetadatos = computed(() =>
                       <i class="pi pi-download text-xs" /> Descargar
                     </button>
                     <button
-                      @click="restaurarVersion(version)"
+                      v-if="!version.es_actual"
+                      @click="marcarComoActual(version)"
                       class="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs
                             text-surface-600 dark:text-surface-300
                             hover:bg-surface-200 dark:hover:bg-surface-700
                             transition-colors cursor-pointer"
                     >
-                      <i class="pi pi-history text-xs" /> Restaurar
+                      <i class="pi pi-check-circle text-xs" /> Marcar actual
                     </button>
                     <button
+                      v-if="!version.es_actual"
                       @click="eliminarVersion(version)"
                       class="ml-auto flex items-center justify-center w-6 h-6 rounded-md text-xs
                             text-surface-400 hover:text-red-500
@@ -511,7 +471,6 @@ const tieneMetadatos = computed(() =>
                     </button>
                   </div>
 
-                  <!-- Audio player: solo visible cuando esta versión está activa -->
                   <div v-if="reproduciendo === version.numero" class="mt-2">
                     <audio
                       controls
@@ -523,12 +482,12 @@ const tieneMetadatos = computed(() =>
                   </div>
                 </div>
 
-                <!-- Sin versiones archivadas -->
+                <!-- Sin versiones todavía -->
                 <p
                   v-if="versiones.length === 0"
                   class="text-xs text-surface-400 dark:text-surface-500 italic pt-2 text-center"
                 >
-                  Solo existe la versión actual.
+                  Sube una versión para empezar.
                 </p>
               </div>
             </div>

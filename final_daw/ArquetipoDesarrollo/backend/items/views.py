@@ -417,7 +417,8 @@ class ItemViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
         item = self.get_object()
         versiones = ItemService.listar_versiones(item)
         serializer = ItemVersionSerializer(versiones, many=True)
-        numero_actual = item.versiones.count() + 1
+        version_activa = item.versiones.filter(es_actual=True).first()
+        numero_actual = version_activa.numero if version_activa else item.versiones.count() + 1
         return Response({'versiones': serializer.data, 'numero_actual': numero_actual})
 
     @extend_schema(
@@ -454,7 +455,7 @@ class ItemViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
         mime_type  = request.data.get('mime_type', '')
         if not key:
             return Response({'detail': 'key es obligatorio.'}, status=status.HTTP_400_BAD_REQUEST)
-        item = ItemService.confirmar_nueva_version(item, key, tamano, mime_type)
+        item = ItemService.registrar_version(item, key, tamano, mime_type)
         threading.Thread(target=ItemService.indexar_item, args=(item,), daemon=True).start()
         return Response(ItemSerializer(item, context={'request': request}).data)
 
@@ -472,15 +473,15 @@ class ItemViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
         return Response({'url': url})
 
     @extend_schema(request=None, responses=ItemSerializer)
-    @action(detail=True, methods=['post'], url_path=r'versiones/(?P<num>[0-9]+)/restaurar', url_name='versiones-restaurar')
-    def versiones_restaurar(self, request, pk=None, num=None):
+    @action(detail=True, methods=['post'], url_path=r'versiones/(?P<num>[0-9]+)/activar', url_name='versiones-activar')
+    def versiones_activar(self, request, pk=None, num=None):
         item = self.get_object()
         try:
             version = item.versiones.get(numero=int(num))
         except ItemVersion.DoesNotExist:
             return Response({'detail': 'Versión no encontrada.'}, status=status.HTTP_404_NOT_FOUND)
         try:
-            item = ItemService.restaurar_version(item, version)
+            item = ItemService.activar_version(item, version)
         except Exception as e:
             return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         threading.Thread(target=ItemService.indexar_item, args=(item,), daemon=True).start()
@@ -507,6 +508,11 @@ class ItemViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
             version = item.versiones.get(numero=int(num))
         except ItemVersion.DoesNotExist:
             return Response({'detail': 'Versión no encontrada.'}, status=status.HTTP_404_NOT_FOUND)
+        if version.es_actual:
+            return Response(
+                {'detail': 'No puedes eliminar la versión activa. Marca otra como actual primero.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         ItemService.eliminar_version(version, development.AWS_STORAGE_BUCKET_NAME)
         return Response(status=status.HTTP_204_NO_CONTENT)
 

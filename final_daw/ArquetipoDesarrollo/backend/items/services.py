@@ -684,20 +684,6 @@ class ItemService:
         return ultimo + 1
 
     @staticmethod
-    def archivar_version_actual(item):
-        """Crea un registro ItemVersion con el estado actual de Item antes de sobreescribirlo."""
-        version = ItemVersion(
-            item=item,
-            numero=ItemService._siguiente_numero_version(item),
-            file=str(item.file),
-            tamano_bytes=item.tamano_bytes or 0,
-            mime_type=item.mime_type or '',
-            metadatos=item.metadatos or {},
-        )
-        version.save()
-        return version
-
-    @staticmethod
     def generar_url_presignada_version(item):
         """Genera una presigned PUT URL para subir una nueva versión. El archivo se guarda en la subcarpeta para distinguirlo de la versión activa."""
         ext = os.path.splitext(str(item.file))[1]
@@ -706,10 +692,19 @@ class ItemService:
         return url, key
 
     @staticmethod
-    def confirmar_nueva_version(item, key, tamano_bytes, mime_type):
-        """Archiva la versión actual y actualiza Item con el nuevo archivo."""
+    def registrar_version(item, key, tamano_bytes, mime_type):
+        """Desactiva la versión activa, crea una nueva ItemVersion marcada como actual y actualiza Item."""
         with transaction.atomic():
-            ItemService.archivar_version_actual(item)
+            item.versiones.filter(es_actual=True).update(es_actual=False)
+            ItemVersion.objects.create(
+                item=item,
+                numero=ItemService._siguiente_numero_version(item),
+                file=key,
+                tamano_bytes=int(tamano_bytes or 0),
+                mime_type=mime_type or item.mime_type or '',
+                metadatos={},
+                es_actual=True,
+            )
             item.file         = key
             item.tamano_bytes = int(tamano_bytes or 0)
             item.mime_type    = mime_type or item.mime_type
@@ -717,27 +712,17 @@ class ItemService:
         return item
 
     @staticmethod
-    def restaurar_version(item, version):
-        """Copia el objeto S3 de la versión a una nueva key, archiva la actual y actualiza Item."""
-        s3        = ItemService.get_s3_client()
-        bucket    = settings.AWS_STORAGE_BUCKET_NAME
-        ext       = os.path.splitext(version.file)[1]
-        nueva_key = f"users/{item.usuario.id}/{uuid.uuid4().hex}{ext}"
-
-        s3.copy_object(
-            Bucket=bucket,
-            CopySource={'Bucket': bucket, 'Key': version.file},
-            Key=nueva_key,
-        )
-
+    def activar_version(item, version):
+        """Marca la versión seleccionada como activa y actualiza Item sin copiar archivos en S3."""
         with transaction.atomic():
-            ItemService.archivar_version_actual(item)
-            item.file         = nueva_key
+            item.versiones.filter(es_actual=True).update(es_actual=False)
+            version.es_actual = True
+            version.save(update_fields=['es_actual'])
+            item.file         = version.file
             item.tamano_bytes = version.tamano_bytes
             item.mime_type    = version.mime_type
             item.metadatos    = version.metadatos
             item.save()
-
         return item
 
     @staticmethod
