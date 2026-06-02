@@ -216,9 +216,9 @@ const pestanas = [
 const tabActiva = ref('foto')
 
 watch(() => userStore.perfil, (valor) => {
-  formularioDatos.value.nombre = valor.nombre || ''
+  formularioDatos.value.nombre    = valor.nombre || ''
   formularioDatos.value.apellidos = valor.apellidos || ''
-  formularioDatos.value.email = valor.email || ''
+  formularioDatos.value.email     = valor.email || ''
 })
 
 // === FOTO ==============================
@@ -284,9 +284,9 @@ const guardarDatos = async () => {
 
 // === CONTRASEÑA =================================
 const formularioContrasena = ref({ actual: '', nueva: '', confirmar: '' })
-const cargandoContrasena = ref(false)
-const exitoContrasena = ref(false)
-const errorContrasena = ref('')
+const cargandoContrasena   = ref(false)
+const exitoContrasena      = ref(false)
+const errorContrasena      = ref('')
 
 const guardarContrasena = async () => {
   errorContrasena.value = ''
@@ -313,8 +313,8 @@ const guardarContrasena = async () => {
 // === ELIMINAR CUENTA ===========================
 const confirmarEliminar = ref(false)
 const textoConfirmacion = ref('')
-const cargandoEliminar = ref(false)
-const errorEliminar = ref('')
+const cargandoEliminar  = ref(false)
+const errorEliminar     = ref('')
 
 const eliminarCuenta = async () => {
   cargandoEliminar.value = true

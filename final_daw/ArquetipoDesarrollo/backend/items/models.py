@@ -73,12 +73,12 @@ class Item(models.Model):
 
 class ItemVersion(models.Model):
     """Versión archivada de un archivo de audio. Item.file siempre apunta a la versión actual."""
-    item           = models.ForeignKey(Item, related_name='versiones', on_delete=models.CASCADE)
-    numero         = models.PositiveIntegerField()
-    file           = models.CharField(max_length=500)
-    tamano_bytes   = models.BigIntegerField()
-    mime_type      = models.CharField(max_length=100, blank=True, default='')
-    metadatos      = models.JSONField(default=dict, blank=True)
+    item = models.ForeignKey(Item, related_name='versiones', on_delete=models.CASCADE)
+    numero = models.PositiveIntegerField()
+    file = models.CharField(max_length=500)
+    tamano_bytes = models.BigIntegerField()
+    mime_type = models.CharField(max_length=100, blank=True, default='')
+    metadatos = models.JSONField(default=dict, blank=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -2,12 +2,14 @@ import os
 import threading
 import uuid
 
-from rest_framework import viewsets, status
+from rest_framework import status
+from rest_framework.mixins import ListModelMixin, CreateModelMixin
+from rest_framework.viewsets import GenericViewSet
 from rest_framework.decorators import action
-from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
+from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 from django.db.models import Exists, OuterRef
-from django.http import FileResponse
+from django.http import StreamingHttpResponse
 from django.db import transaction
 from drf_spectacular.utils import extend_schema, extend_schema_view, inline_serializer, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
@@ -25,9 +27,9 @@ from .services import ItemService
     partial_update=extend_schema(parameters=[OpenApiParameter('id', OpenApiTypes.INT, OpenApiParameter.PATH)]),
     destroy=extend_schema(parameters=[OpenApiParameter('id', OpenApiTypes.INT, OpenApiParameter.PATH)]),
 )
-class ItemViewSet(viewsets.ModelViewSet):
+class ItemViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
     serializer_class = ItemSerializer
-    parser_classes = (MultiPartParser, FormParser, JSONParser)
+    parser_classes = (JSONParser,)
 
     # FILTRADO BASE
     def get_queryset(self):
@@ -133,7 +135,7 @@ class ItemViewSet(viewsets.ModelViewSet):
         return Response({'mensaje': 'Renombrado correctamente', 'nombre': item.nombre})
 
     @extend_schema(
-        request=inline_serializer('FavoritoRequest', fields={'ids': drf_serializers.ListField(child=drf_serializers.IntegerField())}),
+        request=inline_serializer('FavoritoRequest', fields={'id': drf_serializers.IntegerField()}),
         responses=inline_serializer('FavoritoResponse', fields={
             'detail': drf_serializers.CharField(),
             'favorito': drf_serializers.BooleanField(),
@@ -141,14 +143,14 @@ class ItemViewSet(viewsets.ModelViewSet):
     )
     @action(detail=False, methods=['post'])
     def favorito(self, request):
-        ids = request.data.get('ids', [])
-        if not ids:
+        item_id = request.data.get('id')
+        if not item_id:
             return Response(
-                {'detail': 'No se han enviado elementos.'},
+                {'detail': 'No se ha enviado ningún elemento.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         try:
-            nuevo_valor = ItemService.marcar_favorito(ids=ids, usuario=request.user)
+            nuevo_valor = ItemService.marcar_favorito(item_id=item_id, usuario=request.user)
             return Response({
                 'detail': 'Favorito actualizado correctamente.',
                 'favorito': nuevo_valor,
@@ -374,12 +376,6 @@ class ItemViewSet(viewsets.ModelViewSet):
     )
     @action(detail=False, methods=['post'])
     def descargar(self, request):
-        """
-        Construye un ZIP en memoria con todos los ítems seleccionados
-        (resuelve carpetas recursivamente) y lo retorna como stream.
-
-        REVISAR ESTO PORQUE IGUAL SI TIENE QUE DEVOLVER UN ARCHIVO MUY GRANDE LA LIOOO, AHORA CARGA TDO EL OBJETO EN MEMORIA
-        """
         ids = request.data.get('ids', [])
         if not ids:
             return Response(
@@ -398,17 +394,11 @@ class ItemViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        zip_buffer = ItemService.construir_zip(
-            archivos_con_ruta=archivos_con_ruta,
-            bucket_name=development.AWS_STORAGE_BUCKET_NAME,
+        response = StreamingHttpResponse(
+            ItemService.stream_zip(archivos_con_ruta, development.AWS_STORAGE_BUCKET_NAME),
+            content_type='application/zip',
         )
-
-        response = FileResponse(
-            zip_buffer,
-            as_attachment=True,
-            filename='descarga.zip',
-        )
-        response['Content-Type'] = 'application/zip'
+        response['Content-Disposition'] = 'attachment; filename="descarga.zip"'
         return response
 
 
@@ -545,7 +535,7 @@ class ItemViewSet(viewsets.ModelViewSet):
             )
         try:
             resultados = ItemService.buscar_items(usuario=request.user, q=q)
-        except Exception as e:
+        except Exception:
             return Response(
                 {'detail': 'Error al conectar con el motor de búsqueda.'},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,

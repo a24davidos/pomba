@@ -58,6 +58,7 @@ MIDDLEWARE = [
 # URLS / TEMPLATES / WSGI
 # =========================================================
 
+# Aquí le decimos a Django donde va a buscar las rutas
 ROOT_URLCONF = 'core.urls'
 
 TEMPLATES = [
@@ -76,6 +77,7 @@ TEMPLATES = [
     },
 ]
 
+# Le dice a Gunicorn donde comunicarse con Django
 WSGI_APPLICATION = 'core.wsgi.application'
 
 # =========================================================
@@ -107,15 +109,26 @@ ELASTICSEARCH_DSL = {
 # GARAGE (S3 COMPATIBLE STORAGE)
 # =========================================================
 
+# Usuario y contraseña para autenticarse
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+
+# Carpeta donde se guardan los ficheros
 AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', 'mi-bucket-app')
+# Url interna de Garage dentro de docker
 AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL', 'http://garage:3900')
+#Garage no utiliza regiones, pero la librería lo exige
 AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME', 'garage')
 
+# Construir la URL del fichero S3
 AWS_S3_ADDRESSING_STYLE = 'path'
+# Algoritmo criptográfico para autenticar las peticiones
 AWS_S3_SIGNATURE_VERSION = 's3v4'
+# No aplicamos permisos por fichero individual
 AWS_DEFAULT_ACL = None
+# Evitamos sobreescritura si hay dos ficheros con el mismo nombre
+# Django genera nombre único para el segundo
 AWS_S3_FILE_OVERWRITE = False
 
 # URL pública de Garage accesible desde el navegador.
@@ -123,12 +136,14 @@ AWS_S3_FILE_OVERWRITE = False
 GARAGE_PUBLIC_URL = os.environ.get('GARAGE_PUBLIC_URL', 'http://localhost:3900')
 
 STORAGES = {
+    # Ficheros de usuario para Garage S3
     'default': {
         'BACKEND': 'storage.backends.GarageStorage',
         'OPTIONS': {
             'addressing_style': 'path',
         },
     },
+    # Estáticos desde disco local del servidor
     'staticfiles': {
         'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
     },
@@ -196,8 +211,8 @@ SIMPLE_JWT = {
 # =========================================================
 
 # Archivos por encima de este tamaño se escriben en disco temporal en lugar de RAM.
-FILE_UPLOAD_MAX_MEMORY_SIZE = 30 * 1024 * 1024  # 30 MB
-DATA_UPLOAD_MAX_MEMORY_SIZE = 30 * 1024 * 1024  # 30 MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024 # 10 MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 500 * 1024 * 1024 # 500 MB - red de seguridad para subidas multipart (aunque esta desactivado por si acaso lo dejo)
 
 # =========================================================
 # LOCALIZACIÓN

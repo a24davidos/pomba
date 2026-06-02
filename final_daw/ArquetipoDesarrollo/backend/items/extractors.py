@@ -50,17 +50,17 @@ def extraer(datos: bytes, mime_type: str, tamano_bytes: int) -> dict:
 
 
 
-def _texto_plano(datos: bytes) -> str:
+def _texto_plano(datos):
     return datos.decode('utf-8', errors='replace')
 
 
-def _imagen(datos: bytes) -> dict:
+def _imagen(datos):
     from PIL import Image
 
     # IDs de tags EXIF que nos interesan
     TAGS_EXIF = {
-        271:   'camara_marca',
-        272:   'camara_modelo',
+        271  : 'camara_marca',
+        272  : 'camara_modelo',
         36867: 'fecha_captura',
         40962: 'ancho',
         40963: 'alto',
@@ -82,7 +82,7 @@ def _imagen(datos: bytes) -> dict:
     return metadatos
 
 
-def _audio(datos: bytes) -> dict:
+def _audio(datos):
     import mutagen
     from mutagen.id3 import ID3FileType
     from mutagen.mp4 import MP4
@@ -108,13 +108,13 @@ def _audio(datos: bytes) -> dict:
     return metadatos
 
 
-def _tags_vorbis(audio, metadatos: dict) -> None:
+def _tags_vorbis(audio, metadatos):
     mapeo = {
         'artist': 'artista',
-        'album':  'album',
-        'title':  'titulo',
-        'date':   'año',
-        'genre':  'genero',
+        'album' : 'album',
+        'title' : 'titulo',
+        'date'  : 'año',
+        'genre' : 'genero',
     }
     for tag, campo in mapeo.items():
         valores = audio.get(tag, [])
@@ -122,7 +122,7 @@ def _tags_vorbis(audio, metadatos: dict) -> None:
             metadatos[campo] = _año_a_texto(campo, valores[0])
 
 
-def _tags_mp4(audio, metadatos: dict) -> None:
+def _tags_mp4(audio, metadatos):
     mapeo = {
         '©ART': 'artista',
         '©alb': 'album',
@@ -136,7 +136,7 @@ def _tags_mp4(audio, metadatos: dict) -> None:
             metadatos[campo] = _año_a_texto(campo, str(valores[0]))
 
 
-def _tags_id3(audio, metadatos: dict) -> None:
+def _tags_id3(audio, metadatos):
     if not audio.tags:
         return
     mapeo = {
@@ -152,7 +152,7 @@ def _tags_id3(audio, metadatos: dict) -> None:
             metadatos[campo] = _año_a_texto(campo, str(frame.text[0]))
 
 
-def _año_a_texto(campo: str, valor: str):
+def _año_a_texto(campo, valor):
     """Convierte el campo año a texto. El resto lo devuelve como str."""
     valor = str(valor).strip()
     if campo == 'año':

@@ -7,9 +7,6 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Copiamos los requisitos
-COPY requirements.txt .
-
 # Instalamos librerías del sistema necesarias para psycopg, pillow, etc.
 RUN apt-get update && apt-get install -y \
     libpng-dev \
@@ -19,6 +16,10 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Instalamos dependencias Python en la imagen para acelerar el primer arranque.
+# El entrypoint actualizará si requirements.txt cambia en runtime.
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY entrypoint-backend.sh /usr/local/bin/entrypoint-backend.sh
 RUN chmod +x /usr/local/bin/entrypoint-backend.sh

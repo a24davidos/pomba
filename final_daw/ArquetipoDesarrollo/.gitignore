@@ -8,6 +8,8 @@ Docker/.env.prod
 .venv
 env/
 venv/
+.pip_hash
+.pip_hash_local
 PYTHONPATH
 htmlcov/
 .tox/

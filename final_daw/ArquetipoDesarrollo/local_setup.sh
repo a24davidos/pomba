@@ -1,29 +1,30 @@
 #!/bin/bash
 echo "🛠️ Preparando contorna local para o meu proxecto..."
 
-if [ ! -d "backend/libraries" ]; then
-    python3 -m venv backend/libraries
+VENV_DIR="backend/libraries"
+HASH_FILE="backend/.pip_hash_local"
+REQUIREMENTS="backend/requirements.txt"
+
+if [ ! -d "$VENV_DIR" ]; then
+    python3 -m venv "$VENV_DIR"
 fi
 
-source backend/libraries/bin/activate
+source "$VENV_DIR/bin/activate"
+pip install --quiet --upgrade pip
 
-echo "📦 Instalando dependencias para IDE..."
-pip install --no-cache-dir --upgrade pip
+if [ -f "$REQUIREMENTS" ]; then
+    CURRENT_HASH=$(md5sum "$REQUIREMENTS" | cut -d' ' -f1)
+    STORED_HASH=$(cat "$HASH_FILE" 2>/dev/null || echo "")
 
-if [ -f "backend/requirements.txt" ]; then
-    pip install --no-cache-dir -r backend/requirements.txt
+    if [ "$CURRENT_HASH" != "$STORED_HASH" ]; then
+        echo "📦 Dependencias actualizadas, instalando en entorno local..."
+        pip install --no-cache-dir -r "$REQUIREMENTS"
+        echo "$CURRENT_HASH" > "$HASH_FILE"
+    else
+        echo "✅ Dependencias locais sen cambios, saltando pip install."
+    fi
 else
-    pip install django \
-                djangorestframework \
-                django-cors-headers \
-                "psycopg[binary,pool]" \
-                djangorestframework-simplejwt \
-                boto3 \
-                django-storages \
-                elasticsearch \
-                django-elasticsearch-dsl
-                
-    pip freeze > backend/requirements.txt
+    echo "⚠️  Non se atopou requirements.txt en backend/. Executa primeiro init-backend.sh."
 fi
 
 echo "🚀 Todo preparado!"
