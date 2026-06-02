@@ -56,4 +56,4 @@ class ItemSerializer(serializers.ModelSerializer):
 class ItemVersionSerializer(serializers.ModelSerializer):
     class Meta:
         model  = ItemVersion
-        fields = ['id', 'numero', 'tamano_bytes', 'mime_type', 'metadatos', 'fecha_creacion']
+        fields = ['id', 'numero', 'tamano_bytes', 'mime_type', 'metadatos', 'es_actual', 'fecha_creacion']
