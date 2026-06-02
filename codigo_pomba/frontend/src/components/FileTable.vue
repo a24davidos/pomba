@@ -413,12 +413,6 @@ const emptyState = computed(() => {
                       <i class="pi pi-pencil text-surface-400" /> Cambiar nombre
                     </button>
                     <button
-                      @click="accionMenu($event, 'move', item)"
-                      class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
-                    >
-                      <i class="pi pi-arrow-right text-surface-400" /> Mover a...
-                    </button>
-                    <button
                       v-if="!item.favorito"
                       @click="accionMenu($event, 'favorite', item)"
                       class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
@@ -431,6 +425,12 @@ const emptyState = computed(() => {
                       class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
                     >
                       <i class="pi pi-star-fill text-yellow-400" /> Quitar favorito
+                    </button>
+                    <button
+                      @click="accionMenu($event, 'move', item)"
+                      class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
+                    >
+                      <i class="pi pi-arrow-right text-surface-400" /> Mover a...
                     </button>
                     <div class="my-1 border-t border-surface-200 dark:border-surface-800" />
                     <button
