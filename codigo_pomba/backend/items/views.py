@@ -335,12 +335,12 @@ class ItemViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
     # DESCARGA
     # =========================================================
 
+    # Presigned URL de descarga directa para un archivo
     @extend_schema(
         responses=inline_serializer('DescargaArchivoResponse', fields={'url': drf_serializers.URLField()}),
     )
     @action(detail=True, methods=['get'])
     def descargar_archivo(self, request, pk=None):
-        """Devuelve una presigned URL de descarga directa para un archivo."""
         item = self.get_object()
         if item.tipo != 'archivo' or not item.file:
             return Response(
@@ -349,12 +349,12 @@ class ItemViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
             )
         return Response({'url': ItemService.generar_url_descarga(item)})
 
+    # Presigned URL inline para previsualizar imagen, audio o PDF
     @extend_schema(
         responses=inline_serializer('PreviewResponse', fields={'url': drf_serializers.URLField()}),
     )
     @action(detail=True, methods=['get'])
     def previsualizar(self, request, pk=None):
-        """Devuelve una presigned URL de previsualización para imagen, audio o PDF."""
         item = self.get_object()
         if item.tipo != 'archivo' or not item.file:
             return Response(
@@ -529,10 +529,6 @@ class ItemViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
     )
     @action(detail=False, methods=['get'])
     def buscar(self, request):
-        """
-        GET /api/items/buscar/?q=<texto>
-        Devuelve items ordenados por relevancia de Elasticsearch.
-        """
         q = request.query_params.get('q', '').strip()
         if not q:
             return Response(
@@ -565,11 +561,6 @@ class ItemViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
     )
     @action(detail=False, methods=['post'])
     def solicitar_subida(self, request):
-        """
-        Paso 1: devuelve una presigned PUT URL para que Vue suba el fichero directamente a Garage sin pasar por Django.
-        Body: { nombre, mime_type? }
-        Response: { url_subida, key }
-        """
         nombre = request.data.get('nombre', '').strip()
         mime_type = request.data.get('mime_type', 'application/octet-stream')
 
@@ -594,10 +585,6 @@ class ItemViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
     )
     @action(detail=False, methods=['post'])
     def confirmar_subida(self, request):
-        """
-        Paso 2: registra el Item en la BD tras la subida directa a Garage.
-        Body: { nombre, key, padre?, tamano_bytes, mime_type }
-        """
         nombre = request.data.get('nombre', '').strip()
         key = request.data.get('key', '').strip()
         padre_id = request.data.get('padre', None)
@@ -642,10 +629,6 @@ class ItemViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
     )
     @action(detail=False, methods=['post'])
     def crear_arbol_carpetas(self, request):
-        """
-        Recibe una lista de rutas relativas de carpetas (ordenadas de raíz a hoja) y las crea devolviendo el mapa { ruta: id }.
-        Body: { rutas: ["carpeta", "carpeta/sub", ...], padre: null | id }
-        """
         rutas = request.data.get('rutas', [])
         padre_id = request.data.get('padre', None)
         

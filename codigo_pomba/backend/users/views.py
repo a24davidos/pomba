@@ -2,7 +2,7 @@ from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from drf_spectacular.utils import extend_schema, inline_serializer
+from drf_spectacular.utils import extend_schema, extend_schema_view, inline_serializer
 from rest_framework import serializers as drf_serializers
 
 from .serializers import (
@@ -14,18 +14,17 @@ from .serializers import (
 )
 
 
+@extend_schema_view(
+    post=extend_schema(request=UserSerializer, responses={201: UserSerializer}),
+)
+# Registro de nuevos usuarios
 class RegisterView(generics.CreateAPIView):
-    """Registro de nuevos usuarios."""
     serializer_class = UserSerializer
     permission_classes = [AllowAny]
 
 
+# GET: perfil del usuario. PATCH: actualiza nombre/apellidos/email. DELETE: elimina cuenta.
 class MeView(APIView):
-    """
-    GET     devuelve el perfil del usuario autenticado.
-    PATCH   actualiza nombre, apellidos o email.
-    DELETE  elimina la cuenta del usuario.
-    """
     permission_classes = [IsAuthenticated]
 
     @extend_schema(responses=UserProfileSerializer)
@@ -52,8 +51,8 @@ class MeView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+# Cambia la contraseña del usuario autenticado
 class ChangePasswordView(APIView):
-    """POST  cambia la contraseña del usuario autenticado."""
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
@@ -70,8 +69,8 @@ class ChangePasswordView(APIView):
         return Response({"detail": "Contraseña actualizada correctamente."})
 
 
+# Sube o reemplaza la foto de perfil (guardada en Garage/S3)
 class ProfilePhotoView(APIView):
-    """POST  sube o reemplaza la foto de perfil del usuario (guardada en Garage/S3)."""
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
