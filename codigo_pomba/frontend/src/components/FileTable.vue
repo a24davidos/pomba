@@ -94,6 +94,7 @@ function handleClick(event, item, index) {
 }
 
 function handleDoubleClick(item) {
+  if (window.matchMedia('(pointer: coarse)').matches) return
   gestor.limpiarSeleccion()
   if (item.tipo === 'carpeta') {
     abrirItem(item)

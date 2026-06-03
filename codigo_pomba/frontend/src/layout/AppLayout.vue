@@ -156,7 +156,7 @@ function clasesSnackbar(notif) {
             >
               <div
                 v-if="mostrarHints && !textoBusqueda"
-                class="absolute top-full left-0 right-0 mt-1 z-50
+                class="hidden sm:block absolute top-full left-0 right-0 mt-1 z-50
                       bg-surface-0 dark:bg-surface-900
                       border border-surface-200 dark:border-surface-700
                        rounded-2xl shadow-lg p-3"
