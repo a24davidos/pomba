@@ -570,16 +570,29 @@ class ItemService:
     @staticmethod
     def registrar_item_subido(usuario, nombre, padre, key, tamano_bytes, mime_type):
         nombre = ItemService._nombre_disponible(usuario, nombre, padre)
+        mime_type = mime_type or 'application/octet-stream'
         item = Item(
             usuario=usuario,
             nombre=nombre,
             tipo=Item.Tipo.ARCHIVO,
             padre=padre,
             tamano_bytes=tamano_bytes or 0,
-            mime_type=mime_type or 'application/octet-stream',
+            mime_type=mime_type,
         )
         item.file = key
-        return ItemService.guardar_item(item)
+        with transaction.atomic():
+            ItemService.guardar_item(item)
+            if mime_type.startswith('audio/'):
+                ItemVersion.objects.create(
+                    item=item,
+                    numero=1,
+                    file=key,
+                    tamano_bytes=int(tamano_bytes or 0),
+                    mime_type=mime_type,
+                    metadatos={},
+                    es_actual=True,
+                )
+        return item
 
     # Si el archivo es pequeño, lo descarga de S3 para extraer metadatos; si es demasiado grande lo ignora.
     _LIMITE_DESCARGA_BYTES = {

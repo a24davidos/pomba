@@ -45,6 +45,10 @@ function insertarPrefijo(prefijo) {
   mostrarHints.value = false
 }
 
+function limpiarBusqueda() {
+  textoBusqueda.value = ''
+}
+
 watch(() => route.query.q, (q) => {
   textoBusqueda.value = q || ''
 }, { immediate: true }) //Se ejecuta al montar el componente
@@ -146,6 +150,18 @@ function clasesSnackbar(notif) {
                 @blur="mostrarHints = false"
               />
             </IconField>
+            <button
+              v-if="textoBusqueda"
+              @mousedown.prevent="limpiarBusqueda"
+              class="absolute right-3 top-1/2 -translate-y-1/2 z-10
+                     w-7 h-7 flex items-center justify-center rounded-full
+                     text-surface-500 hover:text-surface-800 dark:hover:text-surface-100
+                     hover:bg-surface-200 dark:hover:bg-surface-600
+                     transition-colors cursor-pointer"
+              aria-label="Limpiar búsqueda"
+            >
+              <i class="pi pi-times text-xs" />
+            </button>
 
             <!-- Panel de búsqueda avanzada -->
             <Transition
