@@ -61,7 +61,7 @@ function esPrevisualizableItem(item) {
   // Compruebo si es un tipo de archivo previsualizable
   if (item.tipo !== 'archivo') return false
   const mime = item.mime_type || ''
-  return mime.startsWith('image/') || mime.startsWith('audio/') || mime === 'application/pdf'
+  return mime.startsWith('image/') || mime.startsWith('audio/') || mime === 'application/pdf' || mime === 'video/mp4'
 }
 
 function handleClick(event, item, index) {
