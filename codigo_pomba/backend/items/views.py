@@ -362,7 +362,7 @@ class ItemViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         mime = item.mime_type or ''
-        TIPOS_PREVISUALIZABLE = ('image/', 'audio/', 'application/pdf')
+        TIPOS_PREVISUALIZABLE = ('image/', 'audio/', 'application/pdf', 'video/mp4')
         if not any(mime.startswith(t) for t in TIPOS_PREVISUALIZABLE):
             return Response(
                 {'detail': 'Tipo de archivo no previsualizable.'},

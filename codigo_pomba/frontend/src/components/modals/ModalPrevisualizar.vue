@@ -9,6 +9,7 @@ const tipoPreview = computed(() => {
   const mime = gestor.modal.payload?.item?.mime_type || ''
   if (mime.startsWith('image/')) return 'imagen'
   if (mime.startsWith('audio/')) return 'audio'
+  if (mime === 'video/mp4') return 'video'
   if (mime === 'application/pdf') return 'pdf'
   return null
 })
@@ -79,6 +80,32 @@ const tipoPreview = computed(() => {
       <div class="px-5 py-6">
         <audio controls autoplay :src="gestor.modal.payload?.url" class="w-full" />
       </div>
+    </div>
+
+    <!-- VIDEO -->
+    <div v-else-if="tipoPreview === 'video'" class="relative bg-black">
+      <div class="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 py-3">
+        <div class="flex items-center gap-2 min-w-0 bg-black/40 backdrop-blur-sm rounded-full px-3 py-1">
+          <i class="pi pi-video text-white/60 text-xs shrink-0" />
+          <span class="text-white/90 text-sm font-medium truncate max-w-xs">
+            {{ gestor.modal.payload?.item?.nombre }}
+          </span>
+        </div>
+      </div>
+      <button
+        @click="gestor.cerrarModal"
+        class="absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-black/40 hover:bg-black/70
+              flex items-center justify-center text-white transition-colors cursor-pointer"
+        aria-label="Cerrar"
+      >
+        <i class="pi pi-times text-xs" />
+      </button>
+      <video
+        controls autoplay
+        :src="gestor.modal.payload?.url"
+        class="block mx-auto max-w-full"
+        style="max-height: 90vh; padding-top: 3rem"
+      />
     </div>
 
     <!-- PDF -->
