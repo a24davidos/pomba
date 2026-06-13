@@ -78,6 +78,11 @@ const opcionesMenu = ref([
     icon: 'pi pi-cog',
     command: () => { mostrarAjustes.value = true },
   },
+  {
+    label: 'API',
+    icon: 'pi pi-code',
+    command: () => { window.open('/api/schema/swagger/', '_blank') },
+  },
   { separator: true },
   {
     label: 'Cerrar sesión',
