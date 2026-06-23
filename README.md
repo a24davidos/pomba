@@ -236,7 +236,7 @@ Son David Otero, estudante de Desenvolvemento de Aplicacións Web no IES San Cle
 
 Elixín este proxecto porque quería construír algo con utilidade real: unha alternativa a Google Drive que calquera persoa poida autoaloxa no seu propio servidor, sen ceder os seus datos a terceiros nin depender de plataformas privativas. A crecente preocupación pola privacidade e o uso que grandes empresas fan dos datos dos usuarios foi o principal motivo para desenvolver Pomba.
 
-Podes contactar comigo en: **a24davidos@iessanclemente.net**
+Podes contactar comigo en: **doterosouto@gmail.com**
 
 ---
 
@@ -256,7 +256,7 @@ As contribucións son benvidas. Se queres colaborar:
 1. Fai un *fork* do repositorio.
 2. Crea unha rama nova para a túa funcionalidade: `git checkout -b feature/nova-funcionalidade`.
 3. Fai os teus cambios e subeos con mensaxes descritivas.
-4. Abre un *merge request* describindo o que fixeches e por que.
+4. Abre un *pull request* describindo o que fixeches e por que.
 
 Algunhas áreas onde se pode contribuír:
 
@@ -264,14 +264,3 @@ Algunhas áreas onde se pode contribuír:
 - Melloras de rendemento ou seguridade
 - Tests automatizados
 - Traducións da interface
-
----
-
-## Memoria
-
-1. [Estudo preliminar](doc/templates/1_estudo_preliminar.md)
-2. [Análise](doc/templates/2_analise.md)
-3. [Deseño](doc/templates/3_deseno.md)
-4. [Planificación e Orzamento](doc/templates/a3_orzamento.md)
-5. [Codificación e Probas](doc/templates/4_codificacion_probas.md)
-6. [Futuro e comercialización](doc/templates/5_manuais.md)
