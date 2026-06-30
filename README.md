@@ -10,6 +10,14 @@ A aplicación está completamente contenerizada con Docker e segue unha arquitec
 
 ---
 
+## Capturas de pantalla
+
+![Login](screenshots/login.png)
+
+![Explorador de arquivos](screenshots/explorador.png)
+
+---
+
 ## Instalación / Posta en marcha
 
 ### Requisitos previos
