@@ -1,0 +1,17 @@
+# Contexto de build: app/ (se envía al daemon de Docker)
+**/.git
+**/node_modules
+**/dist
+**/.vite
+**/__pycache__
+**/*.py[cod]
+**/.venv
+backend/libraries
+backend/staticfiles
+backend/media
+**/.env
+Docker/.env.development
+Docker/.env.prod
+Docker/garage.toml
+**/.DS_Store
+**/*.log

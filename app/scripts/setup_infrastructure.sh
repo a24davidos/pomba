@@ -63,12 +63,12 @@ fi
 # 5. Crear bucket
 echo "📦 Creando bucket..."
 # En v2, si el bucket ya existe, el comando falla, así que comprobamos antes
-if ! docker exec garage /garage bucket list | grep -q "mi-bucket-app"; then
-    docker exec garage /garage bucket create mi-bucket-app
+if ! docker exec garage /garage bucket list | grep -q "pomba-app"; then
+    docker exec garage /garage bucket create pomba-app
 fi
 
 echo "🔐 Aplicando permisos..."
 
-docker exec garage /garage bucket allow mi-bucket-app --key django-key --read --write
+docker exec garage /garage bucket allow pomba-app --key django-key --read --write
 
 echo "🚀 Garage v2 listo e operativo"

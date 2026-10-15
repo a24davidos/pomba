@@ -12,8 +12,17 @@ fi
 source "$VENV_DIR/bin/activate"
 pip install --quiet --upgrade pip
 
+# md5sum en Linux, md5 en macOS
+hash_file() {
+    if command -v md5sum >/dev/null 2>&1; then
+        md5sum "$1" | cut -d' ' -f1
+    else
+        md5 -q "$1"
+    fi
+}
+
 if [ -f "$REQUIREMENTS" ]; then
-    CURRENT_HASH=$(md5sum "$REQUIREMENTS" | cut -d' ' -f1)
+    CURRENT_HASH=$(hash_file "$REQUIREMENTS")
     STORED_HASH=$(cat "$HASH_FILE" 2>/dev/null || echo "")
 
     if [ "$CURRENT_HASH" != "$STORED_HASH" ]; then
@@ -24,7 +33,7 @@ if [ -f "$REQUIREMENTS" ]; then
         echo "✅ Dependencias locais sen cambios, saltando pip install."
     fi
 else
-    echo "⚠️  Non se atopou requirements.txt en backend/. Executa primeiro init-backend.sh."
+    echo "⚠️  Non se atopou backend/requirements.txt."
 fi
 
 echo "🚀 Todo preparado!"
