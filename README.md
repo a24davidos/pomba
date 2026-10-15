@@ -234,6 +234,10 @@ make clean-prod  # Elimina contedores e volumes de producción
 ```bash
 make status      # Mostra o estado do clúster Garage
 make start-app NAME=<nome>  # Crea unha nova app de Django
+make bash        # Abre unha terminal no contedor do backend
+make migrate     # Crea e aplica as migracións
+make logs        # Segue os logs do backend
+make createsuperuser  # Crea un superusuario para o admin de Django
 ```
 
 ---

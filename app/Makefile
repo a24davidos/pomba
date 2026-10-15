@@ -42,3 +42,17 @@ status:
 
 start-app:
 	docker exec -it django_backend python manage.py startapp $(NAME)
+
+# --- Atallos de desenvolvemento (contedor do backend) ---
+bash:
+	docker exec -it django_backend bash
+
+migrate:
+	docker exec -it django_backend python manage.py makemigrations
+	docker exec -it django_backend python manage.py migrate
+
+logs:
+	docker logs -f django_backend
+
+createsuperuser:
+	docker exec -it django_backend python manage.py createsuperuser
