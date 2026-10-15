@@ -19,8 +19,8 @@ services:
   # Backend Django
   backend:
     build:
-      context: .
-      dockerfile: Dockerfile.backend
+      context: ..
+      dockerfile: Docker/Dockerfile.backend
     container_name: django_backend
     env_file: .env.development
     volumes:
@@ -42,8 +42,8 @@ services:
   # Frontend Vue 3 + Vite
   frontend:
     build:
-      context: .
-      dockerfile: Dockerfile.frontend
+      context: ..
+      dockerfile: Docker/Dockerfile.frontend
     container_name: vue_frontend
     env_file: .env.development
     volumes:

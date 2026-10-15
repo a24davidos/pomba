@@ -32,8 +32,8 @@ A aplicación está completamente contenerizada con Docker e segue unha arquitec
 **1. Clonar o repositorio**
 
 ```bash
-git clone https://gitlab.iessanclemente.net/dawd/a24davidos.git
-cd a24davidos/codigo_pomba
+git clone https://github.com/a24davidos/pomba.git
+cd pomba/app
 ```
 
 **2. Configurar as variables de entorno**
@@ -41,7 +41,7 @@ cd a24davidos/codigo_pomba
 Copia o ficheiro de exemplo e completa os valores:
 
 ```bash
-cp Docker/.env.development.example Docker/.env.development
+cp Docker/.env.example Docker/.env.development
 ```
 
 Os campos obrigatorios son:

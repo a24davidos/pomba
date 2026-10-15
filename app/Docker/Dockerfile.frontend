@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # El entrypoint instala dependencias y arrancamos Vue en modo dev
-COPY entrypoint-frontend.sh /usr/local/bin/entrypoint-frontend.sh
+COPY Docker/entrypoint-frontend.sh /usr/local/bin/entrypoint-frontend.sh
 RUN chmod +x /usr/local/bin/entrypoint-frontend.sh
 
 EXPOSE 5173

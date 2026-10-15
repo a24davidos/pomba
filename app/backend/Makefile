@@ -13,7 +13,7 @@ migrate:
 # Instalar unha libraría específica. (make install-lib LIB=django)
 install-lib:
 	docker exec -it $(CONTAINER) pip install $(LIB)
-	docker exec -it $(CONTAINER) pip freeze > backend/requirements.txt
+	@echo "⚠️  Lembra engadir '$(LIB)' a backend/requirements.txt (con versión fixada)"
 
 # Ver os logs dun contedor en específico.
 logs:

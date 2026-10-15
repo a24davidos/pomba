@@ -18,10 +18,10 @@ RUN apt-get update && apt-get install -y \
 
 # Instalamos dependencias Python en la imagen para acelerar el primer arranque.
 # El entrypoint actualizará si requirements.txt cambia en runtime.
-COPY requirements.txt .
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY entrypoint-backend.sh /usr/local/bin/entrypoint-backend.sh
+COPY Docker/entrypoint-backend.sh /usr/local/bin/entrypoint-backend.sh
 RUN chmod +x /usr/local/bin/entrypoint-backend.sh
 
 EXPOSE 8000
