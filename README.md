@@ -63,7 +63,13 @@ openssl rand -hex 32
 
 **3. Configurar Garage (almacenamento S3)**
 
-Consulta a sección [Tutorial: Crear un bucket en Garage](#tutorial-crear-un-bucket-en-garage) máis abaixo.
+Cópiase `Docker/garage.toml.example` a `Docker/garage.toml` (co mesmo `GARAGE_RPC_SECRET` do `.env.development`), levántase a infraestrutura co paso 4 e despois execútase:
+
+```bash
+make setup-garage
+```
+
+O script crea o layout, o bucket `pomba-app` e a clave `django-app`, garda as claves en `Docker/.env.development` e recrea o backend. É idempotente: pódese repetir sen problema. Se prefires facelo a man, consulta [Configuración manual de Garage](#configuración-manual-de-garage) máis abaixo.
 
 **4. Levantar os servizos**
 
@@ -82,9 +88,9 @@ docker exec -it django_backend python manage.py createsuperuser
 
 ---
 
-## Tutorial: Crear un bucket en Garage
+## Configuración manual de Garage
 
-[Garage](https://garagehq.deuxfleurs.fr/) é un sistema de almacenamento de obxectos compatible con S3, lixeiro e ideal para autoaloxamento. A continuación explícase como inicializalo e crear o bucket que usa Pomba.
+[Garage](https://garagehq.deuxfleurs.fr/) é un sistema de almacenamento de obxectos compatible con S3, lixeiro e ideal para autoaloxamento. A continuación explícase paso a paso o que fai `make setup-garage`, por se queres entendelo ou repetilo a man.
 
 ### 0. Configurar garage.toml
 
@@ -187,7 +193,7 @@ docker exec -it garage /garage bucket list
 docker exec -it garage /garage key list
 ```
 
-Agora xa podes levantar o resto dos servizos con `make up`.
+Se o fixeches a man, reinicia o backend para que lea as claves: `make up`.
 
 ---
 

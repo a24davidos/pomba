@@ -37,6 +37,12 @@ clean-prod:
 	docker compose -f Docker/docker-compose.prod.yml down -v
 
 
+# Configura Garage (layout, bucket y clave) y recrea o backend para que lea as novas claves
+setup-garage:
+	@chmod +x scripts/setup_infrastructure.sh
+	@./scripts/setup_infrastructure.sh
+	docker compose --env-file "Docker/.env.development" -f "Docker/docker-compose.yml" up -d --force-recreate --no-deps backend
+
 status:
 	@docker exec garage /garage status
 
