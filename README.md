@@ -32,7 +32,7 @@ A aplicación está completamente contenerizada con Docker e segue unha arquitec
 **1. Clonar o repositorio**
 
 ```bash
-git clone https://github.com/a24davidos/pomba.git
+git clone https://github.com/davidoteros/pomba.git
 cd pomba/app
 ```
 
